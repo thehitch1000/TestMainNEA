@@ -1,14 +1,16 @@
 package io.github.some_example_name;
 
-public class Obstacle {
+public class Entity {
     protected Type type;
 
-    public Obstacle(Type type) {
-        this.type = Type.NULL;
-    }
 
     public enum Type {
-        SPIKE, BOX, SQUARE, NULL
+        PLAYER, MONSTER, NULL
+
+    }
+
+    public Entity(Type type) {
+        this.type = Type.NULL;
     }
 
     public Type getType() {
