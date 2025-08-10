@@ -7,7 +7,6 @@ public class Entity {
 
     public enum Type {
         PLAYER, MONSTER, NULL
-
     }
 
     public Entity() {

@@ -6,12 +6,8 @@ public class Spike extends Obstacle{
     private FloatPoint[] points;
 
     public Spike() {
-        super(Type.SPIKE);
-
-
+        type = Type.SPIKE;
     }
 
-    public void Draw(ShapeRenderer sr) {
 
-    }
 }

@@ -2,8 +2,9 @@ package io.github.some_example_name;
 
 public class Obstacle {
     protected Type type;
+    public FloatPoint[] points;
 
-    public Obstacle(Type type) {
+    public Obstacle() {
         this.type = Type.NULL;
     }
 
