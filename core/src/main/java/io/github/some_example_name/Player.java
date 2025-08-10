@@ -182,4 +182,27 @@ public class Player extends Entity {
             GameData.getInstance().setPlayerSpeedY(0);
         }
     }
+
+    public int CreateYHeight() {
+        return (int) Math.floor(Math.random() * 4) + (int) lowestPoint.getY();
+    }
+    public void CheckTrail() {
+        for (int i = 0; i < trail.queue.getQueueSize(); i++) {
+            if (trail.queue.Squares[i].isDisplay()) {
+                if (trail.queue.Squares[i].getAlpha() > 0) {
+                    trail.queue.Squares[i].setAlpha(trail.queue.Squares[i].getAlpha() - 0.04f);
+                    trail.queue.Squares[i].MoveX(-5f);
+                    trail.queue.Squares[i].MoveY(0.5f);
+                } else {
+                    trail.queue.Squares[i].setDisplay(false);
+                }
+            }
+        }
+    }
+    public void AddToTrail() {
+        if (GameData.getInstance().getElapsedTime() >= TargetTime) {
+            trail.AddSquare(trail.CreateSquare(CreateYHeight()));
+            TargetTime += 120;
+        }
+    }
 }
