@@ -3,7 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Spike extends Obstacle{
-    private int[] x,y;
+    private FloatPoint[] points;
 
     public Spike() {
         super(Type.SPIKE);
