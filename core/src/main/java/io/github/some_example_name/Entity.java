@@ -3,7 +3,7 @@ package io.github.some_example_name;
 public class Entity {
     protected Type type;
     protected FloatPoint[] points;
-
+    protected float x, y;
 
     public enum Type {
         PLAYER, MONSTER, NULL

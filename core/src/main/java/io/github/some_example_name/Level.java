@@ -4,7 +4,7 @@ public class Level {
     Entity player, monster;
 
     public Level() {
-        player = new Player();
+        player = new Player(40);
         monster = new Monster();
     }
 }
