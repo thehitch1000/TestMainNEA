@@ -12,3 +12,4 @@ public class Monster extends Entity {
         points = new FloatPoint[4];
     }
 }
+
