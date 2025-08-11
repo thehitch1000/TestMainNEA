@@ -1,21 +1,21 @@
 package io.github.some_example_name;
 
-public class Player extends Entity {
-    public enum Shape {
-        SQUARE, ARROW, NULL
-    }
+public class Player {
     public enum State {
-        JUMPING, FALLING, TIPPING, IDLE, DEAD, RESPAWNING, NULL
+        IDLE, JUMPING, FALLING, TIPPING, DEAD, NULL,
     }
     public enum Direction {
         UP, DOWN, NULL
     }
 
+    int targetTime = 0;
+
     private int totalAngle, LP, surfaceLandingY, originPosX, originPosY, width;
-    private FloatPoint[] healthPoints;
+    private float x, y;
+    private FloatPoint[] healthPoints, points;
     private FloatPoint midPoint, lowestPoint;
+    private ShapeBuffer trail;
     private State state;
-    private Shape shape;
     private Direction direction;
 
     Matrix Angles, OldPoints, NewPoints;
@@ -31,9 +31,7 @@ public class Player extends Entity {
         this.x = 0;
         this.y = 0;
 
-        this.type = Type.PLAYER;
         this.state = State.NULL;
-        this.shape = Shape.NULL;
         this.direction = Direction.NULL;
 
         this.points = new FloatPoint[4];
@@ -44,6 +42,9 @@ public class Player extends Entity {
         }
 
         this.midPoint = new FloatPoint(0, 0);
+        this.lowestPoint = new FloatPoint(0, 0);
+
+        this.trail = new ShapeBuffer(10);
     }
 
     public State getState() {
@@ -51,13 +52,6 @@ public class Player extends Entity {
     }
     public void setState(State state) {
         this.state = state;
-    }
-
-    public Shape getShape() {
-        return shape;
-    }
-    public void setShape(Shape shape) {
-        this.shape = shape;
     }
 
     public Direction getDirection() {
@@ -187,22 +181,23 @@ public class Player extends Entity {
         return (int) Math.floor(Math.random() * 4) + (int) lowestPoint.getY();
     }
     public void CheckTrail() {
-        for (int i = 0; i < trail.queue.getQueueSize(); i++) {
-            if (trail.queue.Squares[i].isDisplay()) {
-                if (trail.queue.Squares[i].getAlpha() > 0) {
-                    trail.queue.Squares[i].setAlpha(trail.queue.Squares[i].getAlpha() - 0.04f);
-                    trail.queue.Squares[i].MoveX(-5f);
-                    trail.queue.Squares[i].MoveY(0.5f);
-                } else {
-                    trail.queue.Squares[i].setDisplay(false);
-                }
+        for (int i = 0; i < trail.getSize(); i++) {
+            int index = (trail.getFrontPointer() + i) % trail.getCapacity();
+            Rect rect = (Rect) trail.shapes[index];
+            if (rect.getAlpha() <= 0) {
+                trail.delete();
+            } else {
+                rect.setAlpha(rect.getAlpha() - 0.04f);
+                rect.MoveX(-5f);
+                rect.MoveY(0.5f);
             }
         }
     }
     public void AddToTrail() {
-        if (GameData.getInstance().getElapsedTime() >= TargetTime) {
-            trail.AddSquare(trail.CreateSquare(CreateYHeight()));
-            TargetTime += 120;
+        if (GameData.getInstance().getElapsedTime() >= targetTime) {
+            Shape shape = new Rect(false,8,8);
+            shape.setShape(GameData.getInstance().getScreenWidth()/2, y + CreateYHeight());
+            targetTime += 120;
         }
     }
 }

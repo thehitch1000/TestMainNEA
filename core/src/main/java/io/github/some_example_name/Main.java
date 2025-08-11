@@ -15,9 +15,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         level = new Level();
-
-        level.player.points[0].setPoint(100, 100);
-
+        
     }
 
     @Override

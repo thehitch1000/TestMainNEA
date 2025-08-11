@@ -1,7 +1,8 @@
 package io.github.some_example_name;
 
 public class Level {
-    Entity player, monster;
+    Player player;
+    Monster monster;
 
     public Level() {
         player = new Player(40);
