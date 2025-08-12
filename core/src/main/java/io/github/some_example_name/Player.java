@@ -12,12 +12,11 @@ public class Player {
 
     private int totalAngle, LP, surfaceLandingY, originPosX, originPosY, width;
     private float x, y;
-    private FloatPoint[] healthPoints, points;
-    private FloatPoint midPoint, lowestPoint;
-    private ShapeBuffer trail;
-    private State state;
-    private Direction direction;
-
+    FloatPoint[] healthPoints, points;
+    FloatPoint midPoint, lowestPoint;
+    ShapeBuffer trail;
+    State state;
+    Direction direction;
     Matrix Angles, OldPoints, NewPoints;
 
     public Player(int width) {
