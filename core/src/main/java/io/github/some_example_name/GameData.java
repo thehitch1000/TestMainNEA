@@ -2,6 +2,9 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.Gdx;
 
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class GameData {
     private int ScreenWidth, ScreenHeight, PlayerSpeedY, BackgroundBaseSpeed, ObstacleSpeed, TrailSpeed;
     private boolean Stop;
@@ -105,5 +108,23 @@ public class GameData {
         setObstacleSpeed(0);
         setTrailSpeed(0);
         setPlayerSpeedY(0);
+    }
+
+    public void EmptyFile(String fileName) {
+        try (FileWriter writer = new FileWriter(fileName, false)) {
+            writer.write("");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void CreateFile(String fileName) {
+        try (FileWriter writer = new FileWriter(fileName, true)) {
+            System.out.println("File created");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void CopyFile(String startFile, String endFile) {
+        Gdx.files.local(startFile).copyTo(Gdx.files.local(endFile));
     }
 }

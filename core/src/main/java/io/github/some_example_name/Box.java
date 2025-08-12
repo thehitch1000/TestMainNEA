@@ -25,6 +25,6 @@ public class Box {
     }
 
     public boolean onScreen() {
-
+        return shape.onScreen();
     }
 }

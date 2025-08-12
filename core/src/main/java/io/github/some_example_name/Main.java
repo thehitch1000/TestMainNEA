@@ -10,21 +10,18 @@ import static com.badlogic.gdx.Gdx.input;
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
     Level level;
-    Obstacle[] obstacles;
 
     @Override
     public void create() {
         level = new Level();
-        
+
+        GameData.getInstance().CreateFile("Course.txt");
+        GameData.getInstance().CreateFile("tempCourse.txt");
     }
 
     @Override
     public void render() {
         ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
-
-        if (input.isKeyPressed(Input.Keys.ESCAPE)) {
-            Gdx.app.exit();
-        }
 
     }
 }
