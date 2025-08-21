@@ -26,8 +26,8 @@ abstract class Shape implements IntShape {
 
 }
 
-class Rect extends Shape {
-    private float x, y, width, height, alpha;
+class Rect extends Shape implements Alpha {
+    private float x, y, width, height, alpha,
     private boolean isPoints;
 
     public Rect(boolean isPoints, float width, float height) {
@@ -39,13 +39,12 @@ class Rect extends Shape {
         }
     }
 
+    public void setAlpha(float alpha) { 
+        alpha = alpha;
+    }
     public float getAlpha() {
         return alpha;
     }
-    public void setAlpha(float alpha) {
-        this.alpha = alpha;
-    }
-
     public void setShape(float x, float y) {
         if (isPoints) {
             points[0] = new FloatPoint(x, y);
@@ -103,6 +102,7 @@ class Rect extends Shape {
 
 class Tri extends Shape {
     private float width, height;
+
     public Tri(float width, float height) {
         points = new FloatPoint[3];
 
@@ -166,3 +166,38 @@ class Tri extends Shape {
         return case1 && case2 && case3;
     }
 }
+
+class Arrow extends Shape {
+    private float width, height;
+    Tri[] tris;
+    
+    public Arrow(int numPoints, float width, float height) {
+        points = new FloatPoint[numPoints];
+        if (numPoints == 3) {
+            tris = new Tri[1];
+        } else {
+            tris = new Tri[2];
+        }
+        this.width = width;
+        this.height = width;
+    }
+
+    public void Draw(ShapeRenderer sr) {
+        
+    }
+}
+
+class Circle extends Shape {
+    private float radius;
+
+    public Circle(float radius) {
+        this.radius = radius;
+        points = null;
+    }
+}
+
+public interface Alpha {
+    void setAlpha(float alpha);
+    float getAlpha();
+}
+ 
