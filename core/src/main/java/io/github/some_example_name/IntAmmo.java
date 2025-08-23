@@ -19,7 +19,6 @@ class bullet extends Ammo {
         shape = new Tri();
         path = new LineSegment[1]
     }
-    
 }
 
 class midsile extends Ammo {
@@ -29,5 +28,4 @@ class midsile extends Ammo {
         shape = new Circle();
         path = new LineSegment[pathLength];
     }
-    
-}    
+}   
