@@ -166,3 +166,71 @@ class Tri extends Shape {
         return case1 && case2 && case3;
     }
 }
+
+class Arrow extends Shape {
+    Tri[] tris;
+    
+    public Arrow() { 
+        points = new FloatPoint[4]; 
+        tris = new Tri[2]; 
+    }
+    
+    public void UpdateTriangles() {
+        for (int i = 0; i < tris.length; i++) {
+            for (int j = 0; j < tris[i].points.length; j++) { 
+                tris[i].points[j].setWholePoint(points[(2*i) + j]; 
+            }
+        }
+    }
+    
+    public void Draw (ShapeRenderer sr) {
+        sr.triangle();
+    }
+    
+    public void MoveX(float X) {
+        for (FloatPoint point : points) {
+            point.MoveX(X);
+        }
+    }
+    public void MoveY(float Y) {
+        for (FloatPoint point : points) {
+            point.MoveY(Y);
+        }
+    }
+    
+    public void setShape(float x, float y) {
+        points[0].setPoint(x, y);
+        points[1]
+        points[2]
+        points[3]
+    } 
+    
+    public boolean IsPointInShape(FloatPoint point) {
+        UpdateTriangles();
+        for (Tri tri : tris) {
+            if (tri.IsPointInShape(point)) {
+                return true;
+            } 
+        }
+        return false;
+    } 
+    
+    public boolean OnScreen() {
+        boolean[] cases = new boolean[4];
+        for (int i = 0; i < cases.length; i++) {
+            float x = points[i].getX();
+            cases[i] = (x > 0 && x < GameData.getInstance().getScreenWidth());
+        }
+        return (cases[0] || cases[1] || cases[2] || cases[3]);
+    } 
+        
+}
+
+class Circle extends Shape {
+    private float radius;
+    
+    public Circle(float radius) {
+        points = null;
+        this.radius = radius;
+    }
+}
