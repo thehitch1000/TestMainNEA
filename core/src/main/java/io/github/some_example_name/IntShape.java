@@ -26,8 +26,8 @@ abstract class Shape implements IntShape {
 
 }
 
-class Rect extends Shape implements Alpha {
-    private float x, y, width, height, alpha,
+class Rect extends Shape implements Transparency {
+    private float x, y, width, height, alpha;
     private boolean isPoints;
 
     public Rect(boolean isPoints, float width, float height) {
@@ -37,6 +37,7 @@ class Rect extends Shape implements Alpha {
         } else {
             points = null;
         }
+        this.x = 0
     }
 
     public void setAlpha(float alpha) { 
@@ -215,7 +216,7 @@ class Arrow extends Shape {
         return false;
     } 
     
-    public boolean OnScreen() {
+    public boolean onScreen() {
         boolean[] cases = new boolean[4];
         for (int i = 0; i < cases.length; i++) {
             float x = points[i].getX();
@@ -227,16 +228,53 @@ class Arrow extends Shape {
 }
 
 class Circle extends Shape {
-    private float radius;
+    private float radius, x, y;
 
     public Circle(float radius) {
         this.radius = radius;
         points = null;
+        this.x = 0;
+        this.y = 0;
+    }
+    
+    public void Draw(ShapeRenderer sr) {
+        sr.circle(x,y,radius);
+    }
+    
+    public void setShape(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+    
+    public void MoveX(float X) {
+        x += X;
+    }
+    public void MoveY(float Y) {
+        y += Y;
+    }
+    
+    public boolean IsPointInShape(FloatPoint point) { 
+        Vector2 C = new Vector2(x,y);
+        Vector2 P = new Vector2(point.getX(), point.getY());
+        
+        float distance = C.dst(P);
+        
+        return (distance <= radius);
+    }
+    
+    public boolean onScreen() {
+        return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
 }
 
-public interface Alpha {
+public interface Transparency {
     void setAlpha(float alpha);
     float getAlpha();
 }
+
+public interface Colour {
+    void setColour(Color colour) {}
+    Color getColour() {}
+} 
+    
  
