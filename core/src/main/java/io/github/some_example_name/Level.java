@@ -34,18 +34,16 @@ public class Level {
 
     public void CheckJumping(){
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
-            if (!player.isFalling() && !player.isJumping() && !player.isTipping()) {
-                player.setJumping(true);
+            if (player.getState() == Player.State.IDLE) {
+                player.setState(Player.State.JUMPING)
                 GameData.getInstance().setPlayerSpeedY(30);
             }
         }
     }
     public void CheckTipping() {
-        if (!player.isTipping() && (player.isJumping() || player.isFalling())) {
+        if (player.getState() == Player.State.JUMPING || player.getState() == p) {
             player.CheckTipOver();
             if (player.isTipping()) {
-                player.setJumping(false);
-                player.setFalling(false);
                 GameData.getInstance().setPlayerSpeedY(0);
                 int angle = player.FindAngleTillFlat();
                 if (angle > 45) {
@@ -88,13 +86,12 @@ public class Level {
     public void Tipping() {
         if (player.getState() == Player.State.TIPPING) {
             if (player.FindAngleTillFlat() == 0) {
-                player.setTipping(false);
+                player.setState(Player.State.IDLE);
                 player.trail.setTargetTime(GameData.getInstance().getElapsedTime() + 200);
-            }
-            if (player.isClockwise()) {
-                player.TipOver(9);
+            } else if (player.isClockwise()) {
+                player.Rotate(9, player.lowestPoint);
             } else {
-                player.TipOver(-9);
+                player.Rotate(-9, player.lowestPoint);
             }
         }
     }
