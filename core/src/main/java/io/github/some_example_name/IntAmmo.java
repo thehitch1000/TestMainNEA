@@ -29,7 +29,7 @@ class bullet extends Ammo {
 class missile extends Ammo {
 
     public missile(int pathLength) {
-        shape = new Circle();
+        shape = new Circle(0);
         path = new LineSegment[pathLength];
     }
 

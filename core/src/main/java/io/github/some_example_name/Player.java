@@ -10,8 +10,8 @@ public class Player {
 
     int targetTime = 0;
 
-    private int totalAngle, LP, surfaceLandingY, originPosX, originPosY;
-    private float x, y;
+    private int totalAngle, LP, BL, originPosX, originPosY;
+    private float x, y, surfaceLandingY;
     FloatPoint midPoint, lowestPoint;
     ShapeBuffer trail;
     Shape shape, healthShape;
@@ -21,6 +21,7 @@ public class Player {
     public Player() {
         this.totalAngle = 0;
         this.LP = 0;
+        this.BL = 0;
         this.surfaceLandingY = 0;
         this.originPosX = 0;
         this.originPosY = 0;
@@ -54,62 +55,64 @@ public class Player {
         this.direction = direction;
     }
 
-
     public void MoveY(float Y) {
-        for (int i = 0; i < points.length; i++) {
-            points[i].setY(points[i].getY() + y);
+        for (int i = 0; i < shape.points.length; i++) {
+            shape.points[i].setY(shape.points[i].getY() + y);
         }
         y += Y;
     }
 
     public void CalcMidPoints() {
-        float x = points[0].getX() + points[2].getX();
-        float y = points[0].getY() + points[2].getY();
+        float x = shape.points[0].getX() + shape.points[2].getX();
+        float y = shape.points[0].getY() + shape.points[2].getY();
         midPoint.setPoint(x/2, y/2);
     }
     public void FindXPoint() {
         int degrees = (totalAngle *-1) % 360;
         if (degrees < 45 || degrees > 315) {
-            x = points[0].getX();
+            x = shape.points[0].getX();
         } else if (degrees < 135) {
-            x = points[1].getX();
+            x = shape.points[1].getX();
         } else if (degrees < 225) {
-            x = points[2].getX();
+            x = shape.points[2].getX();
         } else if (degrees < 315) {
-            x = points[3].getX();
+            x = shape.points[3].getX();
         }
     }
     public void FindYPoint() {
         int degrees = (totalAngle *-1) % 360;
         if (degrees < 45 || degrees > 315) {
-            y = points[0].getY();
+            y = shape.points[0].getY();
         } else if (degrees < 135) {
-            y = points[1].getY();
+            y = shape.points[1].getY();
         } else if (degrees < 225) {
-            y = points[2].getY();
+            y = shape.points[2].getY();
         } else if (degrees < 315) {
-            y = points[3].getY();
+            y = shape.points[3].getY();
         }
     }
     public void FindLowestPoint() {
         LP = 0;
-        for (int i = 0; i < points.length; i++) {
+        for (int i = 0; i < shape.points.length; i++) {
             if (i == 0) {
-                lowestPoint.setPoint(points[i].getX(), points[i].getY());
-            } else if (lowestPoint.getY() > points[i].getY()) {
-                lowestPoint.setPoint(points[i].getX(), points[i].getY());
+                lowestPoint.setPoint(shape.points[i].getX(), shape.points[i].getY());
+            } else if (lowestPoint.getY() > shape.points[i].getY()) {
+                lowestPoint.setPoint(shape.points[i].getX(), shape.points[i].getY());
                 LP = i;
             }
         }
     }
-    public void FindSurfaceY(Box[] boxes) {
-        int newSurfaceLandingY = originPosY;
+    public void FindSurfaceY(Obstacle[] obstacles) {
+        float newSurfaceLandingY = originPosY;
 
-        for (Box box : boxes) {
-            if (x + width > box.getX() && x < box.getX() + box.getWidth()) {
-                if (box.getY() + box.getHeight() > newSurfaceLandingY &&
-                    box.getY() + box.getHeight() < lowestPoint.getY()) {
-                    newSurfaceLandingY = box.getY() + box.getHeight();
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle instanceof Box) {
+                Rect rect = (Rect) obstacle.shape;
+                if (shape.points[BL + 1].getX() > rect.getX() && x < rect.getX() + rect.getWidth()) {
+                    if (rect.getY() + rect.getHeight() > newSurfaceLandingY &&
+                        rect.getY() + rect.getHeight() < lowestPoint.getY()) {
+                        newSurfaceLandingY = rect.getY() + rect.getHeight();
+                    }
                 }
             }
         }
@@ -154,8 +157,7 @@ public class Player {
     }
     public void AddToTrail() {
         if (GameData.getInstance().getElapsedTime() >= targetTime) {
-            Shape shape = new Rect(false,8,8);
-            shape.setShape(GameData.getInstance().getScreenWidth()/2, y + CreateYHeight());
+            Shape shape = new Rect(GameData.getInstance().getScreenWidth()/2, y + CreateYHeight(), 8,8);
             targetTime += 120;
         }
     }
@@ -172,6 +174,14 @@ public class Player {
             return 270 - angle;
         } else {
             return 360 - angle;
+        }
+    }
+
+    public void FindBottomLeft() {
+        if (FindAngleTillFlat() == 0) {
+            BL = totalAngle % 360 / 90;
+        } else {
+            BL = -1;
         }
     }
 }

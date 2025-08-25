@@ -2,7 +2,7 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-public interface IntObstacle() {
+public interface IntObstacle {
     void Draw(ShapeRenderer sr);
     void MoveX(float X);
     void MoveY(float Y);
@@ -25,13 +25,17 @@ abstract class Obstacle implements IntObstacle {
 class Box extends Obstacle {
 
     public Box(float width, float height) {
-        shape = new Rect(false, width, height);
+        shape = new Rect(width, height);
+    }
+
+    public Box(float x, float y, float width, float height) {
+        shape = new Rect(x, y, width, height);
     }
 }
 
 class Spike extends Obstacle {
 
-    public Spike(float width, float height) {
-        shape = new Tri(width, height);
+    public Spike(FloatPoint[] Points) {
+        shape = new Tri(Points);
     }
 }

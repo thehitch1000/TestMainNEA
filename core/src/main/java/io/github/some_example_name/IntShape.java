@@ -14,6 +14,7 @@ public interface IntShape {
     void MoveY(float Y);
     boolean isPointInShape(FloatPoint point);
     boolean onScreen();
+    void Rotate(float angle, FloatPoint point);
 }
 
 abstract class Shape implements IntShape {
@@ -58,7 +59,7 @@ abstract class Shape implements IntShape {
     private float SinValue(float radians) {
         return (float) Math.sin(radians);
     }
-    private float Radians(int angle) {
+    private float Radians(float angle) {
         return (float) (angle * (Math.PI / 180));
     }
 
@@ -66,38 +67,66 @@ abstract class Shape implements IntShape {
 
 class Rect extends Shape implements Transparency {
     private float x, y, width, height, alpha;
-    private boolean isPoints;
 
-    public Rect(boolean isPoints, float width, float height) {
-        this.isPoints = isPoints;
-        if (isPoints) {
-            points = new FloatPoint[4];
-        } else {
-            points = null;
-        }
+    public Rect(float x, float y, float width, float height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.alpha = 1;
+        points = null;
+    }
+    public Rect(float width, float height) {
         this.x = 0;
+        this.y = 0;
+        this.width = width;
+        this.height = height;
+        this.alpha = 1;
+        points = null;
     }
 
-    public void setAlpha(float alpha) {
-        alpha = alpha;
+    public float getX() {
+        return x;
+    }
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public float getY() {
+        return y;
+    }
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    public float getWidth() {
+        return width;
+    }
+    public void setWidth(float width) {
+        this.width = width;
+    }
+
+    public float getHeight() {
+        return height;
+    }
+    public void setHeight(float height) {
+        this.height = height;
+    }
+
+    public void setAlpha(float Alpha) {
+        alpha = Alpha;
     }
     public float getAlpha() {
         return alpha;
     }
+
     public void setShape(float x, float y) {
-        if (isPoints) {
-            points[0] = new FloatPoint(x, y);
-            points[1] = new FloatPoint(x + width, y);
-            points[2] = new FloatPoint(x + width, y + height);
-            points[3] = new FloatPoint(x, y + height);
-        } else {
-            this.x = x;
-            this.y = y;
-        }
+        this.x = x;
+        this.y = y;
     }
     public void Draw(ShapeRenderer sr) {
         sr.setColor(1, 1, 1, alpha);
-        if (isPoints) {
+        if (points != null) {
             sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
             sr.triangle(points[2].getX(), points[2].getY(), points[3].getX(), points[3].getY(), points[0].getX(), points[0].getY());
         } else {
@@ -105,7 +134,7 @@ class Rect extends Shape implements Transparency {
         }
     }
     public void MoveX(float X) {
-        if (isPoints) {
+        if (points != null) {
             for (int i = 0; i < points.length; i++) {
                 points[i].setX(points[i].getX() + X);
             }
@@ -114,7 +143,7 @@ class Rect extends Shape implements Transparency {
         }
     }
     public void MoveY(float Y) {
-        if (isPoints) {
+        if (points != null) {
             for (int i = 0; i < points.length; i++) {
                 points[i].setY(points[i].getY() + Y);
             }
@@ -126,7 +155,7 @@ class Rect extends Shape implements Transparency {
         return point.getX() > x && point.getX() < x + width && point.getY() > y && point.getY() < y + height;
     }
     public boolean onScreen() {
-        if (isPoints) {
+        if (points != null) {
             boolean case1 = (points[0].getX() < GameData.getInstance().getScreenWidth() && points[0].getX() > 0);
             boolean case2 = (points[1].getX() < GameData.getInstance().getScreenWidth() && points[1].getX() > 0);
             boolean case3 = (points[2].getX() < GameData.getInstance().getScreenWidth() && points[2].getX() > 0);
@@ -140,34 +169,18 @@ class Rect extends Shape implements Transparency {
 }
 
 class Tri extends Shape {
-    private float width, height;
-
-    public Tri(float width, float height) {
+    public Tri(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
         points = new FloatPoint[3];
-
-        this.width = width;
-        this.height = height;
+        points[0] = point1;
+        points[1] = point2;
+        points[2] = point3;
     }
-
-    public float getHeight() {
-        return height;
-    }
-    public float getWidth() {
-        return width;
-    }
-    public void setPoints(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
-        points[0].setWholePoint(point1);
-        points[1].setWholePoint(point2);
-        points[2].setWholePoint(point3);
+    public Tri(FloatPoint[] Points) {
+        points = Points;
     }
 
     public void Draw(ShapeRenderer sr) {
         sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
-    }
-    public void setShape(float x, float y) {
-        points[0] = new FloatPoint(x, y);
-        points[1] = new FloatPoint(x + width, y);
-        points[2] = new FloatPoint(x + width/2, y + height);
     }
     public void MoveX(float X) {
         for (int i = 0; i < points.length; i++) {
@@ -215,13 +228,14 @@ class Arrow extends Shape implements Transparency {
     private float alpha;
     Tri[] tris;
 
-    public Arrow() {
-        points = new FloatPoint[4];
+    public Arrow(FloatPoint[] Points) {
+        points = Points;
         tris = new Tri[2];
+        this.alpha = 1;
     }
 
-    public void setAlpha(float alpha) {
-        alpha = alpha;
+    public void setAlpha(float Alpha) {
+        alpha = Alpha;
     }
     public float getAlpha() {
         return alpha;
@@ -230,13 +244,13 @@ class Arrow extends Shape implements Transparency {
     public void UpdateTriangles() {
         for (int i = 0; i < tris.length; i++) {
             for (int j = 0; j < tris[i].points.length; j++) {
-                tris[i].points[j].setWholePoint(points[(2*i) + j];
+                tris[i].points[j].setWholePoint(points[(2*i) + j]);
             }
         }
     }
 
     public void Draw (ShapeRenderer sr) {
-        sr.triangle();
+        sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
     }
 
     public void MoveX(float X) {
@@ -248,13 +262,6 @@ class Arrow extends Shape implements Transparency {
         for (FloatPoint point : points) {
             point.MoveY(Y);
         }
-    }
-
-    public void setShape(float x, float y) {
-        points[0].setPoint(x, y);
-        points[1]
-        points[2]
-        points[3]
     }
 
     public boolean IsPointInShape(FloatPoint point) {
@@ -327,9 +334,15 @@ class Polygon extends Shape {
         tris = new ArrayList<>(numOfPoints - 2);
         lock = new FunctionLock();
     }
+    public Polygon(FloatPoint[] Points) {
+        points = Points;
+        numOfPoints = points.length;
+        tris = new ArrayList<>(numOfPoints - 2);
+        lock = new FunctionLock();
+    }
 
     public void UpdateTriangles() {
-        if (lock.getState() == false) {
+        if (!lock.getState()) {
             tris.clear();
             List<FloatPoint> vertices = new ArrayList<FloatPoint>(numOfPoints);
 
@@ -339,7 +352,7 @@ class Polygon extends Shape {
 
             while (vertices.size() > 3) {
                 for (int i = 0; i < vertices.size(); i++) {
-                    FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size();
+                    FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size());
                     FloatPoint cur = vertices.get(i);
                     FloatPoint nex = vertices.get((i + 1) % vertices.size());
 
@@ -365,10 +378,10 @@ class Polygon extends Shape {
         }
     }
 
-    public boolean isConvex(FloatPoint v1, FloatPoint v2) {
+    private boolean isConvex(FloatPoint v1, FloatPoint v2) {
         return ((v1.getX() * v2.getY()) - (v1.getY() * v2.getX())) < 0;
     }
-    public boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
+    private boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
         for (int n = 0; n < vertices.size() - 3; n++) {
             int index = (currentPoint + 2 + n);
             FloatPoint point = new FloatPoint(vertices.get(index).getX(), vertices.get(index).getY());
@@ -414,12 +427,11 @@ class Polygon extends Shape {
     }
 }
 
-
 interface Transparency {
-    void setAlpha(float alpha);
+    void setAlpha(float Alpha);
     float getAlpha();
 }
 interface Colour {
-    void setColour(Color colour) {}
-    Color getColour() {}
+    void setColour(Color colour);
+    Color getColour();
 }
