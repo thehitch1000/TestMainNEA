@@ -31,8 +31,8 @@ public class Player {
         this.state = State.NULL;
         this.direction = Direction.NULL;
 
-        this.shape = new Shape();
-        this.healthShape = new Shape();
+        this.shape = null;
+        this.healthShape = null;
 
         this.midPoint = new FloatPoint(0, 0);
         this.lowestPoint = new FloatPoint(0, 0);
@@ -53,7 +53,7 @@ public class Player {
     public void setDirection(Direction direction) {
         this.direction = direction;
     }
-  
+
 
     public void MoveY(float Y) {
         for (int i = 0; i < points.length; i++) {
@@ -157,6 +157,21 @@ public class Player {
             Shape shape = new Rect(false,8,8);
             shape.setShape(GameData.getInstance().getScreenWidth()/2, y + CreateYHeight());
             targetTime += 120;
+        }
+    }
+
+    public int FindAngleTillFlat() {
+        int angle = (totalAngle *-1) % 360;
+        if (angle == 0 || angle == 90 || angle == 180 || angle == 270) {
+            return 0;
+        } else if (angle < 90) {
+            return 90 - angle;
+        } else if (angle < 180) {
+            return 180 - angle;
+        } else if (angle < 270) {
+            return 270 - angle;
+        } else {
+            return 360 - angle;
         }
     }
 }

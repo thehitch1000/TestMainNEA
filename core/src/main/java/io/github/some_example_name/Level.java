@@ -11,7 +11,7 @@ public class Level {
     ShapeBuffer[] obstacles;
 
     public Level() {
-        player = new Player(40);
+        player = new Player();
         monster = new Monster();
     }
 
@@ -43,7 +43,7 @@ public class Level {
     public void CheckTipping() {
         if (player.getState() == Player.State.JUMPING || player.getState() == p) {
             player.CheckTipOver();
-            if (player.isTipping()) {
+            if (player.getState() == Player.State.TIPPING) {
                 GameData.getInstance().setPlayerSpeedY(0);
                 int angle = player.FindAngleTillFlat();
                 if (angle > 45) {
