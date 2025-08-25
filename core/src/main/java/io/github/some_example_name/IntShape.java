@@ -14,6 +14,7 @@ public interface IntShape {
 
 abstract class Shape implements IntShape {
     protected FloatPoint[] points;
+    Matrix Angles, OldPoints, NewPoints;
 
     public void Draw(ShapeRenderer sr) {}
     public void setShape(float x, float y) {}
@@ -22,7 +23,42 @@ abstract class Shape implements IntShape {
     public boolean isPointInShape(FloatPoint point) {
         return false;
     }
-    public void Rotate(float angle, FloatPoint point) {}
+    public boolean onScreen() {}
+    
+    public void Rotate(float angle, FloatPoint point) {
+        Angles = new Matrix(new float[4]);
+        OldPoints = new Matrix(new float[8]);
+        NewPoints = new Matrix(new float[8]);
+        Angles.setMatrixSection(0, CosValue(Radians(angle)));
+        Angles.setMatrixSection(1, -(SinValue(Radians(angle))));
+        Angles.setMatrixSection(2, SinValue(Radians(angle)));
+        Angles.setMatrixSection(3, CosValue(Radians(angle)));
+        for (int i = 0; i < points.length; i++) {
+            OldPoints.setMatrixSection(i, points[i].getX() - point.getX());
+            OldPoints.setMatrixSection(i + 4, points[i].getY() - point.getY());
+        }
+        for (int i = 0; i < points.length; i++) {
+            NewPoints.setMatrixSection(i, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(0)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(1)));
+            NewPoints.setMatrixSection(i + 4, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(2)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(3)));
+        }
+        for (int i = 0; i < points.length; i++) {
+            points[i].setX(NewPoints.getMatrixSection(i) + point.getX());
+            points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
+            healthPoints[i].setWholePoint(points[i]);
+        }
+        if (direction == Direction.NULL) {
+            totalAngle += angle;
+        }
+    }
+    private float CosValue(float radians) {
+        return (float) Math.cos(radians);
+    }
+    private float SinValue(float radians) {
+        return (float) Math.sin(radians);
+    }
+    private float Radians(int angle) {
+        return (float) (angle * (Math.PI / 180));
+    }
 
 }
 
@@ -117,6 +153,11 @@ class Tri extends Shape {
     public float getWidth() {
         return width;
     }
+    public void setPoints(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
+        points[0].setPoint(point1);
+        points[1].setPoint(point2);
+        points[2].setPoint(point3);
+    } 
 
     public void Draw(ShapeRenderer sr) {
         sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
@@ -257,15 +298,62 @@ class Circle extends Shape {
         Vector2 C = new Vector2(x,y);
         Vector2 P = new Vector2(point.getX(), point.getY());
         
-        float distance = C.dst(P);
-        
-        return (distance <= radius);
+        return (C.dst(P) <= radius);
     }
     
     public boolean onScreen() {
         return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
 }
+
+class Polygon extends Shape {
+    private int numOfPoints;
+    List<Tri> tris;
+
+    public Polygon(int numOfPoints) {
+        this.numOfPoints = numOfPoints;
+        points = new FloatPoint[numOfPoints];
+        tris = new ArrayList<>(numOfPoints - 2);
+    }
+    
+    public void UpdateTriangles() {
+        List<Vector2> vertices = new ArrayList<>(numOfPoints);
+        
+        while (vertices.size() > 3) {
+            boolean earFound = false;
+            
+            for (int i = 0; i < vertices.size(); i++) {
+                Vector2 pre = vertices.get((i - 1 + vertices.size()) % vertices.size();
+                Vector2 cur = vertices.get(i);
+                Vector2 nex = vertices.get((i + 1) % vertices.size());
+                
+                Vector2 pc = cur.sub().cpy(pre);
+                Vector2 cn = nex.sub().cpy(cur);
+                
+                if (!isConvex(pc, cn)) {
+                    continue;
+                }
+                
+                Tri tri = new tri();
+                tri.setPoints(pre, cur, nex);
+                
+                for (int n = 0; n < vertices.size(); n++) {
+                    FloatPoint point = new FloatPoint();
+                    point.setPoint(vertices.get((i + 2) % n).getX(), vertices.get((i + 2) % n).getY());
+                    if (tri.IsPointInShape(point)) {
+                        
+                
+                
+                
+public boolean isConvex(Vector2 v1, Vector2 v2) {
+        return (v1.cre(v2)) < 0;
+    } 
+    
+    public void Draw(ShapeRenderer sr) {
+        
+        
+      
+        
 
 public interface Transparency {
     void setAlpha(float alpha);

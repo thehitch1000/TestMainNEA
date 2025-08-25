@@ -12,12 +12,12 @@ public class Player {
 
     private int totalAngle, LP, surfaceLandingY, originPosX, originPosY, width;
     private float x, y;
-    FloatPoint[] healthPoints, points;
+    FloatPoint[] healthPoints; 
     FloatPoint midPoint, lowestPoint;
     ShapeBuffer trail;
+    Shape shape;
     State state;
     Direction direction;
-    Matrix Angles, OldPoints, NewPoints;
 
     public Player(int width) {
         this.totalAngle = 0;
@@ -59,41 +59,7 @@ public class Player {
     public void setDirection(Direction direction) {
         this.direction = direction;
     }
-
-    public void Rotate(int angle, FloatPoint point) {
-        Angles = new Matrix(new float[4]);
-        OldPoints = new Matrix(new float[8]);
-        NewPoints = new Matrix(new float[8]);
-        Angles.setMatrixSection(0, CosValue(Radians(angle)));
-        Angles.setMatrixSection(1, -(SinValue(Radians(angle))));
-        Angles.setMatrixSection(2, SinValue(Radians(angle)));
-        Angles.setMatrixSection(3, CosValue(Radians(angle)));
-        for (int i = 0; i < points.length; i++) {
-            OldPoints.setMatrixSection(i, points[i].getX() - point.getX());
-            OldPoints.setMatrixSection(i + 4, points[i].getY() - point.getY());
-        }
-        for (int i = 0; i < points.length; i++) {
-            NewPoints.setMatrixSection(i, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(0)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(1)));
-            NewPoints.setMatrixSection(i + 4, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(2)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(3)));
-        }
-        for (int i = 0; i < points.length; i++) {
-            points[i].setX(NewPoints.getMatrixSection(i) + point.getX());
-            points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
-            healthPoints[i].setWholePoint(points[i]);
-        }
-        if (direction == Direction.NULL) {
-            totalAngle += angle;
-        }
-    }
-    public float CosValue(float radians) {
-        return (float) Math.cos(radians);
-    }
-    public float SinValue(float radians) {
-        return (float) Math.sin(radians);
-    }
-    public float Radians(int angle) {
-        return (float) (angle * (Math.PI / 180));
-    }
+  
 
     public void MoveY(float Y) {
         for (int i = 0; i < points.length; i++) {
