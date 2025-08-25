@@ -10,22 +10,20 @@ public class Player {
 
     int targetTime = 0;
 
-    private int totalAngle, LP, surfaceLandingY, originPosX, originPosY, width;
+    private int totalAngle, LP, surfaceLandingY, originPosX, originPosY;
     private float x, y;
-    FloatPoint[] healthPoints; 
     FloatPoint midPoint, lowestPoint;
     ShapeBuffer trail;
-    Shape shape;
+    Shape shape, healthShape;
     State state;
     Direction direction;
 
-    public Player(int width) {
+    public Player() {
         this.totalAngle = 0;
         this.LP = 0;
         this.surfaceLandingY = 0;
         this.originPosX = 0;
         this.originPosY = 0;
-        this.width = width;
 
         this.x = 0;
         this.y = 0;
@@ -33,12 +31,8 @@ public class Player {
         this.state = State.NULL;
         this.direction = Direction.NULL;
 
-        this.points = new FloatPoint[4];
-        this.healthPoints = new FloatPoint[5];
-        for (int i = 0; i < points.length; i++) {
-            this.points[i] = new FloatPoint(0, 0);
-            this.healthPoints[i] = new FloatPoint(0, 0);
-        }
+        this.shape = new Shape();
+        this.healthShape = new Shape();
 
         this.midPoint = new FloatPoint(0, 0);
         this.lowestPoint = new FloatPoint(0, 0);

@@ -128,3 +128,22 @@ public class GameData {
         Gdx.files.local(startFile).copyTo(Gdx.files.local(endFile));
     }
 }
+
+class FunctionLock {
+    private boolean used;
+    
+    public FunctionLock() {
+        this.used = false;
+    }
+    
+    public void used() {
+        used = true;
+    }
+    public void reset() {
+        used = false;
+    }
+    
+    public boolean getState() {
+        return used;
+    }
+}

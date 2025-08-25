@@ -209,7 +209,7 @@ class Tri extends Shape {
     }
 }
 
-class Arrow extends Shape {
+class Arrow extends Shape implements Transparency {
     Tri[] tris;
     
     public Arrow() { 
@@ -308,53 +308,104 @@ class Circle extends Shape {
 
 class Polygon extends Shape {
     private int numOfPoints;
+    private FunctionLock lock;
     List<Tri> tris;
 
     public Polygon(int numOfPoints) {
         this.numOfPoints = numOfPoints;
         points = new FloatPoint[numOfPoints];
         tris = new ArrayList<>(numOfPoints - 2);
+        lock = new FunctionLock(); 
     }
     
     public void UpdateTriangles() {
-        List<Vector2> vertices = new ArrayList<>(numOfPoints);
-        
-        while (vertices.size() > 3) {
-            boolean earFound = false;
+        if (lock.getState() == false) {
+            tris.clear(); 
+            List<FloatPoint> vertices = new ArrayList<>(numOfPoints);
+            for (FloatPoint point : points) {
+                vertices.add(point.getX(), point.getY());
+            }
             
-            for (int i = 0; i < vertices.size(); i++) {
-                Vector2 pre = vertices.get((i - 1 + vertices.size()) % vertices.size();
-                Vector2 cur = vertices.get(i);
-                Vector2 nex = vertices.get((i + 1) % vertices.size());
-                
-                Vector2 pc = cur.sub().cpy(pre);
-                Vector2 cn = nex.sub().cpy(cur);
-                
-                if (!isConvex(pc, cn)) {
-                    continue;
+            while (vertices.size() > 3) {
+                for (int i = 0; i < vertices.size(); i++) {
+                    FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size();
+                    FloatPoint cur = vertices.get(i);
+                    FloatPoint nex = vertices.get((i + 1) % vertices.size());
+                    
+                    FloatPoint pc = new FloatPoint(cur.getX() - pre.getX(), cur.getY() - pre.getY());
+                    FloatPoint cn = new FloatPoint(nex.getX() - cur.getX(), nex.getY() - cur.getY());
+                    
+                    if (!isConvex(pc, cn)) {
+                        continue;
+                    }
+                    
+                    Tri tri = new tri();
+                    tri.setPoints(pre, cur, nex);
+                    
+                    if (isVerticesInTri) continue;
+                    
+                    tris.add(tri);
+                    
+                    vertices.remove(i);
+                    break;
                 }
+            }
+            tris.add(new Tri(vertices.get(0), vertices.get(1), vertices.get(2)));
+            lock.used();
+        }
+    }
                 
-                Tri tri = new tri();
-                tri.setPoints(pre, cur, nex);
-                
-                for (int n = 0; n < vertices.size(); n++) {
-                    FloatPoint point = new FloatPoint();
-                    point.setPoint(vertices.get((i + 2) % n).getX(), vertices.get((i + 2) % n).getY());
-                    if (tri.IsPointInShape(point)) {
-                        
-                
-                
-                
-public boolean isConvex(Vector2 v1, Vector2 v2) {
-        return (v1.cre(v2)) < 0;
+    public boolean isConvex(FloatPoint v1, FloatPoint v2) {
+        return ((v1.getX() * v2.getY()) - (v1.getY() * v2.getX())) < 0;
+    }
+    public boolean isVerticesInTri(Tri tri, List<Vector2> vertices, int currentPoint) {
+        for (int n = 0; n < vertices.size() - 3; n++) {
+            int index = (cureentPoint + 2 + n) 
+            FloatPoint point = new FloatPoint(vertices.get(index).x, vertices.get(index).y);
+            if (tri.IsPointInShape(point)) return true;
+        }
+        return false; 
     } 
-    
+            
     public void Draw(ShapeRenderer sr) {
-        
+        UpdateTriangles();
+        for  (Tri tri : tris) {
+            tri.Draw(sr);
+        }
+    }
+    
+    public void MoveX(float X) {
+        for (FloatPoint point : points) {
+            point.MoveX(X);
+        }
+    }
+    public void MoveY(float Y) {
+        for (FloatPoint point : points) {
+            point.MoveY(Y);
+        }
+    }
+    
+    public boolean IsPointInShape(FloatPoint point) {
+        UpdateTriangles(); 
+        for (Tri tri : tris) { 
+            if (tri.IsPointInShape(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean onScreen() {
+        for (FloatPoint point : points) {
+            if (point.getX() <= GameData.getInstance().getScreenWidth() && point.getX() >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+     
         
       
-        
-
 public interface Transparency {
     void setAlpha(float alpha);
     float getAlpha();
@@ -365,4 +416,3 @@ public interface Colour {
     Color getColour() {}
 } 
     
- 
