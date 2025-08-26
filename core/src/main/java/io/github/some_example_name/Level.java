@@ -23,12 +23,11 @@ public class Level {
 
     public void AddObstacle(Obstacle obstacle) {
         if (obstacle instanceof Box) {
-
+            obstacles.add(obstacle);
         } else if (obstacle instanceof Spike) {
 
         }
     }
-
 
     public void CheckSlowDown() {
         if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -159,13 +158,93 @@ public class Level {
         for (Obstacle obstacle : obstacles) {
             if (obstacle instanceof Box) {
                 if (PlayerBoxCollision((Rect) obstacle.shape)) {
+                    player.setState(Player.State.RESPAWNING);
                     BoxRespawn();
+                    break;
                 }
             } else if (obstacle instanceof Spike) {
                 if (PlayerSpikeCollision((Tri) obstacle.shape)) {
+                    player.setState(Player.State.RESPAWNING);
                     SpikeRespawn();
+                    break;
                 }
             }
         }
+    }
+
+    public void BoxRespawn() {
+
+    }
+    public void SpikeRespawn() {
+
+    }
+
+    public void InitRespawning(int deathType, int ObstacleNumber) {
+        if (player.getState() != Player.State.RESPAWNING) {
+            setTypeDeath(deathType);
+            if (typeDeath == 1) {
+                triNumber = ObstacleNumber;
+            } else if (typeDeath == 2) {
+                boxNumber = ObstacleNumber;
+            }
+            GameData.getInstance().setStop(true);
+            GameData.getInstance().setAllSpeedsToZero();
+        }
+    }
+    public void Respawning() {
+        if (player.isRespawning()) {
+            respawnCover.Flashing();
+            if (player.MidPoint.getX() >= respawnCover.getElasped()) {
+                if (typeDeath == 1) {
+                    MoveObstacles(40);
+                    int angle = FindPointsOrient();
+                    if (player.points[0].getY() == 200 || player.points[2].getY() == 200) {
+                        player.points[angle].setPoint(player.getOriginPosX(), 200);
+                        player.points[(angle + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200);
+                        player.points[(angle + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200 + player.getHeight());
+                        player.points[(angle + 3) % 4].setPoint(player.getOriginPosX(), 200 + player.getHeight());
+                        player.setX(player.getOriginPosX());
+                        player.setY(200);
+                    } else {
+                        player.points[angle].setPoint(player.getOriginPosX(), player.getSurfaceLandingY());
+                        player.points[(angle + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY());
+                        player.points[(angle + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY() + player.getHeight());
+                        player.points[(angle + 3) % 4].setPoint(player.getOriginPosX(), player.getSurfaceLandingY() + player.getHeight());
+                        player.setX(player.getOriginPosX());
+                        player.setY(player.getSurfaceLandingY());
+                    }
+                    if (TriCheckRespawn()) {
+                        setTypeDeath(-1);
+                        GameData.getInstance().setDefaultSpeeds();
+                    }
+                } else if (typeDeath == 2) {
+                    MoveObstacles(30);
+                    int angle = FindPointsOrient();
+                    player.points[angle].setPoint(player.getOriginPosX(), boxes[boxNumber].getY() + boxes[boxNumber].getHeight());
+                    player.points[(angle + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), boxes[boxNumber].getY() + boxes[boxNumber].getHeight());
+                    player.points[(angle + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), boxes[boxNumber].getY() + boxes[boxNumber].getHeight() + player.getHeight());
+                    player.points[(angle + 3) % 4].setPoint(player.getOriginPosX(), boxes[boxNumber].getY() + boxes[boxNumber].getHeight() + player.getHeight());
+                    player.setX(player.getOriginPosX());
+                    player.setY(boxes[boxNumber].getY() + boxes[boxNumber].getHeight());
+                    if (TriCheckRespawn()) {
+                        setTypeDeath(-1);
+                        GameData.getInstance().setDefaultSpeeds();
+                    }
+                }
+            }
+            if (respawnCover.getElasped() >= 1500) {
+                respawnCover.setElasped(0);
+                player.setRespawning(false);
+                GameData.getInstance().setDefaultSpeeds();
+                playerMaintenance();
+                GameData.getInstance().setStop(false);
+            }
+        }
+    }
+    public boolean TriCheckRespawn() {
+        while (playerTriCollisions()) {
+            MoveObstacles(40);
+        }
+        return true;
     }
 }

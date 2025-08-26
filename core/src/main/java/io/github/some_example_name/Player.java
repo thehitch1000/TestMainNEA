@@ -5,14 +5,14 @@ import java.util.List;
 
 public class Player {
     public enum State {
-        IDLE, JUMPING, FALLING, TIPPING, DEAD, NULL,
+        IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, NULL,
     }
     public enum Direction {
         UP, DOWN, NULL
     }
 
     private int totalAngle, LP, BL, originPosX, originPosY;
-    private float x, y, surfaceLandingY, targetTime;
+    private float xDistance, x, y, surfaceLandingY, targetTime;
     private boolean Clockwise;
     FloatPoint midPoint, lowestPoint;
     List<Shape> trail;
@@ -31,6 +31,8 @@ public class Player {
 
         this.x = 0;
         this.y = 0;
+
+        this.xDistance = 0;
 
         this.state = State.NULL;
         this.direction = Direction.NULL;
@@ -76,6 +78,9 @@ public class Player {
 
     public void setTargetTime(float targetTime) {
         this.targetTime = targetTime;
+    }
+    public void setXDistance(float xDistance) {
+
     }
 
     public void MoveY(float Y) {
