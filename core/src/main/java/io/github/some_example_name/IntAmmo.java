@@ -3,10 +3,10 @@ package io.github.some_example_name;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public interface IntAmmo {
-    void Draw(ShapeRenderer sr) {}
+    void Draw(ShapeRenderer sr);
 }
 
-abstract class Ammo implemtents IntAmmo {
+abstract class Ammo implements IntAmmo {
     protected Shape shape;
     protected LineSegment[] path;
 

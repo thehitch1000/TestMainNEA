@@ -1,5 +1,8 @@
 package io.github.some_example_name;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Player {
     public enum State {
         IDLE, JUMPING, FALLING, TIPPING, DEAD, NULL,
@@ -8,12 +11,11 @@ public class Player {
         UP, DOWN, NULL
     }
 
-    int targetTime = 0;
-
     private int totalAngle, LP, BL, originPosX, originPosY;
-    private float x, y, surfaceLandingY;
+    private float x, y, surfaceLandingY, targetTime;
+    private boolean Clockwise;
     FloatPoint midPoint, lowestPoint;
-    ShapeBuffer trail;
+    List<Shape> trail;
     Shape shape, healthShape;
     State state;
     Direction direction;
@@ -25,6 +27,7 @@ public class Player {
         this.surfaceLandingY = 0;
         this.originPosX = 0;
         this.originPosY = 0;
+        this.targetTime = 0;
 
         this.x = 0;
         this.y = 0;
@@ -38,7 +41,9 @@ public class Player {
         this.midPoint = new FloatPoint(0, 0);
         this.lowestPoint = new FloatPoint(0, 0);
 
-        this.trail = new ShapeBuffer(10);
+        this.trail = new ArrayList<>();
+
+        this.Clockwise = true;
     }
 
     public State getState() {
@@ -55,11 +60,27 @@ public class Player {
         this.direction = direction;
     }
 
+    public boolean isClockwise() {
+        return Clockwise;
+    }
+    public void setClockwise(boolean Clockwise) {
+        this.Clockwise = Clockwise;
+    }
+
+    public float getSurfaceLandingY() {
+        return surfaceLandingY;
+    }
+    public int getBL() {
+        return BL;
+    }
+
+    public void setTargetTime(float targetTime) {
+        this.targetTime = targetTime;
+    }
+
     public void MoveY(float Y) {
-        for (int i = 0; i < shape.points.length; i++) {
-            shape.points[i].setY(shape.points[i].getY() + y);
-        }
-        y += Y;
+        shape.MoveY(Y);
+        healthShape.MoveY(Y);
     }
 
     public void CalcMidPoints() {
@@ -102,7 +123,7 @@ public class Player {
             }
         }
     }
-    public void FindSurfaceY(Obstacle[] obstacles) {
+    public void FindSurfaceY(ArrayList<Obstacle> obstacles) {
         float newSurfaceLandingY = originPosY;
 
         for (Obstacle obstacle : obstacles) {
@@ -118,12 +139,6 @@ public class Player {
         }
 
         surfaceLandingY = newSurfaceLandingY;
-
-        if (state == State.FALLING || state == State.JUMPING) {
-            if (lowestPoint.getY() + GameData.getInstance().getPlayerSpeedY() <= surfaceLandingY) {
-                HandleLanding();
-            }
-        }
     }
     public void HandleLanding() {
         MoveY(surfaceLandingY - lowestPoint.getY());
@@ -131,23 +146,14 @@ public class Player {
         GameData.getInstance().setPlayerSpeedY(0);
     }
 
-    public void CheckTipOver() {
-        if (lowestPoint.getY() + GameData.getInstance().getPlayerSpeedY() <= surfaceLandingY) {
-            MoveY(surfaceLandingY - lowestPoint.getY());
-            state = State.TIPPING;
-            GameData.getInstance().setPlayerSpeedY(0);
-        }
-    }
-
     public int CreateYHeight() {
         return (int) Math.floor(Math.random() * 4) + (int) lowestPoint.getY();
     }
     public void CheckTrail() {
-        for (int i = 0; i < trail.getSize(); i++) {
-            int index = (trail.getFrontPointer() + i) % trail.getCapacity();
-            Rect rect = (Rect) trail.shapes[index];
+        for (int i = 0; i < trail.size(); i++) {
+            Rect rect = (Rect) shape;
             if (rect.getAlpha() <= 0) {
-                trail.delete();
+                trail.remove(i);
             } else {
                 rect.setAlpha(rect.getAlpha() - 0.04f);
                 rect.MoveX(-5f);
