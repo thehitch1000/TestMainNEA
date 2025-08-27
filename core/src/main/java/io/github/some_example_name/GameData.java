@@ -1,37 +1,48 @@
 package io.github.some_example_name;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.utils.Timer;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameData {
     private int ScreenWidth, ScreenHeight, PlayerSpeedY, BackgroundBaseSpeed, ObstacleSpeed, TrailSpeed;
     private boolean Stop;
     private float BackgroundSpeed, elapsedTime;
+    FunctionTimer timers;
+    List<FunctionLock> locks = new ArrayList<>();
 
     private static GameData instance = null;
 
     public static GameData getInstance() {
         if (instance == null) {
-            instance = new GameData(0,0,-8,0.25f,-8,-2,false, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+            instance = new GameData(-8,0.25f,-8,-2, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         }
         return instance;
     }
 
-    public GameData(float elapsedTime,
-                    int PlayerSpeedY, int BackgroundBaseSpeed, float BackgroundSpeed, int ObstacleSpeed, int TrailSpeed,
-                    boolean Stop,
+    public GameData (int BackgroundBaseSpeed, float BackgroundSpeed, int ObstacleSpeed, int TrailSpeed,
                     int ScreenWidth, int ScreenHeight) {
-        this.Stop = Stop;
-        this.elapsedTime = elapsedTime;
-        this.PlayerSpeedY = PlayerSpeedY;
+        this.Stop = false;
+        this.elapsedTime = 0;
+        this.PlayerSpeedY = 0;
         this.BackgroundBaseSpeed = BackgroundBaseSpeed;
         this.BackgroundSpeed = BackgroundSpeed;
         this.ObstacleSpeed = ObstacleSpeed;
         this.TrailSpeed = TrailSpeed;
         this.ScreenWidth = ScreenWidth;
         this.ScreenHeight = ScreenHeight;
+
+        this.timers = new FunctionTimer();
+        this.locks = new ArrayList<>();
+    }
+
+    public void Maintenance() {
+        elapsedTime += Gdx.graphics.getDeltaTime();
+        resetLocks();
     }
 
     public void setStop(boolean stop) {
@@ -127,23 +138,60 @@ public class GameData {
     public void CopyFile(String startFile, String endFile) {
         Gdx.files.local(startFile).copyTo(Gdx.files.local(endFile));
     }
+
+    public void resetLocks() {
+        locks.forEach(lock -> lock.reset());
+    }
 }
 
 class FunctionLock {
     private boolean used;
-    
+
     public FunctionLock() {
         this.used = false;
     }
-    
+
     public void used() {
         used = true;
     }
     public void reset() {
         used = false;
     }
-    
+
     public boolean getState() {
         return used;
+    }
+}
+
+class FunctionTimer {
+    private List<Timer.Task> ActiveTasks = new ArrayList<>();
+
+    public Timer.Task runAfter(float seconds, Runnable runnable) {
+        Timer.Task task = new Timer.Task() {
+            @Override
+            public void run() {
+                runnable.run();
+                ActiveTasks.remove(this);
+            }
+        };
+
+        Timer.schedule(task, seconds);
+        ActiveTasks.add(task);
+
+        return task;
+    }
+
+    public Timer.Task runRepeating(float interval, float seconds, Runnable runnable) {
+        Timer.Task task = new Timer.Task() {
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
+
+        Timer.schedule(task, interval, seconds);
+        ActiveTasks.add(task);
+
+        return task;
     }
 }

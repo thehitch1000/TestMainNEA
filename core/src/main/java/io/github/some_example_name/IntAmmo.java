@@ -17,7 +17,6 @@ abstract class Ammo implements IntAmmo {
 class bullet extends Ammo {
 
     public bullet() {
-        shape = new Tri();
         path = new LineSegment[1];
     }
 

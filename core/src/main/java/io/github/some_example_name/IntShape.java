@@ -65,9 +65,19 @@ abstract class Shape implements IntShape {
 
 }
 
-class Rect extends Shape implements Transparency {
+class Rect extends Shape implements Transparency, Colour{
     private float x, y, width, height, alpha;
+    private Color colour;
 
+    public Rect(float x, float y, float width, float height, Color colour) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.alpha = 1;
+        points = null;
+        this.colour = colour;
+    }
     public Rect(float x, float y, float width, float height) {
         this.x = x;
         this.y = y;
@@ -75,6 +85,7 @@ class Rect extends Shape implements Transparency {
         this.height = height;
         this.alpha = 1;
         points = null;
+        this.colour = new Color(1, 1, 1, 1);
     }
     public Rect(float width, float height) {
         this.x = 0;
@@ -83,6 +94,23 @@ class Rect extends Shape implements Transparency {
         this.height = height;
         this.alpha = 1;
         points = null;
+        this.colour = new Color(1, 1, 1, 1);
+    }
+    public Rect(float width, float height, Color colour) {
+        this.x = 0;
+        this.y = 0;
+        this.width = width;
+        this.height = height;
+        this.alpha = 1;
+        points = null;
+        this.colour = colour;
+    }
+
+    public void setColour(Color colour) {
+        this.colour = colour;
+    }
+    public Color getColour() {
+        return colour;
     }
 
     public float getX() {
@@ -125,13 +153,8 @@ class Rect extends Shape implements Transparency {
         this.y = y;
     }
     public void Draw(ShapeRenderer sr) {
-        sr.setColor(1, 1, 1, alpha);
-        if (points != null) {
-            sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
-            sr.triangle(points[2].getX(), points[2].getY(), points[3].getX(), points[3].getY(), points[0].getX(), points[0].getY());
-        } else {
-            sr.rect(x, y, width, height);
-        }
+        sr.setColor(colour.r, colour.g, colour.b, alpha);
+        sr.rect(x, y, width, height);
     }
     public void MoveX(float X) {
         if (points != null) {
@@ -167,7 +190,6 @@ class Rect extends Shape implements Transparency {
         }
     }
 }
-
 class Tri extends Shape {
     public Tri(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
         points = new FloatPoint[3];
@@ -223,7 +245,6 @@ class Tri extends Shape {
         return case1 && case2 && case3;
     }
 }
-
 class Arrow extends Shape implements Transparency {
     private float alpha;
     Tri[] tris;
@@ -284,7 +305,6 @@ class Arrow extends Shape implements Transparency {
     }
 
 }
-
 class Circle extends Shape {
     private float radius, x, y;
 
@@ -322,34 +342,56 @@ class Circle extends Shape {
         return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
 }
-
-class Polygon extends Shape {
+class Polygon extends Shape implements Transparency, Colour {
     private int numOfPoints;
-    private FunctionLock lock;
+    private float alpha;
+    FunctionLock lock;
     ArrayList<Tri> tris;
+    Color colour;
 
-    public Polygon(int numOfPoints) {
+    public Polygon(int numOfPoints, Color colour) {
         this.numOfPoints = numOfPoints;
         points = new FloatPoint[numOfPoints];
+        for (int i = 0; i < numOfPoints; i++) {
+            points[i] = new FloatPoint(0, 0);
+        }
         tris = new ArrayList<>(numOfPoints - 2);
         lock = new FunctionLock();
+        GameData.getInstance().locks.add(lock);
+        this.colour = colour;
+        this.alpha = 1;
     }
-    public Polygon(FloatPoint[] Points) {
+    public Polygon(FloatPoint[] Points, Color colour) {
         points = Points;
         numOfPoints = points.length;
         tris = new ArrayList<>(numOfPoints - 2);
         lock = new FunctionLock();
+        this.colour = colour;
+        this.alpha = 1;
+    }
+
+    public void setColour(Color colour) {
+        this.colour = colour;
+    }
+    public Color getColour() {
+        return colour;
+    }
+
+    public void setAlpha(float Alpha) {
+        this.alpha = Alpha;
+    }
+    public float getAlpha() {
+        return alpha;
     }
 
     public void UpdateTriangles() {
         if (!lock.getState()) {
             tris.clear();
-            List<FloatPoint> vertices = new ArrayList<FloatPoint>(numOfPoints);
+            List<FloatPoint> vertices = new ArrayList<>(numOfPoints);
 
             for (FloatPoint point : points) {
                 vertices.add(new FloatPoint(point.getX(), point.getY()));
             }
-
             while (vertices.size() > 3) {
                 for (int i = 0; i < vertices.size(); i++) {
                     FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size());
@@ -377,9 +419,8 @@ class Polygon extends Shape {
             lock.used();
         }
     }
-
     private boolean isConvex(FloatPoint v1, FloatPoint v2) {
-        return ((v1.getX() * v2.getY()) - (v1.getY() * v2.getX())) < 0;
+        return ((v1.getX() * v2.getY()) - (v1.getY() * v2.getX())) >= 0;
     }
     private boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
         for (int n = 0; n < vertices.size() - 3; n++) {
@@ -392,7 +433,8 @@ class Polygon extends Shape {
 
     public void Draw(ShapeRenderer sr) {
         UpdateTriangles();
-        for  (Tri tri : tris) {
+        sr.setColor(colour.r, colour.g, colour.b, alpha);
+        for (Tri tri : tris) {
             tri.Draw(sr);
         }
     }
