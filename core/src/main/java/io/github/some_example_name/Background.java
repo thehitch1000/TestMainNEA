@@ -35,6 +35,7 @@ public class Background {
             for (Rect rect : column.rects) {
                 rect.MoveX(X);
             }
+            column.setX(column.getX() + X);
         }
     }
     public void MoveY(float Y) {
@@ -81,6 +82,15 @@ class ShapeColumn {
     }
     public void setWidth(float width) {
         this.width = width;
+    }
+
+    public boolean onScreen() {
+        for (Rect rect : rects) {
+            if (rect.onScreen()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void CreateColumn(int width, int x) {

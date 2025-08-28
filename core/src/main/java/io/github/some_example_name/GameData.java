@@ -181,7 +181,7 @@ class FunctionTimer {
         return task;
     }
 
-    public Timer.Task runRepeating(float interval, float seconds, Runnable runnable) {
+    public Timer.Task runRepeating(float seconds, float interval, Runnable runnable) {
         Timer.Task task = new Timer.Task() {
             @Override
             public void run() {
@@ -189,7 +189,7 @@ class FunctionTimer {
             }
         };
 
-        Timer.schedule(task, interval, seconds);
+        Timer.schedule(task, seconds, interval);
         ActiveTasks.add(task);
 
         return task;

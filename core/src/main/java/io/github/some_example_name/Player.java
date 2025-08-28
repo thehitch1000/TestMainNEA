@@ -15,10 +15,10 @@ public class Player {
     }
 
     private int totalAngle, LP, BL, originPosX, originPosY;
-    private float xDistance, /* x,  y,*/ surfaceLandingY, width;
+    private float xDistance, /* x,  y,*/ surfaceLandingY, width, ySpeed;
     private boolean Clockwise;
     FloatPoint midPoint, lowestPoint;
-    List<Shape> trail;
+    List<Rect> trail;
     Shape shape, healthShape;
     State state;
     Direction direction;
@@ -31,6 +31,7 @@ public class Player {
         this.originPosX = 0;
         this.originPosY = 200;
         this.width = 40;
+        this.ySpeed = 0;
 
 //        this.x = 0;
 //        this.y = 0;
@@ -40,7 +41,7 @@ public class Player {
         this.state = State.IDLE;
         this.direction = Direction.NULL;
 
-        this.shape = new Polygon(4, Color.WHITE);
+        this.shape = new Polygon(4, Color.WHITE, 0.5f);
         this.healthShape = new Polygon(4, Color.WHITE);
 
         this.midPoint = new FloatPoint(0, 0);
@@ -56,7 +57,14 @@ public class Player {
         shape.points[1].setPoint(x + width, y);
         shape.points[2].setPoint(x + width, y + width);
         shape.points[3].setPoint(x, y + width);
-        healthShape.points = shape.points;
+        linkHealthShape();
+
+    }
+    private void linkHealthShape() {
+        this.healthShape.points[0].setPoint(shape.points[0].getX(), shape.points[0].getY());
+        this.healthShape.points[1].setPoint(shape.points[1].getX(), shape.points[1].getY());
+        this.healthShape.points[2].setPoint(shape.points[2].getX(), shape.points[2].getY());
+        this.healthShape.points[3].setPoint(shape.points[3].getX(), shape.points[3].getY());
     }
 
     public State getState() {
@@ -94,6 +102,9 @@ public class Player {
     }
     public float getWidth() {
         return width;
+    }
+    public float getXDistance() {
+        return xDistance;
     }
 
     public void setXDistance(float xDistance) {
@@ -162,33 +173,25 @@ public class Player {
 
         surfaceLandingY = newSurfaceLandingY;
     }
-    public void HandleLanding() {
-        System.out.println("Landing at: " + surfaceLandingY);
-        System.out.println("Lowest point at: " + lowestPoint.getY());
-        System.out.println("Distance: " + (surfaceLandingY - lowestPoint.getY()));
-        MoveY(surfaceLandingY - lowestPoint.getY());
-        state = State.TIPPING;
-        GameData.getInstance().setPlayerSpeedY(0);
-    }
 
     public int CreateYHeight() {
-        return (int) Math.floor(Math.random() * 4) + (int) lowestPoint.getY();
+        return (int) ((Math.random() * (width/2)) + shape.points[BL].getY());
     }
     public void CheckTrail() {
+        System.out.println(trail.size());
         for (int i = 0; i < trail.size(); i++) {
-            Polygon poly = (Polygon) shape;
-            if (poly.getAlpha() <= 0) {
+            if (trail.get(i).getAlpha() <= 0) {
                 trail.remove(i);
             } else {
-                poly.setAlpha(poly.getAlpha() - 0.04f);
-                poly.MoveX(-5f);
-                poly.MoveY(0.5f);
+                trail.get(i).setAlpha(trail.get(i).getAlpha() - 0.04f);
+                trail.get(i).MoveX(-5f);
+                trail.get(i).MoveY(0.5f);
             }
         }
     }
     public void AddToTrail() {
         if (state == State.IDLE) {
-            trail.add(new Rect(GameData.getInstance().getScreenWidth()/2, shape.points[BL].getY() + CreateYHeight(), 8,8));
+            trail.add(new Rect(GameData.getInstance().getScreenWidth()/2, CreateYHeight(), 8,8, Color.WHITE));
         }
     }
 
@@ -217,10 +220,7 @@ public class Player {
 
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
-        healthShape.Draw(sr);
-        for (Shape shape : trail) {
-            shape.Draw(sr);
-        }
+//        healthShape.Draw(sr);
     }
 
     public void Rotate(int angle, FloatPoint point) {

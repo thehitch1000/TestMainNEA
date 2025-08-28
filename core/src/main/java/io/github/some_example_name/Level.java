@@ -21,42 +21,6 @@ public class Level {
         obstacles = new ArrayList<>();
     }
 
-    public void AddObstacle(Obstacle obstacle) {
-        try (FileWriter writer = new FileWriter("obstacles.txt", true)) {
-            if (obstacle instanceof Box) {
-                Rect rect = (Rect) obstacle.shape;
-                writer.write("Box: " + rect.getX() + " " + rect.getY() + " " + rect.getWidth() + " " + rect.getHeight());
-                writer.write("\n");
-            } else if (obstacle instanceof Spike) {
-                Tri tri = (Tri) obstacle.shape;
-                writer.write("Spike: " + tri.points[0].getX() + " " + tri.points[0].getY() + " " +
-                    tri.points[1].getX() + " " + tri.points[1].getY() + " " +
-                    tri.points[2].getX() + " " + tri.points[2].getY());
-                writer.write("\n");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    public void MoveObstaclesX(float X) {
-        for (Obstacle obstacle : obstacles) {
-            obstacle.MoveX(X);
-        }
-    }
-    public void MoveObstaclesY(float Y) {
-        for (Obstacle obstacle : obstacles) {
-            obstacle.MoveY(Y);
-        }
-    }
-
-    public void CheckSlowDown() {
-        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-            GameData.getInstance().setSpeedMulti(0.5f);
-        } else {
-            GameData.getInstance().setDefaultSpeeds();
-        }
-    }
-
     public void CheckJumping(){
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
             if (player.getState() == Player.State.IDLE) {
@@ -68,7 +32,8 @@ public class Level {
     public void CheckTipping() {
         if (player.getState() == Player.State.FALLING || player.getState() == Player.State.JUMPING) {
             if (player.lowestPoint.getY() + GameData.getInstance().getPlayerSpeedY() <= player.getSurfaceLandingY()) {
-                player.HandleLanding();
+                player.MoveY(player.getSurfaceLandingY() - player.lowestPoint.getY());
+                player.setState(Player.State.TIPPING);
                 GameData.getInstance().setPlayerSpeedY(0);
                 int angle = player.FindAngleTillFlat();
                 if (angle > 45) {
@@ -133,18 +98,69 @@ public class Level {
     }
 
     public void PlayerMaintenance() {
-        CheckSlowDown();
-        CheckPlayerMovement();
-        PlayerMovement();
-        player.setXDistance(0);
         player.FindLowestPoint();
         player.FindBottomLeft();
         player.CalcMidPoints();
         player.FindSurfaceY(obstacles);
-//        player.FindXPoint();
-//        player.FindYPoint();
-//        player.CheckTrail();
+        CheckPlayerMovement();
+        PlayerMovement();
+        player.CheckTrail();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public void CheckSlowDown() {
+        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+            GameData.getInstance().setSpeedMulti(0.5f);
+        } else {
+            GameData.getInstance().setDefaultSpeeds();
+        }
+    }
+
+
+    public void AddObstacle(Obstacle obstacle) {
+        try (FileWriter writer = new FileWriter("obstacles.txt", true)) {
+            if (obstacle instanceof Box) {
+                Rect rect = (Rect) obstacle.shape;
+                writer.write("Box: " + rect.getX() + " " + rect.getY() + " " + rect.getWidth() + " " + rect.getHeight());
+                writer.write("\n");
+            } else if (obstacle instanceof Spike) {
+                Tri tri = (Tri) obstacle.shape;
+                writer.write("Spike: " + tri.points[0].getX() + " " + tri.points[0].getY() + " " +
+                    tri.points[1].getX() + " " + tri.points[1].getY() + " " +
+                    tri.points[2].getX() + " " + tri.points[2].getY());
+                writer.write("\n");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void MoveObstaclesX(float X) {
+        for (Obstacle obstacle : obstacles) {
+            obstacle.MoveX(X);
+        }
+    }
+    public void MoveObstaclesY(float Y) {
+        for (Obstacle obstacle : obstacles) {
+            obstacle.MoveY(Y);
+        }
+    }
+
 
     public boolean PlayerSpikeCollision(Tri tri) {
         for (FloatPoint point : tri.points) {

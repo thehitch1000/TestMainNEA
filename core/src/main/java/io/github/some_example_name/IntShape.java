@@ -157,37 +157,16 @@ class Rect extends Shape implements Transparency, Colour{
         sr.rect(x, y, width, height);
     }
     public void MoveX(float X) {
-        if (points != null) {
-            for (int i = 0; i < points.length; i++) {
-                points[i].setX(points[i].getX() + X);
-            }
-        } else {
-            x += X;
-        }
+        x += X;
     }
     public void MoveY(float Y) {
-        if (points != null) {
-            for (int i = 0; i < points.length; i++) {
-                points[i].setY(points[i].getY() + Y);
-            }
-        } else {
-            y += Y;
-        }
+        y += Y;
     }
     public boolean isPointInShape(FloatPoint point) {
         return point.getX() > x && point.getX() < x + width && point.getY() > y && point.getY() < y + height;
     }
     public boolean onScreen() {
-        if (points != null) {
-            boolean case1 = (points[0].getX() < GameData.getInstance().getScreenWidth() && points[0].getX() > 0);
-            boolean case2 = (points[1].getX() < GameData.getInstance().getScreenWidth() && points[1].getX() > 0);
-            boolean case3 = (points[2].getX() < GameData.getInstance().getScreenWidth() && points[2].getX() > 0);
-            boolean case4 = (points[3].getX() < GameData.getInstance().getScreenWidth() && points[3].getX() > 0);
-
-            return case1 && case2 && case3 && case4;
-        } else {
-            return (x < GameData.getInstance().getScreenWidth() && x > 0);
-        }
+        return (x - width < GameData.getInstance().getScreenWidth() && x + width > 0);
     }
 }
 class Tri extends Shape {
@@ -360,6 +339,18 @@ class Polygon extends Shape implements Transparency, Colour {
         GameData.getInstance().locks.add(lock);
         this.colour = colour;
         this.alpha = 1;
+    }
+    public Polygon(int numOfPoints, Color colour, float alpha) {
+        this.numOfPoints = numOfPoints;
+        points = new FloatPoint[numOfPoints];
+        for (int i = 0; i < numOfPoints; i++) {
+            points[i] = new FloatPoint(0, 0);
+        }
+        tris = new ArrayList<>(numOfPoints - 2);
+        lock = new FunctionLock();
+        GameData.getInstance().locks.add(lock);
+        this.colour = colour;
+        this.alpha = alpha;
     }
     public Polygon(FloatPoint[] Points, Color colour) {
         points = Points;

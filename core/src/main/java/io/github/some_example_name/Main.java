@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 
@@ -36,9 +37,9 @@ public class Main extends ApplicationAdapter {
             background.addColumn();
         }
 
-//        GameData.getInstance().timers.runRepeating(0.1f, 0, () -> level.player.AddToTrail());
+        GameData.getInstance().timers.runRepeating(0.5f, 0.1f, () -> level.player.AddToTrail());
 
-        level.player.setStartingPosition(730, 200);
+        level.player.setStartingPosition(730,200);
     }
 
     @Override
@@ -62,16 +63,16 @@ public class Main extends ApplicationAdapter {
             }
             background.MoveX(-GameData.getInstance().getBackgroundSpeed());
             for (int i = 0; i < background.columns.size(); i++) {
-                if (background.columns.get(i).getX() + background.columns.get(i).getWidth() <= 0) {
-                    background.setXTotal(background.getXTotal() + 10);
+                if (!background.columns.get(i).onScreen()) {
                     background.columns.remove(i);
-                    background.addColumn();
                 } else {
                     background.columns.get(i).setX(background.columns.get(i).getX() - GameData.getInstance().getBackgroundSpeed());
                 }
             }
+            if (background.getXTotal() < 1700) {
+                background.addColumn();
+            }
 
-            // Player Movement
             level.PlayerMaintenance();
         }
 
@@ -92,5 +93,18 @@ public class Main extends ApplicationAdapter {
         BaseLine.Draw(sr);
 
         sr.end();
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        sr.begin(ShapeRenderer.ShapeType.Filled);
+
+        for (Rect rect : level.player.trail) {
+            rect.Draw(sr);
+        }
+
+        sr.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 }
