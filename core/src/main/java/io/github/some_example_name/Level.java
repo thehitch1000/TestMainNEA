@@ -11,13 +11,11 @@ import static com.badlogic.gdx.Gdx.input;
 
 public class Level {
     Player player;
-    Monster monster;
     ArrayList<Obstacle> obstacles;
     ArrayList<Ammo> playerAmmo, monsterAmmo;
 
     public Level() {
         player = new Player(100);
-        monster = new Monster();
 
         obstacles = new ArrayList<>();
 
@@ -69,8 +67,7 @@ public class Level {
         if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
             if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
                 FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-                Bullet bullet = new Bullet(3, player.midPoint, mouse);
-                playerAmmo.add(bullet);
+                playerAmmo.add(new Bullet(3, player.midPoint, mouse));
                 player.setCoolDownEndTime(GameData.getInstance().getElapsedTime() + 150);
             }
         }
@@ -122,34 +119,33 @@ public class Level {
         player.CheckTrail();
     }
 
+    public void AmmoMaintenance() {
+//        CheckBulletContact();
+        MoveAmmo();
+    }
+
     public void MoveAmmo() {
         for (Ammo ammo : playerAmmo) {
             ammo.MoveAlongPath();
         }
-        for (Ammo ammo : monsterAmmo) {
-            ammo.MoveAlongPath();
-        }
     }
 
-    public void CheckBulletContact() {
-        for (Ammo ammo : playerAmmo) {
-            if (CheckAmmoCollision(ammo, player.shape)) {
-                playerAmmo.remove(ammo);
-            }
-        }
-        for (Ammo ammo : monsterAmmo) {
-            if (CheckAmmoCollision(ammo, monster.shape)) {
-                monsterAmmo.remove(ammo);
-            }
-        }
-    }
+//    public void CheckBulletContact() {
+//        for (int i = 0; i < playerAmmo.size(); i++) {
+//            if (CheckAmmoCollision(playerAmmo.get(i), monster.shape)) {
+//                playerAmmo.remove(i);
+//                i--;
+//            }
+//        }
+//    }
 
     public boolean CheckAmmoCollision(Ammo ammo, Shape shape) {
         if (ammo instanceof Bullet) {
+            if (!ammo.shape.onScreen()) {
+                return true;
+            }
             for (FloatPoint point : shape.points) {
                 if (ammo.shape.isPointInShape(point)) {
-                    return true;
-                } else if (ammo.shape.onScreen()) {
                     return true;
                 }
             }
@@ -161,6 +157,8 @@ public class Level {
         }
         return false;
     }
+
+
 
 
 

@@ -73,6 +73,8 @@ public class Main extends ApplicationAdapter {
             }
 
             level.PlayerMaintenance();
+
+            level.AmmoMaintenance();
         }
 
 
@@ -81,8 +83,6 @@ public class Main extends ApplicationAdapter {
         base.Draw(sr);
         baseRects.forEach(rect -> rect.Draw(sr));
         background.Draw(sr);
-
-        level.playerAmmo.forEach(ammo -> ammo.Draw(sr));
 
         sr.end();
 
@@ -106,5 +106,12 @@ public class Main extends ApplicationAdapter {
         sr.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        sr.begin(ShapeRenderer.ShapeType.Filled);
+
+        level.playerAmmo.forEach(ammo -> ammo.Draw(sr));
+
+        sr.end();
+
     }
 }

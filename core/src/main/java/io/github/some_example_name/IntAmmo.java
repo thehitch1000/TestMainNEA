@@ -21,13 +21,27 @@ abstract class Ammo implements IntAmmo {
 }
 
 class Bullet extends Ammo {
+    FloatPoint startPoint, endPoint;
 
     public Bullet(float Speed, FloatPoint startPoint, FloatPoint endPoint) {
-        shape = new Tri(new FloatPoint(0, 0), new FloatPoint(0, 0), new FloatPoint(0, 0));
+        shape = new Tri(new FloatPoint[3]);
         path = new ArrayList<>();
-        path.add(new LineSegment(startPoint, endPoint));
+
         speed = Speed;
-        shape.Rotate(path.get(0).getAngle() - (float)(Math.PI / 2), startPoint);
+
+        this.startPoint = startPoint;
+        this.endPoint = endPoint;
+    }
+
+    public void setBullet(FloatPoint point) {
+        shape.points[0].setPoint(point.getX(), point.getY());
+        shape.points[1].setPoint(point.getX() - 10, point.getY() - 10);
+        shape.points[2].setPoint(point.getX() + 10, point.getY() - 10);
+
+        // Rotate the bullet to align with its movement direction
+        shape.Rotate(path.get(0).getAngle() - (float)(Math.PI / 2), point);
+m
+        path.add(new LineSegment(startPoint, endPoint));
     }
 
     public void Draw(ShapeRenderer sr) {
