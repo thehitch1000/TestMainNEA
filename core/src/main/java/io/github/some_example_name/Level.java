@@ -13,12 +13,16 @@ public class Level {
     Player player;
     Monster monster;
     ArrayList<Obstacle> obstacles;
+    ArrayList<Ammo> playerAmmo, monsterAmmo;
 
     public Level() {
-        player = new Player();
+        player = new Player(100);
         monster = new Monster();
 
         obstacles = new ArrayList<>();
+
+        playerAmmo = new ArrayList<>();
+        monsterAmmo = new ArrayList<>();
     }
 
     public void CheckJumping(){
@@ -61,10 +65,21 @@ public class Level {
             }
         }
     }
+    public void CheckFiring() {
+        if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
+                FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+                Bullet bullet = new Bullet(3, player.midPoint, mouse);
+                playerAmmo.add(bullet);
+                player.setCoolDownEndTime(GameData.getInstance().getElapsedTime() + 150);
+            }
+        }
+    }
     public void CheckPlayerMovement() {
         CheckJumping();
         CheckingFalling();
         CheckTipping();
+        CheckFiring();
     }
 
     public void Falling() {
@@ -107,8 +122,45 @@ public class Level {
         player.CheckTrail();
     }
 
+    public void MoveAmmo() {
+        for (Ammo ammo : playerAmmo) {
+            ammo.MoveAlongPath();
+        }
+        for (Ammo ammo : monsterAmmo) {
+            ammo.MoveAlongPath();
+        }
+    }
 
+    public void CheckBulletContact() {
+        for (Ammo ammo : playerAmmo) {
+            if (CheckAmmoCollision(ammo, player.shape)) {
+                playerAmmo.remove(ammo);
+            }
+        }
+        for (Ammo ammo : monsterAmmo) {
+            if (CheckAmmoCollision(ammo, monster.shape)) {
+                monsterAmmo.remove(ammo);
+            }
+        }
+    }
 
+    public boolean CheckAmmoCollision(Ammo ammo, Shape shape) {
+        if (ammo instanceof Bullet) {
+            for (FloatPoint point : shape.points) {
+                if (ammo.shape.isPointInShape(point)) {
+                    return true;
+                } else if (ammo.shape.onScreen()) {
+                    return true;
+                }
+            }
+            for (FloatPoint point : ammo.shape.points) {
+                if (shape.isPointInShape(point)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
 
 
@@ -160,6 +212,7 @@ public class Level {
             obstacle.MoveY(Y);
         }
     }
+
 
 
     public boolean PlayerSpikeCollision(Tri tri) {

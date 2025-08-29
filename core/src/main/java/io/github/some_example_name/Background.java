@@ -7,30 +7,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Background {
-    private int XTotal;
     List<ShapeColumn> columns;
+    private final float columnGap = 10f; // horizontal space between columns
 
     public Background() {
         columns = new ArrayList<>();
     }
 
     public void addColumn() {
-        int width = FindWidth();
-        ShapeColumn column = new ShapeColumn();
-        column.CreateColumn(width, XTotal);
-        XTotal += width + 10;
-        columns.add(column);
-    }
-
-    public int getXTotal() {
-        return XTotal;
-    }
-    public void setXTotal(int XTotal) {
-        this.XTotal = XTotal;
+        if (columns.size() == 0) {
+            columns.add(new ShapeColumn(0));
+        } else {
+            ShapeColumn last = columns.get(columns.size() - 1);
+            columns.add(new ShapeColumn(last.getX() + last.getWidth() + columnGap));
+        }
     }
 
     public void MoveX(float X) {
-        XTotal += X;
         for (ShapeColumn column : columns) {
             for (Rect rect : column.rects) {
                 rect.MoveX(X);
@@ -44,10 +37,6 @@ public class Background {
                 rect.MoveY(Y);
             }
         }
-    }
-
-    public int FindWidth() {
-        return 100 * (int) Math.ceil((Math.random() * 4));
     }
 
     public void Draw(ShapeRenderer sr) {
@@ -64,10 +53,11 @@ class ShapeColumn {
     List<Rect> rects;
     Color BackgroundColour = new Color(0.12f, 0.28f, 0.51f, 1f);
 
-    public ShapeColumn() {
+    public ShapeColumn(float x) {
         rects = new ArrayList<>();
-        this.x = 0;
+        this.x = x;
         this.width = 0;
+        CreateColumn(FindWidth(), x);
     }
 
     public float getX() {
@@ -93,7 +83,7 @@ class ShapeColumn {
         return false;
     }
 
-    public void CreateColumn(int width, int x) {
+    public void CreateColumn(int width, float x) {
         this.width = width;
         this.x = x;
         int CurrentHeight = 590;
@@ -125,6 +115,9 @@ class ShapeColumn {
     }
     public float randomBetween(float min, float max) {
         return (float) Math.random() * (max - min) + min;
+    }
+    public int FindWidth() {
+        return 100 * (int) Math.ceil((Math.random() * 4));
     }
 
 }

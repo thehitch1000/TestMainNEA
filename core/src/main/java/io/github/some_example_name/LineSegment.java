@@ -22,6 +22,7 @@ public class LineSegment {
         this.angle = 0;
         this.vertical = Vertical.NONE;
         this.horizontal = Horizontal.NONE;
+        CalcAngle();
     }
 
     public float getAngle() {
@@ -67,13 +68,16 @@ public class LineSegment {
         endPoint.MoveY(Y);
     }
 
-    public boolean isPointInSegment(float x, float y) {
+    public boolean isPointInSegment(FloatPoint point) {
         float minX = Math.min(startPoint.getX(), endPoint.getX());
         float maxX = Math.max(startPoint.getX(), endPoint.getX());
         float minY = Math.min(startPoint.getY(), endPoint.getY());
         float maxY = Math.max(startPoint.getY(), endPoint.getY());
 
-        return !(x < minX) && !(x > maxX) && !(y < minY) && !(y > maxY);
+        return !(point.getX() < minX) && !(point.getX() > maxX) && !(point.getY() < minY) && !(point.getY() > maxY);
+    }
+    public void CalcAngle() {
+        angle = (float) Math.atan2(endPoint.getY() - startPoint.getY(), endPoint.getX() - startPoint.getX());
     }
 
     public void Draw(ShapeRenderer sr) {

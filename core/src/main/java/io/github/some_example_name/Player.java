@@ -1,5 +1,6 @@
 package io.github.some_example_name;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -14,8 +15,9 @@ public class Player {
         UP, DOWN, NULL
     }
 
+    private final int startingHealth;
     private int totalAngle, LP, BL, originPosX, originPosY;
-    private float xDistance, /* x,  y,*/ surfaceLandingY, width, ySpeed;
+    private float xDistance, /* x,  y,*/ surfaceLandingY, width, coolDownEndTime, currentHealth;
     private boolean Clockwise;
     FloatPoint midPoint, lowestPoint;
     List<Rect> trail;
@@ -23,7 +25,7 @@ public class Player {
     State state;
     Direction direction;
 
-    public Player() {
+    public Player(int startingHealth) {
         this.totalAngle = 0;
         this.LP = 0;
         this.BL = 0;
@@ -31,7 +33,10 @@ public class Player {
         this.originPosX = 0;
         this.originPosY = 200;
         this.width = 40;
-        this.ySpeed = 0;
+        this.coolDownEndTime = 0;
+        this.currentHealth = 80;
+
+        this.startingHealth = 100;
 
 //        this.x = 0;
 //        this.y = 0;
@@ -86,6 +91,20 @@ public class Player {
     }
     public void setClockwise(boolean Clockwise) {
         this.Clockwise = Clockwise;
+    }
+
+    public float getCurrentHealth() {
+        return currentHealth;
+    }
+    public void setCurrentHealth(int currentHealth) {
+        this.currentHealth = currentHealth;
+    }
+
+    public float getCoolDownEndTime() {
+        return coolDownEndTime;
+    }
+    public void setCoolDownEndTime(float CoolDownEndTime) {
+        coolDownEndTime = coolDownEndTime;
     }
 
     public float getSurfaceLandingY() {
@@ -178,7 +197,6 @@ public class Player {
         return (int) ((Math.random() * (width/2)) + shape.points[BL].getY());
     }
     public void CheckTrail() {
-        System.out.println(trail.size());
         for (int i = 0; i < trail.size(); i++) {
             if (trail.get(i).getAlpha() <= 0) {
                 trail.remove(i);
@@ -220,12 +238,21 @@ public class Player {
 
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
-//        healthShape.Draw(sr);
+        healthShape.Draw(sr);
     }
 
     public void Rotate(int angle, FloatPoint point) {
         shape.Rotate(angle, point);
         healthShape.Rotate(angle, point);
         totalAngle -= angle;
+    }
+
+    public void ReCalcSolidPoints() {
+        if (currentHealth <= 0) {
+            Gdx.app.exit();
+        }
+        float multi = currentHealth / (float) startingHealth;
+        healthShape.points[2].setY(shape.points[1].getY() + (width * multi));
+        healthShape.points[3].setY(shape.points[0].getY() + (width * multi));
     }
 }

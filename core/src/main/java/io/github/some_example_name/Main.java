@@ -33,20 +33,21 @@ public class Main extends ApplicationAdapter {
         for (int i = 0; i < 12; i++) {
             baseRects.add(new Rect(160 * i, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
         }
-        while(background.getXTotal() < 1700) {
+        while(background.columns.size() < 20) {
             background.addColumn();
         }
 
         GameData.getInstance().timers.runRepeating(0.5f, 0.1f, () -> level.player.AddToTrail());
 
         level.player.setStartingPosition(730,200);
+
+        level.player.ReCalcSolidPoints();
     }
 
     @Override
     public void render() {
         ScreenUtils.clear(0.2f, 0.38f, 0.66f, 1f);
         GameData.getInstance().Maintenance();
-
 
         if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
@@ -62,14 +63,12 @@ public class Main extends ApplicationAdapter {
                 baseRects.add(new Rect(1770, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
             }
             background.MoveX(-GameData.getInstance().getBackgroundSpeed());
-            for (int i = 0; i < background.columns.size(); i++) {
+            for (int i = background.columns.size() - 1; i >= 0; i--) {
                 if (!background.columns.get(i).onScreen()) {
                     background.columns.remove(i);
-                } else {
-                    background.columns.get(i).setX(background.columns.get(i).getX() - GameData.getInstance().getBackgroundSpeed());
                 }
             }
-            if (background.getXTotal() < 1700) {
+            if (background.columns.size() < 20) {
                 background.addColumn();
             }
 
@@ -83,7 +82,7 @@ public class Main extends ApplicationAdapter {
         baseRects.forEach(rect -> rect.Draw(sr));
         background.Draw(sr);
 
-        level.Draw(sr);
+        level.playerAmmo.forEach(ammo -> ammo.Draw(sr));
 
         sr.end();
 
@@ -102,6 +101,7 @@ public class Main extends ApplicationAdapter {
         for (Rect rect : level.player.trail) {
             rect.Draw(sr);
         }
+        level.player.Draw(sr);
 
         sr.end();
 

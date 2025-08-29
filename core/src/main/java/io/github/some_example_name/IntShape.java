@@ -294,6 +294,16 @@ class Circle extends Shape {
         this.y = 0;
     }
 
+    public float getRadius() {
+        return radius;
+    }
+    public float getY() {
+        return y;
+    }
+    public float getX() {
+        return x;
+    }
+
     public void Draw(ShapeRenderer sr) {
         sr.circle(x,y,radius);
     }
