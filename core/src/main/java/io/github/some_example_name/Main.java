@@ -109,7 +109,7 @@ public class Main extends ApplicationAdapter {
 
         sr.begin(ShapeRenderer.ShapeType.Filled);
 
-        level.playerAmmo.forEach(ammo -> ammo.Draw(sr));
+        level.player.ammo.forEach(ammo -> ammo.Draw(sr));
 
         sr.end();
 

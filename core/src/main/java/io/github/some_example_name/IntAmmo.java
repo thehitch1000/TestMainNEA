@@ -31,17 +31,39 @@ class Bullet extends Ammo {
 
         this.startPoint = startPoint;
         this.endPoint = endPoint;
+
+        // Initialize triangle points at the start position
+        shape.points[0] = new FloatPoint(startPoint.getX(), startPoint.getY());
+        shape.points[1] = new FloatPoint(startPoint.getX() - 10, startPoint.getY() - 10);
+        shape.points[2] = new FloatPoint(startPoint.getX() + 10, startPoint.getY() - 10);
+
+        // Build first path segment and orient the bullet
+        path.add(new LineSegment(this.startPoint, this.endPoint));
+        float angleRad = path.get(0).getAngle();
+        float angleDeg = (float) Math.toDegrees(angleRad);
+        shape.Rotate(angleDeg - 90f, shape.points[0]);
     }
 
     public void setBullet(FloatPoint point) {
-        shape.points[0].setPoint(point.getX(), point.getY());
-        shape.points[1].setPoint(point.getX() - 10, point.getY() - 10);
-        shape.points[2].setPoint(point.getX() + 10, point.getY() - 10);
+        // Ensure path exists before using it and initialize points if needed
+        if (shape.points[0] == null) {
+            shape.points[0] = new FloatPoint(point.getX(), point.getY());
+            shape.points[1] = new FloatPoint(point.getX() - 10, point.getY() - 10);
+            shape.points[2] = new FloatPoint(point.getX() + 10, point.getY() - 10);
+        } else {
+            shape.points[0].setPoint(point.getX(), point.getY());
+            shape.points[1].setPoint(point.getX() - 10, point.getY() - 10);
+            shape.points[2].setPoint(point.getX() + 10, point.getY() - 10);
+        }
 
-        // Rotate the bullet to align with its movement direction
-        shape.Rotate(path.get(0).getAngle() - (float)(Math.PI / 2), point);
-m
-        path.add(new LineSegment(startPoint, endPoint));
+        if (path.isEmpty()) {
+            path.add(new LineSegment(startPoint, endPoint));
+        }
+
+        // Rotate the bullet to align with its movement direction (Rotate expects degrees)
+        float angleRad = path.get(0).getAngle();
+        float angleDeg = (float) Math.toDegrees(angleRad);
+        shape.Rotate(angleDeg - 90f, point);
     }
 
     public void Draw(ShapeRenderer sr) {
@@ -49,24 +71,23 @@ m
     }
 
     public void MoveAlongPath() {
-        FloatPoint tempPoint = new FloatPoint(shape.points[2].getX() + (speed * CosValue(Radians(path.get(0).getAngle()))), shape.points[2].getY() + (speed * SinValue(Radians(path.get(0).getAngle()))));
+        // Guard against uninitialized path or shape
+        if (path.isEmpty() || shape == null || shape.points == null || shape.points.length < 3 || shape.points[0] == null) {
+            return;
+        }
+        float angleRad = path.get(0).getAngle();
+        FloatPoint tempPoint = new FloatPoint(
+            shape.points[0].getX() + (speed * (float) Math.cos(angleRad)),
+            shape.points[0].getY() + (speed * (float) Math.sin(angleRad))
+        );
         if (path.get(0).isPointInSegment(tempPoint)) {
-            shape.MoveX(CosValue(Radians(path.get(0).getAngle())) * speed);
-            shape.MoveY(SinValue(Radians(path.get(0).getAngle())) * speed);
+            shape.MoveX((float) Math.cos(angleRad) * speed);
+            shape.MoveY((float) Math.sin(angleRad) * speed);
         } else {
-            shape.MoveX(path.get(0).endPoint.getX() - shape.points[2].getX());
-            shape.MoveY(path.get(0).endPoint.getY() - shape.points[2].getY());
+            shape.MoveX(path.get(0).endPoint.getX() - shape.points[0].getX());
+            shape.MoveY(path.get(0).endPoint.getY() - shape.points[0].getY());
         }
 
-    }
-    private float CosValue(float radians) {
-        return (float) Math.cos(radians);
-    }
-    private float SinValue(float radians) {
-        return (float) Math.sin(radians);
-    }
-    private float Radians(float angle) {
-        return (float) (angle * (Math.PI / 180));
     }
 }
 

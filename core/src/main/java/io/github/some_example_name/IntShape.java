@@ -31,7 +31,6 @@ abstract class Shape implements IntShape {
     public boolean onScreen() {
         return false;
     }
-
     public void Rotate(float angle, FloatPoint point) {
         Angles = new Matrix(new float[4]);
         OldPoints = new Matrix(new float[8]);
@@ -53,6 +52,7 @@ abstract class Shape implements IntShape {
             points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
         }
     }
+
     private float CosValue(float radians) {
         return (float) Math.cos(radians);
     }

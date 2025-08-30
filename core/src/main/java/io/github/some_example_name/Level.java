@@ -2,28 +2,27 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.badlogic.gdx.Gdx.input;
 
 public class Level {
-    Player player;
+    Entity player, monster;
     ArrayList<Obstacle> obstacles;
-    ArrayList<Ammo> playerAmmo, monsterAmmo;
 
     public Level() {
         player = new Player(100);
+        monster = new Monster(100);
 
         obstacles = new ArrayList<>();
-
-        playerAmmo = new ArrayList<>();
-        monsterAmmo = new ArrayList<>();
     }
 
-    public void CheckJumping(){
+    public void CheckJumping(Player player){
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
             if (player.getState() == Player.State.IDLE) {
                 player.setState(Player.State.JUMPING);
@@ -31,13 +30,13 @@ public class Level {
             }
         }
     }
-    public void CheckTipping() {
+    public void CheckTipping(Player player) {
         if (player.getState() == Player.State.FALLING || player.getState() == Player.State.JUMPING) {
             if (player.lowestPoint.getY() + GameData.getInstance().getPlayerSpeedY() <= player.getSurfaceLandingY()) {
                 player.MoveY(player.getSurfaceLandingY() - player.lowestPoint.getY());
                 player.setState(Player.State.TIPPING);
                 GameData.getInstance().setPlayerSpeedY(0);
-                int angle = player.FindAngleTillFlat();
+                int angle = (int) player.getAngleTillFlat();
                 if (angle > 45) {
                     player.setClockwise(true);
                 } else {
@@ -46,7 +45,7 @@ public class Level {
             }
         }
     }
-    public void CheckingFalling() {
+    public void CheckingFalling(Player player) {
         if (player.getState() == Player.State.IDLE) {
             for (Obstacle obstacle : obstacles) {
                 if (obstacle instanceof Box) {
@@ -63,31 +62,34 @@ public class Level {
             }
         }
     }
-    public void CheckFiring() {
+    public void CheckFiring(Player player) {
         if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
             if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
                 FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-                playerAmmo.add(new Bullet(3, player.midPoint, mouse));
+                Bullet bullet = new Bullet(3, player.midPoint, mouse);
+                bullet.setBullet(player.midPoint);
+                player.ammo.add(bullet);
                 player.setCoolDownEndTime(GameData.getInstance().getElapsedTime() + 150);
             }
         }
     }
     public void CheckPlayerMovement() {
-        CheckJumping();
-        CheckingFalling();
-        CheckTipping();
-        CheckFiring();
+        Player player = (Player) this.player;
+        CheckJumping(player);
+        CheckingFalling(player);
+        CheckTipping(player);
+        CheckFiring(player);
     }
 
-    public void Falling() {
+    public void Falling(Player player) {
         if (player.getState() == Player.State.FALLING) {
             GameData.getInstance().setPlayerSpeedY(GameData.getInstance().getPlayerSpeedY() - 3);
             player.Rotate(-9, player.midPoint);
         }
     }
-    public void Tipping() {
+    public void Tipping(Player player) {
         if (player.getState() == Player.State.TIPPING) {
-            if (player.FindAngleTillFlat() == 0) {
+            if (player.getAngleTillFlat() == 0) {
                 player.setState(Player.State.IDLE);
             } else if (player.isClockwise()) {
                 player.Rotate(9, player.lowestPoint);
@@ -96,49 +98,46 @@ public class Level {
             }
         }
     }
-    public void Jumping() {
+    public void Jumping(Player player) {
         if (player.getState() == Player.State.JUMPING) {
             GameData.getInstance().setPlayerSpeedY(GameData.getInstance().getPlayerSpeedY() - 3);
             player.Rotate(-9, player.midPoint);
         }
     }
-    public void PlayerMovement(){
-        Falling();
-        Tipping();
-        Jumping();
+    public void PlayerMovement() {
+        Player player = (Player) this.player;
+        Falling(player);
+        Tipping(player);
+        Jumping(player);
         player.MoveY(GameData.getInstance().getPlayerSpeedY());
     }
 
     public void PlayerMaintenance() {
-        player.FindLowestPoint();
-        player.FindBottomLeft();
-        player.CalcMidPoints();
-        player.FindSurfaceY(obstacles);
+        player.EntityUpdate(obstacles);
         CheckPlayerMovement();
         PlayerMovement();
         player.CheckTrail();
     }
 
     public void AmmoMaintenance() {
-//        CheckBulletContact();
+        CheckBulletContact();
         MoveAmmo();
     }
 
     public void MoveAmmo() {
-        for (Ammo ammo : playerAmmo) {
+        for (Ammo ammo : player.ammo) {
             ammo.MoveAlongPath();
         }
     }
 
-//    public void CheckBulletContact() {
-//        for (int i = 0; i < playerAmmo.size(); i++) {
-//            if (CheckAmmoCollision(playerAmmo.get(i), monster.shape)) {
-//                playerAmmo.remove(i);
-//                i--;
-//            }
-//        }
-//    }
-
+    public void CheckBulletContact() {
+        for (int i = 0; i < player.ammo.size(); i++) {
+            if (CheckAmmoCollision(player.ammo.get(i), monster.shape)) {
+                player.ammo.remove(i);
+                i--;
+            }
+        }
+    }
     public boolean CheckAmmoCollision(Ammo ammo, Shape shape) {
         if (ammo instanceof Bullet) {
             if (!ammo.shape.onScreen()) {
@@ -256,15 +255,16 @@ public class Level {
     }
 
     public void PlayerRespawn(Obstacle obstacle) {
+        Player player = (Player) this.player;
         if (player.getState() != Player.State.RESPAWNING) {
             player.setState(Player.State.RESPAWNING);
             GameData.getInstance().setStop(true);
             GameData.getInstance().setAllSpeedsToZero();
-            GameData.getInstance().timers.runAfter(0.5f, () -> Respawning(obstacle));
-            GameData.getInstance().timers.runAfter(1f, () -> EndRespawning());
+            GameData.getInstance().timers.runAfter(0.5f, () -> Respawning(obstacle, player));
+            GameData.getInstance().timers.runAfter(1f, () -> EndRespawning(player));
         }
     }
-    public void Respawning(Obstacle obstacle) {
+    public void Respawning(Obstacle obstacle, Player player) {
         if (obstacle instanceof Spike) {
             Tri tri = (Tri) obstacle.shape;
             Polygon poly = (Polygon) player.shape;
@@ -309,14 +309,10 @@ public class Level {
 //        return true;
 //    }
 
-    public void EndRespawning() {
+    public void EndRespawning(Player player) {
         player.setState(Player.State.IDLE);
         GameData.getInstance().setDefaultSpeeds();
         PlayerMaintenance();
         GameData.getInstance().setStop(false);
-    }
-
-    public void Draw(ShapeRenderer sr) {
-        player.Draw(sr);
     }
 }
