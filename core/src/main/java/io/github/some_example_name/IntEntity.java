@@ -63,7 +63,6 @@ abstract class Entity implements IntEntity {
     }
     public void AddToTrail() {
         if (state == State.IDLE) {
-            System.out.println("ADDED");
             trail.add(new Rect(GameData.getInstance().getScreenWidth()/2, CreateYHeight(), 8,8, Color.WHITE));
         }
     }
@@ -277,10 +276,15 @@ class Player extends Entity {
         midPoint.setPoint(x/2, y/2);
     }
     private void FindBottomLeft() {
+        BL = 0;
         if (AngleTillFlat == 0) {
             BL = ((int) totalAngle % 360) / 90;
         } else {
-            BL = -1;
+            for (int i = 1; i < 4; i++) {
+                if (shape.points[i].getX() < shape.points[BL].getX()) {
+                    BL = i;
+                }
+            }
         }
     }
 

@@ -24,6 +24,8 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void create() {
+        GameData.getInstance().EmptyFile("obstacles.txt");
+
         level = new Level();
         sr = new ShapeRenderer();
         BaseLine = new LineSegment(new FloatPoint(0, 200), new FloatPoint(GameData.getInstance().getScreenWidth(), 200));
@@ -42,6 +44,13 @@ public class Main extends ApplicationAdapter {
         level.player.setStartingPosition(730,200);
 
         level.player.ReCalcSolidPoints();
+
+        level.CreateLevel();
+
+        while (!level.isEnded()) {
+            level.ReadFile();
+        }
+        level.setEnded(false);
     }
 
     @Override
@@ -52,6 +61,11 @@ public class Main extends ApplicationAdapter {
         if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
         }
+
+        while (!level.isEnded()) {
+            level.ReadFile();
+        }
+        level.setEnded(false);
 
         if (!GameData.getInstance().isStop()) {
             // Background and Base Movement
@@ -72,9 +86,9 @@ public class Main extends ApplicationAdapter {
                 background.addColumn();
             }
 
-            level.PlayerMaintenance();
-
-            level.AmmoMaintenance();
+            level.Update();
+            level.Checking();
+            level.Move();
         }
 
 
@@ -83,6 +97,8 @@ public class Main extends ApplicationAdapter {
         base.Draw(sr);
         baseRects.forEach(rect -> rect.Draw(sr));
         background.Draw(sr);
+
+        level.obstacles.forEach(obstacle -> obstacle.Draw(sr));
 
         sr.end();
 

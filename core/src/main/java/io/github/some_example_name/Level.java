@@ -2,10 +2,11 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,13 +16,137 @@ public class Level {
     Entity player, monster;
     ArrayList<Obstacle> obstacles;
 
+    private float xTravelled;
+    private boolean ended;
+    private int shapeNumber = 0;
+
     public Level() {
         player = new Player(100);
         monster = new Monster(100);
 
         obstacles = new ArrayList<>();
+
+        this.ended = false;
+        this.xTravelled = 0;
+        this.shapeNumber = 0;
     }
 
+    public boolean isEnded() {
+        return ended;
+    }
+
+    public void setEnded(boolean ended) {
+        this.ended = ended;
+    }
+
+    public void CreateLevel() {
+        for (int i = 0; i < 5; i++) {
+            AddObstacle(new Box(1800 + (i * 800), 200, 200, 40));
+        }
+    }
+
+    public void ReadFile() {
+        try {
+            File file = new File("obstacles.txt");
+            List<String> lines = Files.readAllLines(file.toPath());
+
+            if (lines.isEmpty() || shapeNumber >= lines.size()) {
+                ended = true;
+                return;
+            }
+
+            String line = lines.get(shapeNumber);
+            String[] parts = line.split(":\\s+|\\s+");  // Split by ": " or whitespace
+
+            float x1 = Float.parseFloat(parts[1]);
+            switch (parts[0]) {
+                case "Box":
+                    if (x1 - xTravelled < 1500) {
+                        Obstacle box = new Box(x1 - xTravelled, Float.parseFloat(parts[2]), Float.parseFloat(parts[3]), Float.parseFloat(parts[4]));
+                        obstacles.add(box);
+                        shapeNumber++;
+                    } else {
+                        ended = true;
+                    }
+                    break;
+                case "Triangle":
+                    float x3 = Float.parseFloat(parts[3]);
+                    float x5 = Float.parseFloat(parts[5]);
+                    if (x1 - xTravelled < 1500 || x3 - xTravelled < 1500 || x5 - xTravelled < 1500) {
+                        Obstacle spike = new Spike(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2])),
+                                                   new FloatPoint(x3 - xTravelled, Float.parseFloat(parts[4])),
+                                                   new FloatPoint(x5 - xTravelled, Float.parseFloat(parts[6])));
+                        obstacles.add(spike);
+                        shapeNumber++;
+                    } else {
+                        ended = true;
+                    }
+                    break;
+            }
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void CheckSlowDown() {
+        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+            GameData.getInstance().setSpeedMulti(0.5f);
+        } else {
+            GameData.getInstance().setDefaultSpeeds();
+        }
+    }
+
+    public void Update() {
+        player.EntityUpdate(obstacles);
+    }
+    public void Checking() {
+        CheckObstacleCollision();
+        CheckPlayerMovement();
+        CheckSlowDown();
+        CheckBulletContact();
+        player.CheckTrail();
+    }
+    public void Move() {
+        MoveAmmo();
+        PlayerMovement();
+        MoveObstaclesX(GameData.getInstance().getObstacleSpeed());
+    }
+
+    public boolean PlayerSpikeCollision(Tri tri) {
+        for (FloatPoint point : tri.points) {
+            if (player.shape.isPointInShape(point)) {
+                return true;
+            }
+        }
+        for (FloatPoint point : player.shape.points) {
+            if (tri.isPointInShape(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean PlayerBoxCollision(Rect rect) {
+        if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY() + rect.getHeight()))) return true;
+        if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY()))) return true;
+        for (FloatPoint point : player.shape.points) {
+            if (rect.isPointInShape(point)) return true;
+        }
+        return false;
+    }
+
+    public void CheckObstacleCollision() {
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle instanceof Box) {
+                if (PlayerBoxCollision((Rect) obstacle.shape)) {
+                    Gdx.app.exit();
+                }
+            } else if (obstacle instanceof Spike) {
+                if (PlayerSpikeCollision((Tri) obstacle.shape)) {
+                    Gdx.app.exit();
+                }
+            }
+        }
+    }
     public void CheckJumping(Player player){
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
             if (player.getState() == Player.State.IDLE) {
@@ -112,24 +237,11 @@ public class Level {
         player.MoveY(GameData.getInstance().getPlayerSpeedY());
     }
 
-    public void PlayerMaintenance() {
-        player.EntityUpdate(obstacles);
-        CheckPlayerMovement();
-        PlayerMovement();
-        player.CheckTrail();
-    }
-
-    public void AmmoMaintenance() {
-        CheckBulletContact();
-        MoveAmmo();
-    }
-
     public void MoveAmmo() {
         for (Ammo ammo : player.ammo) {
             ammo.MoveAlongPath();
         }
     }
-
     public void CheckBulletContact() {
         for (int i = 0; i < player.ammo.size(); i++) {
             if (CheckAmmoCollision(player.ammo.get(i), monster.shape)) {
@@ -140,6 +252,10 @@ public class Level {
     }
     public boolean CheckAmmoCollision(Ammo ammo, Shape shape) {
         if (ammo instanceof Bullet) {
+            Bullet bullet = (Bullet) ammo;
+            if (bullet.shape.points[0].getX() == bullet.endPoint.getX() && bullet.shape.points[0].getY() == bullet.endPoint.getY()) {
+                return true;
+            }
             if (!ammo.shape.onScreen()) {
                 return true;
             }
@@ -156,31 +272,6 @@ public class Level {
         }
         return false;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public void CheckSlowDown() {
-        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-            GameData.getInstance().setSpeedMulti(0.5f);
-        } else {
-            GameData.getInstance().setDefaultSpeeds();
-        }
-    }
-
 
     public void AddObstacle(Obstacle obstacle) {
         try (FileWriter writer = new FileWriter("obstacles.txt", true)) {
@@ -203,56 +294,30 @@ public class Level {
         for (Obstacle obstacle : obstacles) {
             obstacle.MoveX(X);
         }
+        xTravelled -= X;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public void MoveObstaclesY(float Y) {
         for (Obstacle obstacle : obstacles) {
             obstacle.MoveY(Y);
         }
     }
 
-
-
-    public boolean PlayerSpikeCollision(Tri tri) {
-        for (FloatPoint point : tri.points) {
-            if (player.shape.isPointInShape(point)) {
-                return true;
-            }
-        }
-        for (FloatPoint point : player.shape.points) {
-            if (tri.isPointInShape(point)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    public boolean PlayerBoxCollision(Rect rect) {
-        for (FloatPoint point : rect.points) {
-            if (player.shape.isPointInShape(point)) {
-                return true;
-            }
-        }
-        for (FloatPoint point : player.shape.points) {
-            if (rect.isPointInShape(point)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    public void ObstacleCollision() {
-        for (Obstacle obstacle : obstacles) {
-            if (obstacle instanceof Box) {
-                if (PlayerBoxCollision((Rect) obstacle.shape)) {
-                    PlayerRespawn(obstacle);
-                    break;
-                }
-            } else if (obstacle instanceof Spike) {
-                if (PlayerSpikeCollision((Tri) obstacle.shape)) {
-                    PlayerRespawn(obstacle);
-                    break;
-                }
-            }
-        }
-    }
 
     public void PlayerRespawn(Obstacle obstacle) {
         Player player = (Player) this.player;
@@ -312,7 +377,6 @@ public class Level {
     public void EndRespawning(Player player) {
         player.setState(Player.State.IDLE);
         GameData.getInstance().setDefaultSpeeds();
-        PlayerMaintenance();
         GameData.getInstance().setStop(false);
     }
 }
