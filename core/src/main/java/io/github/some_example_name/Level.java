@@ -128,8 +128,10 @@ public class Level {
     public boolean PlayerBoxCollision(Rect rect) {
         if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY() + rect.getHeight()))) return true;
         if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY()))) return true;
-        for (FloatPoint point : player.shape.points) {
-            if (rect.isPointInShape(point)) return true;
+        if (rect.getX() <= player.shape.points[player.BL].getX() + player.width && rect.getX() >= player.shape.points[player.BL].getX() + (player.width / 2)) {
+            if (player.shape.points[player.BL].getY() <= rect.getY() + rect.getHeight() && player.shape.points[player.BL].getY() + player.width >= rect.getY()) {
+                return true;
+            }
         }
         return false;
     }
@@ -138,11 +140,11 @@ public class Level {
         for (Obstacle obstacle : obstacles) {
             if (obstacle instanceof Box) {
                 if (PlayerBoxCollision((Rect) obstacle.shape)) {
-                    Gdx.app.exit();
+                    PlayerRespawn(obstacle);
                 }
             } else if (obstacle instanceof Spike) {
                 if (PlayerSpikeCollision((Tri) obstacle.shape)) {
-                    Gdx.app.exit();
+                    PlayerRespawn(obstacle);
                 }
             }
         }
@@ -176,11 +178,12 @@ public class Level {
                 if (obstacle instanceof Box) {
                     Rect rect = (Rect) obstacle.shape;
                     if (rect.onScreen()) {
-                        if (((player.shape.points[player.getBL() + 1].getX() / 2f) + 4f >= rect.getX() + rect.getWidth()
-                            && (player.shape.points[player.getBL() + 1].getX() / 2f) - 4f <= rect.getX() + rect.getWidth())
-                            && player.lowestPoint.getY() == rect.getY() + rect.getHeight()) {
+                        if (((player.shape.points[player.BL].getX() + player.getWidth() / 2f) + 4f >= rect.getX() + rect.getWidth()
+                            && (player.shape.points[player.BL].getX() + player.getWidth() / 2f) - 4f <= rect.getX() + rect.getWidth())
+                            && Math.abs(player.lowestPoint.getY() - rect.getY() - rect.getHeight()) <= 0.1) {
                             player.Rotate(-27, player.midPoint);
                             player.setState(Player.State.FALLING);
+
                         }
                     }
                 }
@@ -189,6 +192,7 @@ public class Level {
     }
     public void CheckFiring(Player player) {
         if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            System.out.println(GameData.getInstance().getElapsedTime());
             if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
                 FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
                 Bullet bullet = new Bullet(3, player.midPoint, mouse);
@@ -201,8 +205,8 @@ public class Level {
     public void CheckPlayerMovement() {
         Player player = (Player) this.player;
         CheckJumping(player);
-        CheckingFalling(player);
         CheckTipping(player);
+        CheckingFalling(player);
         CheckFiring(player);
     }
 
@@ -216,6 +220,7 @@ public class Level {
         if (player.getState() == Player.State.TIPPING) {
             if (player.getAngleTillFlat() == 0) {
                 player.setState(Player.State.IDLE);
+                player.CorrectPoints();
             } else if (player.isClockwise()) {
                 player.Rotate(9, player.lowestPoint);
             } else {
@@ -297,28 +302,6 @@ public class Level {
         xTravelled -= X;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public void MoveObstaclesY(float Y) {
-        for (Obstacle obstacle : obstacles) {
-            obstacle.MoveY(Y);
-        }
-    }
-
-
     public void PlayerRespawn(Obstacle obstacle) {
         Player player = (Player) this.player;
         if (player.getState() != Player.State.RESPAWNING) {
@@ -331,52 +314,74 @@ public class Level {
     }
     public void Respawning(Obstacle obstacle, Player player) {
         if (obstacle instanceof Spike) {
-            Tri tri = (Tri) obstacle.shape;
             Polygon poly = (Polygon) player.shape;
             MoveObstaclesX(-40);
-            if (poly.points[player.getBL()].getY() == 200) {
-                poly.points[player.getBL()].setPoint(player.getOriginPosX(), 200);
-                poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200);
-                poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200 + player.getWidth());
-                poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), 200 + player.getWidth());
-//                poly.setX(player.getOriginPosX());
-//                poly.setY(200);
+            if (Math.abs(poly.points[player.BL].getY() - 200f) <= 0.5f) {
+                poly.points[player.BL].setPoint(player.getOriginPosX(), 200);
+                poly.points[(player.BL + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200);
+                poly.points[(player.BL + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200 + player.getWidth());
+                poly.points[(player.BL + 3) % 4].setPoint(player.getOriginPosX(), 200 + player.getWidth());
             } else {
-                poly.points[player.getBL()].setPoint(player.getOriginPosX(), player.getSurfaceLandingY());
-                poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY());
-                poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY() + player.getWidth());
-                poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), player.getSurfaceLandingY() + player.getWidth());
-//                player.poly.setX(player.getOriginPosX());
-//                player.poly.setY(player.getSurfaceLandingY());
+                poly.points[player.BL].setPoint(player.getOriginPosX(), player.getSurfaceLandingY());
+                poly.points[(player.BL + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY());
+                poly.points[(player.BL + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY() + player.getWidth());
+                poly.points[(player.BL + 3) % 4].setPoint(player.getOriginPosX(), player.getSurfaceLandingY() + player.getWidth());
             }
-//            if (TriCheckRespawn()) {
-//                GameData.getInstance().setDefaultSpeeds();
-//            }
+
+            if (TriCheckRespawn()) {
+                GameData.getInstance().setDefaultSpeeds();
+            }
         } else if (obstacle instanceof Box) {
             Rect rect = (Rect) obstacle.shape;
             Polygon poly = (Polygon) player.shape;
             MoveObstaclesX(-30);
-            poly.points[player.getBL()].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight() + player.getWidth());
-            poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight() + player.getWidth());
-//            player.poly.setX(player.getOriginPosX());
-//            player.poly.setY(rect.getY() + rect.getHeight());
-//            if (TriCheckRespawn()) {
-//                GameData.getInstance().setDefaultSpeeds();
-//            }
+            poly.points[player.BL].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
+            poly.points[(player.BL + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
+            poly.points[(player.BL + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight() + player.getWidth());
+            poly.points[(player.BL + 3) % 4].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight() + player.getWidth());
+            if (TriCheckRespawn()) {
+                GameData.getInstance().setDefaultSpeeds();
+            }
         }
+        player.CorrectPoints();
+        player.EqualPoints();
+        player.EntityUpdate(obstacles);
     }
-//    public boolean TriCheckRespawn() {
-//        while (ObstacleCollision()) {
-//            MoveObstaclesX(-40);
-//        }
-//        return true;
-//    }
+    public boolean TriCheckRespawn() {
+        while (TriCheck()) {
+            MoveObstaclesX(-40);
+        }
+        return true;
+    }
+    public boolean TriCheck() {
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle instanceof Spike) {
+                for (FloatPoint point : player.shape.points) {
+                    if (obstacle.shape.isPointInShape(point)) return true;
+                }
+                for (FloatPoint point : obstacle.shape.points) {
+                    if (player.shape.isPointInShape(point)) return true;
+                }
+            }
+        }
 
+        return false;
+    }
     public void EndRespawning(Player player) {
         player.setState(Player.State.IDLE);
         GameData.getInstance().setDefaultSpeeds();
         GameData.getInstance().setStop(false);
     }
+
+
+
+
+
+
+    public void MoveObstaclesY(float Y) {
+        for (Obstacle obstacle : obstacles) {
+            obstacle.MoveY(Y);
+        }
+    }
+
 }

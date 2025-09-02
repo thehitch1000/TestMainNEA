@@ -41,7 +41,7 @@ public class GameData {
     }
 
     public void Maintenance() {
-        elapsedTime += Gdx.graphics.getDeltaTime();
+        elapsedTime += Gdx.graphics.getDeltaTime() * 1000;
         resetLocks();
     }
 

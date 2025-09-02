@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 
@@ -15,6 +16,11 @@ import static com.badlogic.gdx.Gdx.input;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
+    public enum Stage {
+        MENUS, PLAYING, PAUSED, DEADMENU, ENDING
+    }
+
+    SpriteBatch batch;
     Level level;
     ShapeRenderer sr;
     LineSegment BaseLine;
@@ -26,6 +32,7 @@ public class Main extends ApplicationAdapter {
     public void create() {
         GameData.getInstance().EmptyFile("obstacles.txt");
 
+        batch = new SpriteBatch();
         level = new Level();
         sr = new ShapeRenderer();
         BaseLine = new LineSegment(new FloatPoint(0, 200), new FloatPoint(GameData.getInstance().getScreenWidth(), 200));
@@ -35,6 +42,8 @@ public class Main extends ApplicationAdapter {
         for (int i = 0; i < 12; i++) {
             baseRects.add(new Rect(160 * i, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
         }
+
+
         while(background.columns.size() < 20) {
             background.addColumn();
         }
@@ -91,7 +100,6 @@ public class Main extends ApplicationAdapter {
             level.Move();
         }
 
-
         sr.begin(ShapeRenderer.ShapeType.Filled);
 
         base.Draw(sr);
@@ -129,5 +137,11 @@ public class Main extends ApplicationAdapter {
 
         sr.end();
 
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
+        sr.dispose();
     }
 }

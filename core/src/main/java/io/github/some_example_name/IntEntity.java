@@ -18,6 +18,7 @@ public interface IntEntity {
     void ReCalcSolidPoints();
     void AddToTrail();
     void CheckTrail();
+    void EqualPoints();
 }
 
 abstract class Entity implements IntEntity {
@@ -25,7 +26,7 @@ abstract class Entity implements IntEntity {
         IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, AWAKE, SLEEPING, NULL,
     }
 
-    protected int startingHealth;
+    protected int startingHealth, BL;
     protected float currentHealth, width, totalAngle;
     protected List<Ammo> ammo;
     protected List<Rect> trail = new ArrayList<>();
@@ -58,8 +59,8 @@ abstract class Entity implements IntEntity {
             Gdx.app.exit();
         }
         float multi = currentHealth / (float) startingHealth;
-        healthShape.points[2].setY(shape.points[1].getY() + (width * multi));
-        healthShape.points[3].setY(shape.points[0].getY() + (width * multi));
+        healthShape.points[(BL + 2) % 4].setY(shape.points[(BL + 1) % 4].getY() + (width * multi));
+        healthShape.points[(BL + 3) % 4].setY(shape.points[BL].getY() + (width * multi));
     }
     public void AddToTrail() {
         if (state == State.IDLE) {
@@ -79,6 +80,15 @@ abstract class Entity implements IntEntity {
                 trail.get(i).MoveY(0.5f);
             }
         }
+    }
+    public State getState() {
+        return state;
+    }
+    public void EqualPoints() {
+        for (int i = 0; i < shape.points.length; i++) {
+            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
+        }
+        ReCalcSolidPoints();
     }
 }
 
@@ -110,7 +120,6 @@ class Monster extends Entity {
             this.healthShape.points[i].setWholePoint(shape.points[i]);
         }
     }
-
     public void EntityUpdate() {}
 
 }
@@ -120,7 +129,7 @@ class Player extends Entity {
         UP, DOWN, NULL
     }
 
-    private int AngleTillFlat, BL, LP;
+    private int AngleTillFlat, LP;
     private float surfaceLandingY, xDistance, coolDownEndTime, originPosX, originPosY;
     private boolean Clockwise;
     FloatPoint lowestPoint;
@@ -132,14 +141,14 @@ class Player extends Entity {
         this.BL = 0;
         this.LP = 0;
         this.totalAngle = 0;
-        this.originPosX = 0;
+        this.originPosX = GameData.getInstance().getScreenWidth() / 2f - width / 2;
         this.originPosY = 200;
 
         this.direction = Direction.NULL;
         this.state = State.IDLE;
 
         this.surfaceLandingY = 0;
-        this.currentHealth = startingHealth;
+        this.currentHealth = 80;
         this.width = 40;
 
         ammo = new ArrayList<>();
@@ -183,17 +192,11 @@ class Player extends Entity {
         return coolDownEndTime;
     }
     public void setCoolDownEndTime(float CoolDownEndTime) {
-        coolDownEndTime = coolDownEndTime;
+        coolDownEndTime = CoolDownEndTime;
     }
 
     public float getSurfaceLandingY() {
         return surfaceLandingY;
-    }
-    public int getBL() {
-        return BL;
-    }
-    public int getLP() {
-        return LP;
     }
     public float getOriginPosX() {
         return originPosX;
@@ -201,15 +204,8 @@ class Player extends Entity {
     public float getWidth() {
         return width;
     }
-    public float getXDistance() {
-        return xDistance;
-    }
     public float getAngleTillFlat() {
         return AngleTillFlat;
-    }
-
-    public void setXDistance(float xDistance) {
-        this.xDistance = xDistance;
     }
 
     public void setStartingPosition(float x, float y) {
@@ -218,8 +214,19 @@ class Player extends Entity {
         this.shape.points[2].setPoint(x + width, y + width);
         this.shape.points[3].setPoint(x, y + width);
         for (int i = 0; i < shape.points.length; i++) {
-            this.healthShape.points[i].setWholePoint(shape.points[i]);
+            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
         }
+    }
+
+    public void CorrectPoints() {
+        shape.points[BL].setX(originPosX);
+        shape.points[(BL + 1) % 4].setX(originPosX + width);
+        shape.points[(BL + 2) % 4].setX(originPosX + width);
+        shape.points[(BL + 3) % 4].setX(originPosX);
+        for (int i = 0; i < shape.points.length; i++) {
+            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
+        }
+        ReCalcSolidPoints();
     }
 
     public void EntityUpdate(ArrayList<Obstacle> obstacles) {
@@ -249,9 +256,8 @@ class Player extends Entity {
         for (Obstacle obstacle : obstacles) {
             if (obstacle instanceof Box) {
                 Rect rect = (Rect) obstacle.shape;
-                if (shape.points[BL + 1].getX() > rect.getX() && shape.points[BL].getX() < rect.getX() + rect.getWidth()) {
-                    if (rect.getY() + rect.getHeight() > newSurfaceLandingY &&
-                        rect.getY() + rect.getHeight() < lowestPoint.getY()) {
+                if (midPoint.getX() > rect.getX() && midPoint.getX() < rect.getX() + rect.getWidth()) {
+                    if (rect.getY() + rect.getHeight() > newSurfaceLandingY) {
                         newSurfaceLandingY = rect.getY() + rect.getHeight();
                     }
                 }
