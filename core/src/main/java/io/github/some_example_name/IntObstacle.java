@@ -7,6 +7,7 @@ public interface IntObstacle {
     void Draw(ShapeRenderer sr);
     void MoveX(float X);
     void MoveY(float Y);
+    void setX(float X);
 }
 
 abstract class Obstacle implements IntObstacle {
@@ -18,6 +19,14 @@ abstract class Obstacle implements IntObstacle {
     public void MoveY(float Y) {
         shape.MoveY(Y);
     }
+    public void setX(float X) {}
+    public void setY(float Y) {}
+    public void setHeight(float height) {}
+    public void setWidth(float width) {}
+    public float getX() {return 0;}
+    public float getY() {return 0;}
+    public float getWidth() {return 0;}
+    public float getHeight() {return 0;}
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
     }
@@ -32,6 +41,10 @@ class Box extends Obstacle {
     public Box(float x, float y, float width, float height) {
         shape = new Rect(x, y, width, height, Color.WHITE);
     }
+
+    public void setX (float X) {
+        ((Rect)shape).setX(X);
+    }
 }
 
 class Spike extends Obstacle {
@@ -43,4 +56,48 @@ class Spike extends Obstacle {
         shape = new Tri(point1, point2, point3);
     }
 
+}
+
+class RectPath extends Obstacle {
+    public RectPath() {
+        shape = new Rect(0, 0);
+    }
+    public RectPath(float x, float y, float width, float height) {
+        shape = new Rect(x, y, width, height);
+    }
+
+    public void setX (float X) {
+        ((Rect)shape).setX(X);
+    }
+    public void setY(float Y) {
+        ((Rect)shape).setY(Y);
+    }
+    public void setHeight(float height) {
+        ((Rect)shape).setHeight(height);
+    }
+    public void setWidth(float width) {
+        ((Rect)shape).setWidth(width);
+    }
+    public float getX() {
+        return ((Rect)shape).getX();
+    }
+    public float getY() {
+        return ((Rect)shape).getY();
+    }
+    public float getHeight() {
+        return ((Rect)shape).getHeight();
+    }
+    public float getWidth() {
+        return ((Rect)shape).getWidth();
+    }
+}
+
+class TriPath extends Obstacle {
+
+    public TriPath() {
+        shape = new Tri(new FloatPoint(0,0), new FloatPoint(0,0), new FloatPoint(0,0));
+    }
+    public TriPath(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
+        shape = new Tri(point1, point2, point3);
+    }
 }

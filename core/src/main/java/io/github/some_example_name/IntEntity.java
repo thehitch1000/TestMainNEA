@@ -10,7 +10,7 @@ import java.util.List;
 public interface IntEntity {
     void Draw(ShapeRenderer sr);
     void EntityUpdate();
-    void EntityUpdate(ArrayList<Obstacle> obstacles);
+    void EntityUpdate(List<Obstacle> obstacles);
     void setStartingPosition(float x, float y);
     void MoveX(float X);
     void MoveY(float Y);
@@ -39,7 +39,7 @@ abstract class Entity implements IntEntity {
         healthShape.Draw(sr);
     }
     public void EntityUpdate() {}
-    public void EntityUpdate(ArrayList<Obstacle> obstacles) {}
+    public void EntityUpdate(List<Obstacle> obstacles) {}
     public void setStartingPosition(float x, float y) {}
     public void MoveX(float X) {
         shape.MoveX(X);
@@ -80,9 +80,6 @@ abstract class Entity implements IntEntity {
                 trail.get(i).MoveY(0.5f);
             }
         }
-    }
-    public State getState() {
-        return state;
     }
     public void EqualPoints() {
         for (int i = 0; i < shape.points.length; i++) {
@@ -130,7 +127,7 @@ class Player extends Entity {
     }
 
     private int AngleTillFlat, LP;
-    private float surfaceLandingY, xDistance, coolDownEndTime, originPosX, originPosY;
+    private float surfaceLandingY, coolDownEndTime, originPosX, originPosY;
     private boolean Clockwise;
     FloatPoint lowestPoint;
     Direction direction;
@@ -145,10 +142,10 @@ class Player extends Entity {
         this.originPosY = 200;
 
         this.direction = Direction.NULL;
-        this.state = State.IDLE;
+        this.state = State.NULL;
 
         this.surfaceLandingY = 0;
-        this.currentHealth = 80;
+        this.currentHealth = startingHealth;
         this.width = 40;
 
         ammo = new ArrayList<>();
@@ -181,13 +178,6 @@ class Player extends Entity {
         this.Clockwise = Clockwise;
     }
 
-    public float getCurrentHealth() {
-        return currentHealth;
-    }
-    public void setCurrentHealth(int currentHealth) {
-        this.currentHealth = currentHealth;
-    }
-
     public float getCoolDownEndTime() {
         return coolDownEndTime;
     }
@@ -200,9 +190,6 @@ class Player extends Entity {
     }
     public float getOriginPosX() {
         return originPosX;
-    }
-    public float getWidth() {
-        return width;
     }
     public float getAngleTillFlat() {
         return AngleTillFlat;
@@ -229,7 +216,7 @@ class Player extends Entity {
         ReCalcSolidPoints();
     }
 
-    public void EntityUpdate(ArrayList<Obstacle> obstacles) {
+    public void EntityUpdate(List<Obstacle> obstacles) {
         AngleTillFlat();
         FindSurfaceY(obstacles);
         FindLowestPoint();
@@ -250,7 +237,7 @@ class Player extends Entity {
             AngleTillFlat = 360 - angle;
         }
     }
-    private void FindSurfaceY(ArrayList<Obstacle> obstacles) {
+    private void FindSurfaceY(List<Obstacle> obstacles) {
         float newSurfaceLandingY = originPosY;
 
         for (Obstacle obstacle : obstacles) {

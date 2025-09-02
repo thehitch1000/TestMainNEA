@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -20,46 +21,44 @@ public class Main extends ApplicationAdapter {
         MENUS, PLAYING, PAUSED, DEADMENU, ENDING
     }
 
-    SpriteBatch batch;
-    Level level;
     ShapeRenderer sr;
-    LineSegment BaseLine;
-    Shape base;
-    Background background;
-    List<Rect> baseRects;
+    SpriteBatch batch;
+    BitmapFont font;
+
+    Menu startMenu;
+    Level level;
+    Stage stage;
+
+    List<Runnable> start1 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(Level.levelStage.NORMAL));
+    }};
+    List<Runnable> start2 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(Level.levelStage.ZIGZAG));
+    }};
+    List<Runnable> start3 = new ArrayList<Runnable>() {{
+        add(() -> Gdx.app.exit());
+    }};
 
     @Override
     public void create() {
         GameData.getInstance().EmptyFile("obstacles.txt");
 
-        batch = new SpriteBatch();
-        level = new Level();
         sr = new ShapeRenderer();
-        BaseLine = new LineSegment(new FloatPoint(0, 200), new FloatPoint(GameData.getInstance().getScreenWidth(), 200));
-        base = new Rect(0, 0, GameData.getInstance().getScreenWidth(), 200, new Color(0.2f, 0.38f, 0.66f, 1f));
-        background = new Background();
-        baseRects = new ArrayList<>();
-        for (int i = 0; i < 12; i++) {
-            baseRects.add(new Rect(160 * i, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
-        }
+        batch = new SpriteBatch();
+        font = new BitmapFont();
 
+        startMenu = new Menu();
+        level = new Level();
+        stage = Stage.MENUS;
 
-        while(background.columns.size() < 20) {
-            background.addColumn();
-        }
-
-        GameData.getInstance().timers.runRepeating(0.5f, 0.1f, () -> level.player.AddToTrail());
-
-        level.player.setStartingPosition(730,200);
-
-        level.player.ReCalcSolidPoints();
-
-        level.CreateLevel();
-
-        while (!level.isEnded()) {
-            level.ReadFile();
-        }
-        level.setEnded(false);
+        startMenu.AddButton(new Button("Play Normal Level", start1, 750, 600, font));
+        startMenu.AddButton(new Button("Play ZigZag Level", start2, 750, 400, font));
+        startMenu.AddButton(new Button("Leave", start3, 750, 200, font));
+        startMenu.Open();
     }
 
     @Override
@@ -71,77 +70,80 @@ public class Main extends ApplicationAdapter {
             Gdx.app.exit();
         }
 
-        while (!level.isEnded()) {
-            level.ReadFile();
-        }
-        level.setEnded(false);
-
-        if (!GameData.getInstance().isStop()) {
-            // Background and Base Movement
-            for (Rect rect : baseRects) {
-                rect.MoveX(GameData.getInstance().getBackgroundBaseSpeed());
-            }
-            if (baseRects.get(0).getX() < -baseRects.get(0).getWidth()) {
-                baseRects.remove(0);
-                baseRects.add(new Rect(1770, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
-            }
-            background.MoveX(-GameData.getInstance().getBackgroundSpeed());
-            for (int i = background.columns.size() - 1; i >= 0; i--) {
-                if (!background.columns.get(i).onScreen()) {
-                    background.columns.remove(i);
+        switch (stage) {
+            case PLAYING:
+                while (!level.isEnded()) {
+                    level.ReadFile();
                 }
-            }
-            if (background.columns.size() < 20) {
-                background.addColumn();
-            }
+                level.setEnded(false);
 
-            level.Update();
-            level.Checking();
-            level.Move();
+                if (!GameData.getInstance().isStop()) {
+                    // Background and Base Movement
+                    for (Rect rect : level.baseRects) {
+                        rect.MoveX(GameData.getInstance().getBackgroundBaseSpeed());
+                    }
+                    if (level.baseRects.get(0).getX() < -level.baseRects.get(0).getWidth()) {
+                        level.baseRects.remove(0);
+                        level.baseRects.add(new Rect(1770, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
+                    }
+                    level.background.MoveX(-GameData.getInstance().getBackgroundSpeed());
+                    for (int i = level.background.columns.size() - 1; i >= 0; i--) {
+                        if (!level.background.columns.get(i).onScreen()) {
+                            level.background.columns.remove(i);
+                        }
+                    }
+                    if (level.background.columns.size() < 20) {
+                        level.background.addColumn();
+                    }
+
+                    level.Update();
+                    level.Checking();
+                    level.Move();
+                }
+
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+
+                level.base.Draw(sr);
+                level.baseRects.forEach(rect -> rect.Draw(sr));
+                level.background.Draw(sr);
+
+                level.obstacles.forEach(obstacle -> obstacle.Draw(sr));
+
+                sr.end();
+
+                sr.begin(ShapeRenderer.ShapeType.Line);
+
+                sr.setColor(Color.WHITE);
+                level.BaseLine.Draw(sr);
+
+                sr.end();
+
+                Gdx.gl.glEnable(GL20.GL_BLEND);
+                Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+
+                for (Rect rect : level.player.trail) {
+                    rect.Draw(sr);
+                }
+                level.player.Draw(sr);
+
+                sr.end();
+
+                Gdx.gl.glDisable(GL20.GL_BLEND);
+
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+
+                level.player.ammo.forEach(ammo -> ammo.Draw(sr));
+
+                sr.end();
+                break;
+
+            case MENUS:
+                startMenu.CheckClick();
+
+                startMenu.Draw(sr, batch, font);
+                break;
         }
-
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-
-        base.Draw(sr);
-        baseRects.forEach(rect -> rect.Draw(sr));
-        background.Draw(sr);
-
-        level.obstacles.forEach(obstacle -> obstacle.Draw(sr));
-
-        sr.end();
-
-        sr.begin(ShapeRenderer.ShapeType.Line);
-
-        sr.setColor(Color.WHITE);
-        BaseLine.Draw(sr);
-
-        sr.end();
-
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-
-        for (Rect rect : level.player.trail) {
-            rect.Draw(sr);
-        }
-        level.player.Draw(sr);
-
-        sr.end();
-
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-
-        level.player.ammo.forEach(ammo -> ammo.Draw(sr));
-
-        sr.end();
-
-    }
-
-    @Override
-    public void dispose() {
-        batch.dispose();
-        sr.dispose();
     }
 }
