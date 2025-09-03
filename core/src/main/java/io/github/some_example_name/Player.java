@@ -7,130 +7,25 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import java.util.ArrayList;
 import java.util.List;
 
-public interface IntEntity {
-    void Draw(ShapeRenderer sr);
-    void EntityUpdate();
-    void EntityUpdate(List<Obstacle> obstacles);
-    void setStartingPosition(float x, float y);
-    void MoveX(float X);
-    void MoveY(float Y);
-    void Rotate(float angle, FloatPoint pivot);
-    void ReCalcSolidPoints();
-    void AddToTrail();
-    void CheckTrail();
-    void EqualPoints();
-}
-
-abstract class Entity implements IntEntity {
-    public enum State {
-        IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, AWAKE, SLEEPING, NULL,
-    }
-
-    protected int startingHealth, BL;
-    protected float currentHealth, width, totalAngle;
-    protected List<Ammo> ammo;
-    protected List<Rect> trail = new ArrayList<>();
-    protected Shape healthShape, shape;
-    protected FloatPoint midPoint;
-    protected State state;
-
-    public void Draw(ShapeRenderer sr) {
-        shape.Draw(sr);
-        healthShape.Draw(sr);
-    }
-    public void EntityUpdate() {}
-    public void EntityUpdate(List<Obstacle> obstacles) {}
-    public void setStartingPosition(float x, float y) {}
-    public void MoveX(float X) {
-        shape.MoveX(X);
-        healthShape.MoveX(X);
-    }
-    public void MoveY(float Y) {
-        shape.MoveY(Y);
-        healthShape.MoveY(Y);
-    }
-    public void Rotate(float angle, FloatPoint pivot) {
-        shape.Rotate(angle, pivot);
-        healthShape.Rotate(angle, pivot);
-        totalAngle -= angle;
-    }
-    public void ReCalcSolidPoints() {
-        if (currentHealth <= 0) {
-            Gdx.app.exit();
-        }
-        float multi = currentHealth / (float) startingHealth;
-        healthShape.points[(BL + 2) % 4].setY(shape.points[(BL + 1) % 4].getY() + (width * multi));
-        healthShape.points[(BL + 3) % 4].setY(shape.points[BL].getY() + (width * multi));
-    }
-    public void AddToTrail() {
-        if (state == State.IDLE) {
-            trail.add(new Rect(GameData.getInstance().getScreenWidth()/2, CreateYHeight(), 8,8, Color.WHITE));
-        }
-    }
-    public int CreateYHeight() {
-        return 0;
-    }
-    public void CheckTrail() {
-        for (int i = 0; i < trail.size(); i++) {
-            if (trail.get(i).getAlpha() <= 0) {
-                trail.remove(i);
-            } else {
-                trail.get(i).setAlpha(trail.get(i).getAlpha() - 0.04f);
-                trail.get(i).MoveX(-5f);
-                trail.get(i).MoveY(0.5f);
-            }
-        }
-    }
-    public void EqualPoints() {
-        for (int i = 0; i < shape.points.length; i++) {
-            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
-        }
-        ReCalcSolidPoints();
-    }
-}
-
-class Monster extends Entity {
-
-
-    public Monster(int startingHealth) {
-        this.startingHealth = startingHealth;
-        this.width = 40;
-        this.currentHealth = startingHealth;
-        this.totalAngle = 0;
-
-        this.state = State.SLEEPING;
-
-        ammo = new ArrayList<>();
-
-        midPoint = new FloatPoint(0, 0);
-
-        healthShape = new Polygon(4, Color.RED);
-        shape = new Polygon(4, Color.RED, 0.5f);
-    }
-
-    public void setStartingPosition(float x, float y) {
-        this.shape.points[0].setPoint(x, y);
-        this.shape.points[1].setPoint(x + width, y);
-        this.shape.points[2].setPoint(x + width, y + width);
-        this.shape.points[3].setPoint(x, y + width);
-        for (int i = 0; i < shape.points.length; i++) {
-            this.healthShape.points[i].setWholePoint(shape.points[i]);
-        }
-    }
-    public void EntityUpdate() {}
-
-}
-
-class Player extends Entity {
+public class Player {
     public enum Direction {
         UP, DOWN, NULL
     }
+    public enum State {
+        IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, NULL
+    }
 
-    private int AngleTillFlat, LP;
-    private float surfaceLandingY, coolDownEndTime, originPosX, originPosY;
+    private int AngleTillFlat, LP, startingHealth, BL;
+    private float surfaceLandingY, coolDownEndTime, originPosX, originPosY, currentHealth, width, totalAngle;
     private boolean Clockwise;
-    FloatPoint lowestPoint;
+    List<Ammo> ammo;
+    List<Rect> normalTrail;
+    List<Polygon> zigTrail;
+    FloatPoint[] upPoints, downPoints;
     Direction direction;
+    State state;
+    FloatPoint lowestPoint, midPoint;
+    Shape healthShape, shape;
 
     public Player(int startingHealth) {
         this.startingHealth = startingHealth;
@@ -142,19 +37,29 @@ class Player extends Entity {
         this.originPosY = 200;
 
         this.direction = Direction.NULL;
-        this.state = State.NULL;
+        this.state = Player.State.NULL;
 
         this.surfaceLandingY = 0;
         this.currentHealth = startingHealth;
         this.width = 40;
 
         ammo = new ArrayList<>();
+        normalTrail = new ArrayList<>();
 
         lowestPoint = new FloatPoint(0, 0);
         midPoint = new FloatPoint(0, 0);
 
         healthShape = new Polygon(4, Color.WHITE);
         shape = new Polygon(4, Color.WHITE, 0.5f);
+
+        downPoints = new FloatPoint[4];
+        for(int i = 0; i < downPoints.length; i++) {
+            downPoints[i] = new FloatPoint(0, 0);
+        }
+        upPoints = new FloatPoint[4];
+        for(int i = 0; i < upPoints.length; i++) {
+            upPoints[i] = new FloatPoint(0, 0);
+        }
     }
 
     public Player.State getState() {
@@ -183,6 +88,28 @@ class Player extends Entity {
     }
     public void setCoolDownEndTime(float CoolDownEndTime) {
         coolDownEndTime = CoolDownEndTime;
+    }
+
+    public int getBL() {
+        return BL;
+    }
+    public float getWidth() {
+        return width;
+    }
+
+    public void setDownPoints() {
+        Rotate(-45, midPoint);
+        for (int i = 0; i < downPoints.length; i++) {
+            downPoints[i].setPoint(shape.points[i].getX(), shape.points[i].getY());
+        }
+        Rotate(45, midPoint);
+    }
+    public void setUpPoints() {
+        Rotate(45, midPoint);
+        for (int i = 0; i < upPoints.length; i++) {
+            upPoints[i].setPoint(shape.points[i].getX(), shape.points[i].getY());
+        }
+        Rotate(-45, midPoint);
     }
 
     public float getSurfaceLandingY() {
@@ -281,8 +208,59 @@ class Player extends Entity {
         }
     }
 
-    @Override
+    public void ReCalcSolidPoints() {
+        if (currentHealth <= 0) {
+            Gdx.app.exit();
+        }
+        float multi = currentHealth / (float) startingHealth;
+        healthShape.points[(BL + 2) % 4].setY(shape.points[(BL + 1) % 4].getY() + (width * multi));
+        healthShape.points[(BL + 3) % 4].setY(shape.points[BL].getY() + (width * multi));
+    }
+
+    public void AddToTrail() {
+        if (state == Player.State.IDLE) {
+            normalTrail.add(new Rect(GameData.getInstance().getScreenWidth()/2, CreateYHeight(), 8,8, Color.WHITE));
+        }
+    }
     public int CreateYHeight() {
         return (int) ((Math.random() * (width/2)) + shape.points[BL].getY());
+    }
+    public void CheckTrail() {
+        for (int i = 0; i < normalTrail.size(); i++) {
+            if (normalTrail.get(i).getAlpha() <= 0) {
+                normalTrail.remove(i);
+            } else {
+                normalTrail.get(i).setAlpha(normalTrail.get(i).getAlpha() - 0.04f);
+                normalTrail.get(i).MoveX(-5f);
+                normalTrail.get(i).MoveY(0.5f);
+            }
+        }
+    }
+
+    public void Draw(ShapeRenderer sr) {
+        shape.Draw(sr);
+        healthShape.Draw(sr);
+    }
+
+    public void Rotate(float angle, FloatPoint pivot) {
+        shape.Rotate(angle, pivot);
+        healthShape.Rotate(angle, pivot);
+        totalAngle -= angle;
+    }
+
+    public void MoveX(float X) {
+        shape.MoveX(X);
+        healthShape.MoveX(X);
+    }
+    public void MoveY(float Y) {
+        shape.MoveY(Y);
+        healthShape.MoveY(Y);
+    }
+
+    public void EqualPoints() {
+        for (int i = 0; i < shape.points.length; i++) {
+            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
+        }
+        ReCalcSolidPoints();
     }
 }

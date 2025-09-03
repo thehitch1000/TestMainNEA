@@ -78,23 +78,7 @@ public class Main extends ApplicationAdapter {
                 level.setEnded(false);
 
                 if (!GameData.getInstance().isStop()) {
-                    // Background and Base Movement
-                    for (Rect rect : level.baseRects) {
-                        rect.MoveX(GameData.getInstance().getBackgroundBaseSpeed());
-                    }
-                    if (level.baseRects.get(0).getX() < -level.baseRects.get(0).getWidth()) {
-                        level.baseRects.remove(0);
-                        level.baseRects.add(new Rect(1770, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
-                    }
-                    level.background.MoveX(-GameData.getInstance().getBackgroundSpeed());
-                    for (int i = level.background.columns.size() - 1; i >= 0; i--) {
-                        if (!level.background.columns.get(i).onScreen()) {
-                            level.background.columns.remove(i);
-                        }
-                    }
-                    if (level.background.columns.size() < 20) {
-                        level.background.addColumn();
-                    }
+                    level.CheckBackground();
 
                     level.Update();
                     level.Checking();
@@ -123,7 +107,7 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                for (Rect rect : level.player.trail) {
+                for (Rect rect : level.player.normalTrail) {
                     rect.Draw(sr);
                 }
                 level.player.Draw(sr);

@@ -8,17 +8,17 @@ import java.util.List;
 
 public class Drill {
     public enum Direction {
-        UP_RIGHT, RIGHT, DOWN_RIGHT, NULL
+        UP_RIGHT, RIGHT, DOWN_RIGHT
     }
 
-    private boolean finished;
     List<Obstacle> currentShapes;
     FloatPoint[] IntersectionPoints;
     LineEquation[] lines, oldLines;
     Direction newDirection, oldDirection, direction;
     Polygon drillShape;
-    Drill.Direction[] directions = Drill.Direction.values();
-    int a = 0;
+    public Drill.Direction[] directions = Drill.Direction.values();
+    private boolean finished;
+    int timesInARow = 0;
 
     // 0 - up right
     // 1 - right
@@ -37,10 +37,10 @@ public class Drill {
     // 3 - old 1 new 1
 
     public Drill() {
-        this.direction = Direction.NULL;
+        this.direction = null;
         this.finished = false;
-        this.newDirection = Direction.NULL;
-        this.oldDirection = Direction.NULL;
+        this.newDirection = null;
+        this.oldDirection = null;
 
         this.lines = new LineEquation[2];
         for (int i = 0; i < lines.length; i++) {
@@ -58,6 +58,8 @@ public class Drill {
         for (int i = 0; i < IntersectionPoints.length; i++) {
             this.IntersectionPoints[i] = new FloatPoint(0, 0);
         }
+
+        drillShape = new Polygon(4, new Color(Color.WHITE));
     }
 
     public Direction getDirection() {
@@ -149,18 +151,18 @@ public class Drill {
     }
 
     public void CalcDirection() {
-        if (a >= 9) {
+        if (timesInARow >= 4) {
             int chance = (int) Math.ceil(Math.random() * 102);
             if (chance <= 81) {
                 newDirection = direction;
             } else {
-                a = 0;
-                Drill.Direction randomDirection = directions[(int) (Math.random() * directions.length)];
-                newDirection = randomDirection;
+                timesInARow = 0;
+                newDirection = directions[(int) (Math.random() * directions.length)];
+                System.out.println("New direction: " + newDirection);
             }
             CheckDirection();
         } else {
-            a++;
+            timesInARow++;
             newDirection = direction;
         }
     }
@@ -202,8 +204,8 @@ public class Drill {
                 currentShapes.get(0).setX(700);
                 currentShapes.get(0).setY(drillShape.points[3].getY());
                 currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - drillShape.points[3].getY());
-                currentShapes.get(3).setX(700);
-                currentShapes.get(3).setHeight(drillShape.points[0].getY());
+                currentShapes.get(1).setX(700);
+                currentShapes.get(1).setHeight(drillShape.points[0].getY());
                 break;
             case DOWN_RIGHT:
                 currentShapes.get(0).setX(700);
@@ -244,8 +246,8 @@ public class Drill {
                 currentShapes.get(0).setX(IntersectionPoints[3].getX());
                 currentShapes.get(0).setY(IntersectionPoints[3].getY());
                 currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                currentShapes.get(3).setX(IntersectionPoints[0].getX());
-                currentShapes.get(3).setHeight(IntersectionPoints[0].getY());
+                currentShapes.get(1).setX(IntersectionPoints[0].getX());
+                currentShapes.get(1).setHeight(IntersectionPoints[0].getY());
                 break;
             case DOWN_RIGHT:
                 if (direction == Direction.UP_RIGHT) {
@@ -270,18 +272,18 @@ public class Drill {
                 break;
         }
     }
-    public void InitialiseShapes() {
+    public void  InitialiseShapes() {
         switch (newDirection) {
             case RIGHT:
-                currentShapes.add(new RectPath());
-                currentShapes.add(new RectPath());
+                currentShapes.add(0, new RectPath(false));
+                currentShapes.add(1, new RectPath(true));
                 break;
             case DOWN_RIGHT:
             case UP_RIGHT:
-                currentShapes.add(new RectPath());
-                currentShapes.add(new TriPath());
-                currentShapes.add(new TriPath());
-                currentShapes.add(new RectPath());
+                currentShapes.add(0, new RectPath(false));
+                currentShapes.add(1, new TriPath(false));
+                currentShapes.add(2, new TriPath(true));
+                currentShapes.add(3, new RectPath(true));
                 break;
         }
     }
@@ -292,7 +294,7 @@ public class Drill {
     }
 
     public void EndShapes() {
-        switch (direction) {
+        switch (direction)  {
             case UP_RIGHT:
                 if (newDirection == Direction.RIGHT) {
                     currentShapes.get(0).setY(IntersectionPoints[3].getY());
@@ -316,7 +318,7 @@ public class Drill {
                 break;
             case RIGHT:
                 currentShapes.get(0).setWidth(IntersectionPoints[3].getX() - currentShapes.get(0).getX());
-                currentShapes.get(3).setWidth(IntersectionPoints[0].getX() - currentShapes.get(3).getX());
+                currentShapes.get(1).setWidth(IntersectionPoints[0].getX() - currentShapes.get(1).getX());
                 break;
             case DOWN_RIGHT:
                 if (newDirection == Direction.UP_RIGHT) {
@@ -399,10 +401,10 @@ public class Drill {
         }
     }
 
-    public void setDrill(float x, float YLevel) {
+    public void setDrill(float x, float YLevel, float width, float height) {
         drillShape.points[0].setPoint(x, YLevel);
-        drillShape.points[1].setPoint(x + 20, YLevel);
-        drillShape.points[2].setPoint(x + 20, YLevel + CalcHeight());
-        drillShape.points[3].setPoint(x, drillShape.points[2].getY());
+        drillShape.points[1].setPoint(x + width, YLevel);
+        drillShape.points[2].setPoint(x + width, YLevel + height);
+        drillShape.points[3].setPoint(x, YLevel + height);
     }
 }

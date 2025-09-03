@@ -59,11 +59,15 @@ class Spike extends Obstacle {
 }
 
 class RectPath extends Obstacle {
-    public RectPath() {
+    private boolean bottom;
+
+    public RectPath(boolean bottom) {
         shape = new Rect(0, 0);
+        this.bottom = bottom;
     }
-    public RectPath(float x, float y, float width, float height) {
+    public RectPath(float x, float y, float width, float height, boolean bottom) {
         shape = new Rect(x, y, width, height);
+        this.bottom = bottom;
     }
 
     public void setX (float X) {
@@ -90,14 +94,30 @@ class RectPath extends Obstacle {
     public float getWidth() {
         return ((Rect)shape).getWidth();
     }
+
+    public boolean isBottom() {
+        return bottom;
+    }
+    public void setBottom(boolean bottom) {
+        this.bottom = bottom;
+    }
 }
 
 class TriPath extends Obstacle {
-
-    public TriPath() {
+    private boolean bottom;
+    public TriPath(boolean bottom) {
         shape = new Tri(new FloatPoint(0,0), new FloatPoint(0,0), new FloatPoint(0,0));
+        this.bottom = bottom;
     }
-    public TriPath(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
+    public TriPath(FloatPoint point1, FloatPoint point2, FloatPoint point3, boolean bottom) {
         shape = new Tri(point1, point2, point3);
+        this.bottom = bottom;
+    }
+
+    public boolean isBottom() {
+        return bottom;
+    }
+    public void setBottom(boolean bottom) {
+        this.bottom = bottom;
     }
 }
