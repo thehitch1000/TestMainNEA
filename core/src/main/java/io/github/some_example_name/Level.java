@@ -36,32 +36,32 @@ public class Level {
     int levelDistance = 3000;
 
     private float xTravelled, topOfLevel, bottomOfLevel, currentHeight;
-    private boolean ended;
     private int shapeNumber;
 
     public Level() {
         player = new Player(100);
         monster = new Monster();
         background = new Background();
-        base = new Rect(0,0, new Color(0.2f, 0.38f, 0.66f, 1f));
+        base = new Rect(0, 0, new Color(0.2f, 0.38f, 0.66f, 1f));
         BaseLine = new LineSegment(new FloatPoint(0, 0), new FloatPoint(0, 0));
 
         obstacles = new ArrayList<>();
         baseRects = new ArrayList<>();
+        zones = new ArrayList<>();
 
         drill = new Drill();
 
-        this.ended = false;
         this.xTravelled = 0;
         this.shapeNumber = 0;
-    }
 
-    public boolean isEnded() {
-        return ended;
-    }
+        topOfLevel = GameData.getInstance().getScreenHeight();
+        bottomOfLevel = 0;
+        currentHeight = 0;
 
-    public void setEnded(boolean ended) {
-        this.ended = ended;
+        screenHeight = ScreenHeight.NEUTRAL;
+        stage = null;
+
+
     }
 
     public void CreateNormalLevel() {
@@ -171,29 +171,36 @@ public class Level {
                 }
             }
         }
+        bottomOfLevel -= 50;
+        topOfLevel += 50;
     }
     public void TransferShapes() {
         if (drill.currentShapes.size() == 2) {
-            AddObstacle(drill.currentShapes.get(0));
-            AddObstacle(drill.currentShapes.get(1));
-        } else if (drill.currentShapes.get(0).getX() > drill.currentShapes.get(3).getX()) {
-            AddObstacle(drill.currentShapes.get(3));
-            if (drill.currentShapes.get(1) != null) {
-                AddObstacle(drill.currentShapes.get(2));
+            if (drill.currentShapes.get(0).getX() < drill.currentShapes.get(1).getX()) {
+                AddObstacle(drill.currentShapes.get(0));
                 AddObstacle(drill.currentShapes.get(1));
+            } else {
+                AddObstacle(drill.currentShapes.get(1));
+                AddObstacle(drill.currentShapes.get(0));
             }
-            AddObstacle(drill.currentShapes.get(0));
+        } else if (drill.currentShapes.get(0).getX() > drill.currentShapes.get(3).getX()) {
+            for (int i = drill.currentShapes.size() - 1; i >= 0; i--) {
+                AddObstacle(drill.currentShapes.get(i));
+            }
         } else {
             for (int i = 0; i < drill.currentShapes.size(); i++) {
-                if (drill.currentShapes.get(i) != null) {
-                    AddObstacle(drill.currentShapes.get(i));
-                }
+                AddObstacle(drill.currentShapes.get(i));
             }
         }
         drill.currentShapes.clear();
     }
     public void CreateZone() {
-        Zone zone = new Zone(false, drill.getDirection());
+        Zone zone;
+        if (drill.currentShapes.size() == 2) {
+            zone = new Zone(1);
+        } else {
+            zone = new Zone(0);
+        }
         for (int i = 0; i < zone.polygon.points.length; i++) {
             zone.polygon.points[i] = new FloatPoint(0, 0);
         }
@@ -251,68 +258,89 @@ public class Level {
         }
     }
 
-    public void ReadFile() {
+    public boolean ReadFile() {
         try {
             File file = new File("obstacles.txt");
             List<String> lines = Files.readAllLines(file.toPath());
 
             if (lines.isEmpty() || shapeNumber >= lines.size()) {
-                ended = true;
-                return;
+                return false;
             }
 
             String line = lines.get(shapeNumber);
             String[] parts = line.split(":\\s+|\\s+");  // Split by ": " or whitespace
 
             float x1 = Float.parseFloat(parts[1]);
+
             switch (parts[0]) {
                 case "Box":
-                    if (x1 - xTravelled <= 1500) {
+                    if (x1 - xTravelled <= 1700) {
                         Obstacle box = new Box(x1 - xTravelled, Float.parseFloat(parts[2]), Float.parseFloat(parts[3]), Float.parseFloat(parts[4]));
                         obstacles.add(box);
                         shapeNumber++;
+                        return true;
                     } else {
-                        ended = true;
+                        return false;
                     }
-                    break;
-                case "Triangle":
+
+                case "Spike":
                     float x3 = Float.parseFloat(parts[3]);
                     float x5 = Float.parseFloat(parts[5]);
-                    if (x1 - xTravelled <= 1500 || x3 - xTravelled <= 1500 || x5 - xTravelled <= 1500) {
+                    if (x1 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x5 - xTravelled <= 1700) {
                         Obstacle spike = new Spike(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2])),
                                                    new FloatPoint(x3 - xTravelled, Float.parseFloat(parts[4])),
                                                    new FloatPoint(x5 - xTravelled, Float.parseFloat(parts[6])));
                         obstacles.add(spike);
                         shapeNumber++;
+                        return true;
                     } else {
-                        ended = true;
+                        return false;
                     }
-                    break;
+
                 case "RectPath":
-                    if (x1 - xTravelled <= 1500) {
+                    if (x1 - xTravelled <= 1700) {
                         Obstacle rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]), Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
                         obstacles.add(rectPath);
                         shapeNumber++;
+                        return true;
                     } else {
-                        ended = true;
+                        return false;
                     }
-                    break;
+
                 case "TriPath":
                     float X3 = Float.parseFloat(parts[3]);
                     float X5 = Float.parseFloat(parts[5]);
-                    if (x1 - xTravelled <= 1500 || X3 - xTravelled <= 1500 || X5 - xTravelled <= 1500) {
+                    if (x1 - xTravelled <= 1700 || X3 - xTravelled <= 1700 || X5 - xTravelled <= 1700) {
                         Obstacle TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2])),
                             new FloatPoint(X3 - xTravelled, Float.parseFloat(parts[4])),
                             new FloatPoint(X5 - xTravelled, Float.parseFloat(parts[6])), Boolean.parseBoolean(parts[7]));
                         obstacles.add(TriPath);
                         shapeNumber++;
+                        return true;
                     } else {
-                        ended = true;
+                        return false;
                     }
+
+                case "Zone":
+                    float x4 = Float.parseFloat(parts[7]);
+                    if (x1 - xTravelled <= 1700 || x4 - xTravelled <= 1700) {
+                        Zone zone = new Zone(Integer.parseInt(parts[9]));
+                        zone.polygon.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
+                        zone.polygon.points[1].setPoint(Float.parseFloat(parts[3]) - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
+                        zone.polygon.points[2].setPoint(Float.parseFloat(parts[5]) - xTravelled, Float.parseFloat(parts[6]) - currentHeight);
+                        zone.polygon.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
+                        zones.add(zone);
+                        shapeNumber++;
+                    }
+                    break;
+
+                default:
+                    System.out.println("Unknown obstacle type: " + parts[0]);
             }
         } catch(IOException e) {
             e.printStackTrace();
         }
+        return false;
     }
 
     public void CheckSlowDown() {
@@ -427,11 +455,9 @@ public class Level {
     }
     public void CheckFiring() {
         if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            System.out.println(GameData.getInstance().getElapsedTime());
             if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
                 FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-                Bullet bullet = new Bullet(3, player.midPoint, mouse);
-                bullet.setBullet(player.midPoint);
+                Bullet bullet = new Bullet(3, new FloatPoint(player.midPoint.getX(), player.midPoint.getY()), mouse);
                 player.ammo.add(bullet);
                 player.setCoolDownEndTime(GameData.getInstance().getElapsedTime() + 150);
             }
@@ -756,11 +782,7 @@ public class Level {
         while(background.columns.size() < 20) {
             background.addColumn();
         }
-
-        while (!ended) {
-            ReadFile();
-        }
-        ended = false;
+        while (ReadFile());
     }
 
 

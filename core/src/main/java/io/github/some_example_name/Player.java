@@ -53,10 +53,10 @@ public class Player {
         shape = new Polygon(4, Color.WHITE, 0.5f);
 
         downPoints = new FloatPoint[4];
+        upPoints = new FloatPoint[4];
         for(int i = 0; i < downPoints.length; i++) {
             downPoints[i] = new FloatPoint(0, 0);
         }
-        upPoints = new FloatPoint[4];
         for(int i = 0; i < upPoints.length; i++) {
             upPoints[i] = new FloatPoint(0, 0);
         }

@@ -46,6 +46,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         GameData.getInstance().EmptyFile("obstacles.txt");
+        GameData.getInstance().EmptyFile("tempObstacles.txt");
 
         sr = new ShapeRenderer();
         batch = new SpriteBatch();
@@ -72,10 +73,7 @@ public class Main extends ApplicationAdapter {
 
         switch (stage) {
             case PLAYING:
-                while (!level.isEnded()) {
-                    level.ReadFile();
-                }
-                level.setEnded(false);
+                while (level.ReadFile());
 
                 if (!GameData.getInstance().isStop()) {
                     level.CheckBackground();

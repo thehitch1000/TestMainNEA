@@ -151,14 +151,13 @@ public class Drill {
     }
 
     public void CalcDirection() {
-        if (timesInARow >= 4) {
+        if (timesInARow >= 8) {
             int chance = (int) Math.ceil(Math.random() * 102);
             if (chance <= 81) {
                 newDirection = direction;
             } else {
                 timesInARow = 0;
                 newDirection = directions[(int) (Math.random() * directions.length)];
-                System.out.println("New direction: " + newDirection);
             }
             CheckDirection();
         } else {

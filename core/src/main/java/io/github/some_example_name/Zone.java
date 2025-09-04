@@ -5,20 +5,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Zone {
     Polygon polygon;
-    private boolean isActive;
     private int type;
 
-    public Zone (boolean isActive, Drill.Direction direction) {
-        this.isActive = isActive;
-        switch (direction) {
-            case UP_RIGHT:
-            case DOWN_RIGHT:
-                type = 0;
-                break;
-            case RIGHT:
-                type = 1;
-                break;
-        }
+    public Zone (int type) {
+        this.type = type;
 
         if (type == 0) {
             polygon = new Polygon(4, new Color(1,0,0,0.5f), 0.5f);
