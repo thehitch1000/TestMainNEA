@@ -53,6 +53,24 @@ abstract class Shape implements IntShape {
         }
     }
 
+    public float getX() {
+        return 0;
+    }
+    public float getY() {
+        return 0;
+    }
+    public float getWidth() {
+        return 0;
+    }
+    public float getHeight() {
+        return 0;
+    }
+
+    public void setX(float x) {}
+    public void setY(float y) {}
+    public void setWidth(float width) {}
+    public void setHeight(float height) {}
+
     private float CosValue(float radians) {
         return (float) Math.cos(radians);
     }

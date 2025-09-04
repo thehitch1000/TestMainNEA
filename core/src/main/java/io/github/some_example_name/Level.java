@@ -71,7 +71,7 @@ public class Level {
     }
     public void CreateZigZagLevel() {
         while (!drill.isFinished()) {
-            if (drill.drillShape.points[0].getX() + xTravelled >= levelDistance && drill.drillShape.points[3].getX() + xTravelled >= levelDistance) {
+            if (drill.points[0].getX() + xTravelled >= levelDistance && drill.points[3].getX() + xTravelled >= levelDistance) {
                 drill.setFinished(true);
                 drill.FinishPath();
                 drill.EndShapes();
@@ -103,30 +103,30 @@ public class Level {
                         break;
                     case "UP_RIGHT,RIGHT":
                         drill.MoveXY(20);
-                        drill.RotateDrill(45, drill.drillShape.points[0]);
+                        drill.RotateDrill(45, drill.points[0]);
                         break;
                     case "UP_RIGHT,DOWN_RIGHT":
                         drill.MoveXY(20);
-                        drill.RotateDrill(90, drill.drillShape.points[0]);
+                        drill.RotateDrill(90, drill.points[0]);
                         break;
                     case "RIGHT,UP_RIGHT":
                         drill.MoveX(20);
-                        drill.RotateDrill(-45, drill.drillShape.points[3]);
+                        drill.RotateDrill(-45, drill.points[3]);
                         break;
                     case "RIGHT,RIGHT":
                         drill.MoveX(20);
                         break;
                     case "RIGHT,DOWN_RIGHT":
                         drill.MoveX(20);
-                        drill.RotateDrill(45, drill.drillShape.points[0]);
+                        drill.RotateDrill(45, drill.points[0]);
                         break;
                     case "DOWN_RIGHT,UP_RIGHT":
                         drill.MoveXY(20);
-                        drill.RotateDrill(-90, drill.drillShape.points[3]);
+                        drill.RotateDrill(-90, drill.points[3]);
                         break;
                     case "DOWN_RIGHT,RIGHT":
                         drill.MoveXY(20);
-                        drill.RotateDrill(-45, drill.drillShape.points[3]);
+                        drill.RotateDrill(-45, drill.points[3]);
                         break;
                     case "DOWN_RIGHT,DOWN_RIGHT":
                         drill.MoveXY(20);
@@ -288,8 +288,8 @@ public class Level {
                     float x5 = Float.parseFloat(parts[5]);
                     if (x1 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x5 - xTravelled <= 1700) {
                         Obstacle spike = new Spike(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2])),
-                                                   new FloatPoint(x3 - xTravelled, Float.parseFloat(parts[4])),
-                                                   new FloatPoint(x5 - xTravelled, Float.parseFloat(parts[6])));
+                            new FloatPoint(x3 - xTravelled, Float.parseFloat(parts[4])),
+                            new FloatPoint(x5 - xTravelled, Float.parseFloat(parts[6])));
                         obstacles.add(spike);
                         shapeNumber++;
                         return true;
@@ -505,7 +505,6 @@ public class Level {
             MoveObstaclesX(-3.5f);
 //            player.zigTrail.forEach(trail -> trail.MoveX(-3.5f));
 //            player.MoveTempLinesX(-3.5f);
-            xTravelled += 3.5f;
             zones.forEach(zone -> zone.MoveX(-3.5f));
         } else {
             MoveObstaclesX(GameData.getInstance().getObstacleSpeed());
@@ -760,10 +759,10 @@ public class Level {
 
             switch (drill.getNewDirection()) {
                 case UP_RIGHT: // up right
-                    drill.RotateDrill(-45, drill.drillShape.points[3]);
+                    drill.RotateDrill(-45, drill.points[3]);
                     break;
                 case DOWN_RIGHT: // down right
-                    drill.RotateDrill(45, drill.drillShape.points[0]);
+                    drill.RotateDrill(45, drill.points[0]);
                     break;
             }
 

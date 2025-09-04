@@ -11,14 +11,16 @@ public class Drill {
         UP_RIGHT, RIGHT, DOWN_RIGHT
     }
 
+
     List<Obstacle> currentShapes;
-    FloatPoint[] IntersectionPoints;
+    FloatPoint[] IntersectionPoints, points;
     LineEquation[] lines, oldLines;
     Direction newDirection, oldDirection, direction;
-    Polygon drillShape;
     public Drill.Direction[] directions = Drill.Direction.values();
     private boolean finished;
     int timesInARow = 0;
+
+    Matrix Angles, OldPoints, NewPoints;
 
     // 0 - up right
     // 1 - right
@@ -59,7 +61,10 @@ public class Drill {
             this.IntersectionPoints[i] = new FloatPoint(0, 0);
         }
 
-        drillShape = new Polygon(4, new Color(Color.WHITE));
+        points = new FloatPoint[4];
+        for (int i = 0; i < points.length; i++) {
+            points[i] = new FloatPoint(0, 0);
+        }
     }
 
     public Direction getDirection() {
@@ -91,10 +96,14 @@ public class Drill {
     }
 
     public void MoveX(float X) {
-        drillShape.MoveX(X);
+        for(FloatPoint point : points) {
+            point.setX(point.getX() + X);
+        }
     }
     public void MoveY(float Y) {
-        drillShape.MoveY(Y);
+        for (FloatPoint point : points) {
+            point.setY(point.getY() + Y);
+        }
     }
     public void MoveXY(float x) {
         MoveX(x);
@@ -106,22 +115,56 @@ public class Drill {
     }
 
     public void RotateDrill(int angle, FloatPoint point) {
-        drillShape.Rotate(angle, point);
+        Angles = new Matrix(new float[4]);
+        OldPoints = new Matrix(new float[8]);
+        NewPoints = new Matrix(new float[8]);
+
+        angle = angle * -1;
+
+        float xChange = point.getX();
+        float yChange = point.getY();
+
+        Angles.setMatrixSection(0, CosValue(Radians(angle)));
+        Angles.setMatrixSection(1, -(SinValue(Radians(angle))));
+        Angles.setMatrixSection(2, SinValue(Radians(angle)));
+        Angles.setMatrixSection(3, CosValue(Radians(angle)));
+
+        for (int i = 0; i < points.length; i++) {
+            OldPoints.setMatrixSection(i, points[i].getX() - xChange);
+            OldPoints.setMatrixSection(i + 4, points[i].getY() - yChange);
+        }
+        for (int i = 0; i < points.length; i++) {
+            NewPoints.setMatrixSection(i, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(0)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(1)));
+            NewPoints.setMatrixSection(i + 4, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(2)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(3)));
+        }
+        for (int i = 0; i < points.length; i++) {
+            points[i].setX(NewPoints.getMatrixSection(i) + xChange);
+            points[i].setY(NewPoints.getMatrixSection(i + 4) + yChange);
+        }
+    }
+    public float CosValue(float radians) {
+        return (float) Math.cos(radians);
+    }
+    public float SinValue(float radians) {
+        return (float) Math.sin(radians);
+    }
+    public float Radians(int angle) {
+        return (float) (angle * (Math.PI / 180));
     }
 
     public void FindLines() {
         lines[0] = null;
         lines[1] = null;
         if (newDirection == Direction.RIGHT) {
-            lines[0] = new LineEquation(0, drillShape.points[0].getY(), LineEquation.LineDirection.HORIZONTAL);
-            lines[1] = new LineEquation(0, drillShape.points[2].getY(), LineEquation.LineDirection.HORIZONTAL);
+            lines[0] = new LineEquation(0, points[0].getY(), LineEquation.LineDirection.HORIZONTAL);
+            lines[1] = new LineEquation(0, points[2].getY(), LineEquation.LineDirection.HORIZONTAL);
         } else {
             if (newDirection == Direction.UP_RIGHT) {
-                lines[0] = new LineEquation(1, drillShape.points[0].getY() - drillShape.points[0].getX(), LineEquation.LineDirection.DIAGONAL);
-                lines[1] = new LineEquation(1, drillShape.points[2].getY() - drillShape.points[2].getX(), LineEquation.LineDirection.DIAGONAL);
+                lines[0] = new LineEquation(1, points[0].getY() - points[0].getX(), LineEquation.LineDirection.DIAGONAL);
+                lines[1] = new LineEquation(1, points[2].getY() - points[2].getX(), LineEquation.LineDirection.DIAGONAL);
             } else {
-                lines[0] = new LineEquation(-1, drillShape.points[0].getY() + drillShape.points[0].getX(), LineEquation.LineDirection.DIAGONAL);
-                lines[1] = new LineEquation(-1, drillShape.points[2].getY() + drillShape.points[2].getX(), LineEquation.LineDirection.DIAGONAL);
+                lines[0] = new LineEquation(-1, points[0].getY() + points[0].getX(), LineEquation.LineDirection.DIAGONAL);
+                lines[1] = new LineEquation(-1, points[2].getY() + points[2].getX(), LineEquation.LineDirection.DIAGONAL);
             }
         }
         FindIntersections();
@@ -167,17 +210,17 @@ public class Drill {
     }
     public void CheckDirection() {
         if (newDirection == Direction.UP_RIGHT) {
-            if (drillShape.points[3].getY() > GameData.getInstance().getScreenHeight() - 100) {
+            if (points[3].getY() > GameData.getInstance().getScreenHeight() - 100) {
                 newDirection = directions[1 + ((int) Math.ceil(Math.random() * 100) % 2)];
             }
         } else if (newDirection == Direction.RIGHT) {
-            if (drillShape.points[2].getY() > GameData.getInstance().getScreenHeight() - 100) {
+            if (points[2].getY() > GameData.getInstance().getScreenHeight() - 100) {
                 newDirection = directions[1 + ((int) Math.ceil(Math.random() * 100) % 2)];
-            } else if (drillShape.points[0].getY() < 50) {
+            } else if (points[0].getY() < 50) {
                 newDirection = directions[((int) Math.ceil(Math.random() * 100) % 2)];
             }
         } else {
-            if (drillShape.points[1].getY() < 100) {
+            if (points[1].getY() < 100) {
                 newDirection = directions[((int) Math.ceil(Math.random() * 100) % 2)];
             }
         }
@@ -192,8 +235,8 @@ public class Drill {
         switch (newDirection) {
             case UP_RIGHT:
                 currentShapes.get(0).setX(700);
-                currentShapes.get(1).shape.points[0].setWholePoint(drillShape.points[3]);
-                currentShapes.get(1).shape.points[1].setX(drillShape.points[3].getX());
+                currentShapes.get(1).shape.points[0].setWholePoint(points[3]);
+                currentShapes.get(1).shape.points[1].setX(points[3].getX());
                 currentShapes.get(2).shape.points[0].setPoint(700, lines[0].FindY(700));
                 currentShapes.get(2).shape.points[1].setY(lines[0].FindY(700));
                 currentShapes.get(3).setX(700);
@@ -201,10 +244,10 @@ public class Drill {
                 break;
             case RIGHT:
                 currentShapes.get(0).setX(700);
-                currentShapes.get(0).setY(drillShape.points[3].getY());
-                currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - drillShape.points[3].getY());
+                currentShapes.get(0).setY(points[3].getY());
+                currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - points[3].getY());
                 currentShapes.get(1).setX(700);
-                currentShapes.get(1).setHeight(drillShape.points[0].getY());
+                currentShapes.get(1).setHeight(points[0].getY());
                 break;
             case DOWN_RIGHT:
                 currentShapes.get(0).setX(700);
@@ -383,7 +426,7 @@ public class Drill {
         switch (direction) {
             case UP_RIGHT:
                 MoveXY(20);
-                RotateDrill(45, drillShape.points[0]);
+                RotateDrill(45, points[0]);
                 newDirection = Direction.RIGHT;
                 FindLines();
                 break;
@@ -393,7 +436,7 @@ public class Drill {
                 break;
             case DOWN_RIGHT:
                 MoveXY(20);
-                RotateDrill(-45, drillShape.points[3]);
+                RotateDrill(-45, points[3]);
                 newDirection = Direction.RIGHT;
                 FindLines();
                 break;
@@ -401,9 +444,9 @@ public class Drill {
     }
 
     public void setDrill(float x, float YLevel, float width, float height) {
-        drillShape.points[0].setPoint(x, YLevel);
-        drillShape.points[1].setPoint(x + width, YLevel);
-        drillShape.points[2].setPoint(x + width, YLevel + height);
-        drillShape.points[3].setPoint(x, YLevel + height);
+        points[0].setPoint(x, YLevel);
+        points[1].setPoint(x + width, YLevel);
+        points[2].setPoint(x + width, YLevel + height);
+        points[3].setPoint(x, YLevel + height);
     }
 }
