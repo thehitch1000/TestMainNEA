@@ -89,11 +89,11 @@ public class Main extends ApplicationAdapter {
                         level.Move();
                         level.Checking();
                     } else {
-                        level.MovePlayerY();
+                        level.MovePlayerY(0);
                         level.MoveWorldX();
 
                         level.player.CalcMidPoints();
-                        level.ChangePlayerDirection();
+                        level.CheckChangePlayerDirection();
                         level.player.UpdatePoints();
 
                         level.CheckDisplay();

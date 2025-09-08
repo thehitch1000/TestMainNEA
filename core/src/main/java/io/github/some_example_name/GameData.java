@@ -194,4 +194,24 @@ class FunctionTimer {
 
         return task;
     }
+
+    public Timer.Task runRepeatingUntil(float seconds, float interval, float ending, Runnable runnable) {
+        Timer.Task task = new Timer.Task() {
+            float elapsed = 0;
+            @Override
+            public void run() {
+                runnable.run();
+                elapsed += interval;
+                if (elapsed >= ending) {
+                    this.cancel();
+                    ActiveTasks.remove(this);
+                }
+            }
+        };
+
+        Timer.schedule(task, seconds, interval);
+        ActiveTasks.add(task);
+
+        return task;
+    }
 }

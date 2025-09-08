@@ -370,7 +370,7 @@ public class Level {
             MoveAmmo();
             PlayerMovement();
             MoveObstaclesX(GameData.getInstance().getObstacleSpeed());
-            MovePlayerY();
+            MovePlayerY(0);
         }
     }
 
@@ -538,11 +538,11 @@ public class Level {
             MoveBackgroundY(Y/10);
         }
     }
-    public void MovePlayerY() {
+    public void MovePlayerY(float Y) {
         if (stage == levelStage.NORMAL) {
             player.MoveY(GameData.getInstance().getPlayerSpeedY());
         } else {
-            float Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+            if (Y != 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
             switch (screenHeight) {
                 case FIXED:
                     player.MoveY(Y);
@@ -598,21 +598,24 @@ public class Level {
         }
     }
 
-    public void ChangePlayerDirection() {
+    public void CheckChangePlayerDirection() {
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
-            player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
-            player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
-            player.CalcMidPoints();
-            if (player.getDirection() == Player.Direction.DOWN) {
-                player.Rotate(90, player.midPoint);
-                player.setDirection(Player.Direction.UP);
-            } else {
-                player.Rotate(-90, player.midPoint);
-                player.setDirection(Player.Direction.DOWN);
-            }
-            player.CalcMidPoints();
-            player.CreateTrail();
+            ChangeDirection();
         }
+    }
+    public void ChangeDirection() {
+        player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
+        player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
+        player.CalcMidPoints();
+        if (player.getDirection() == Player.Direction.DOWN) {
+            player.Rotate(90, player.midPoint);
+            player.setDirection(Player.Direction.UP);
+        } else {
+            player.Rotate(-90, player.midPoint);
+            player.setDirection(Player.Direction.DOWN);
+        }
+        player.CalcMidPoints();
+        player.CreateTrail();
     }
     public void CheckDisplay() {
         for (Polygon polygon : player.zigTrail) {
@@ -716,7 +719,7 @@ public class Level {
             GameData.getInstance().timers.runAfter(1f, () -> EndNormalRespawning());
         } else {
             GameData.getInstance().setStop(true);
-            GameData.getInstance().timers.runAfter(0.5f, () -> ZigZagRespawning(obstacle));
+            GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(obstacle));
             GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
         }
     }
@@ -781,32 +784,39 @@ public class Level {
         GameData.getInstance().setStop(false);
     }
     public void ZigZagRespawning(Obstacle obstacle) {
+        float move;
         if (obstacle instanceof RectPath) {
             RectPath rectPath = (RectPath) obstacle;
 
-            float MoveDist = (drill.points[3].getY() - drill.points[0].getY()) * 0.5f;
+            move = (drill.points[3].getY() - drill.points[0].getY()) * 0.7f;
             if (!rectPath.isBottom()) {
-                player.MoveY(-MoveDist);
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move/10));
             } else {
-                player.MoveY(MoveDist);
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move/10));
             }
         } else {
             TriPath triPath = (TriPath) obstacle;
 
-            float MoveDist = (drill.points[3].getY() - drill.points[0].getY());
+            move = (drill.points[3].getY() - drill.points[0].getY());
             if (!triPath.isBottom()) {
-                player.MoveY(-MoveDist);
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move/10));
             } else {
-                player.MoveY(MoveDist);
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move/10));
             }
-            ChangePlayerDirection();
         }
-
+    }
+    public void ZigZagEndRespawning() {
+        player.CalcMidPoints();
+        if (player.getDirection() == Player.Direction.DOWN) {
+            player.Rotate(90, player.midPoint);
+            player.setDirection(Player.Direction.UP);
+        } else {
+            player.Rotate(-90, player.midPoint);
+            player.setDirection(Player.Direction.DOWN);
+        }
         player.CalcMidPoints();
         player.zigTrail.clear();
         player.FirstTrail();
-    }
-    public void ZigZagEndRespawning() {
         GameData.getInstance().setStop(false);
     }
 
