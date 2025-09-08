@@ -43,6 +43,8 @@ public class Main extends ApplicationAdapter {
         add(() -> Gdx.app.exit());
     }};
 
+    int a = 0;
+
     @Override
     public void create() {
         GameData.getInstance().EmptyFile("obstacles.txt");
@@ -71,6 +73,10 @@ public class Main extends ApplicationAdapter {
             Gdx.app.exit();
         }
 
+        if (input.isKeyJustPressed(Input.Keys.F1)) {
+            a = (a + 1) % 2;
+        }
+
         switch (stage) {
             case PLAYING:
                 while (level.ReadFile());
@@ -78,9 +84,22 @@ public class Main extends ApplicationAdapter {
                 if (!GameData.getInstance().isStop()) {
                     level.CheckBackground();
 
-                    level.Update();
-                    level.Checking();
-                    level.Move();
+                    if (level.stage == Level.levelStage.NORMAL) {
+                        level.Update();
+                        level.Move();
+                        level.Checking();
+                    } else {
+                        level.MovePlayerY();
+                        level.MoveWorldX();
+
+                        level.player.CalcMidPoints();
+                        level.ChangePlayerDirection();
+                        level.player.UpdatePoints();
+
+                        level.CheckDisplay();
+
+                        level.CheckObstacleCollision();
+                    }
                 }
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
@@ -90,6 +109,8 @@ public class Main extends ApplicationAdapter {
                 level.background.Draw(sr);
 
                 level.obstacles.forEach(obstacle -> obstacle.Draw(sr));
+                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
+                level.player.ammo.forEach(ammo -> ammo.Draw(sr));
 
                 sr.end();
 
@@ -98,6 +119,10 @@ public class Main extends ApplicationAdapter {
                 sr.setColor(Color.WHITE);
                 level.BaseLine.Draw(sr);
 
+                if (a == 1) {
+                    level.player.PrintLines(sr);
+                }
+
                 sr.end();
 
                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -105,20 +130,12 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                for (Rect rect : level.player.normalTrail) {
-                    rect.Draw(sr);
-                }
+                level.player.normalTrail.forEach(trail -> trail.Draw(sr));
                 level.player.Draw(sr);
 
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
-
-                sr.begin(ShapeRenderer.ShapeType.Filled);
-
-                level.player.ammo.forEach(ammo -> ammo.Draw(sr));
-
-                sr.end();
                 break;
 
             case MENUS:

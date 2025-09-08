@@ -358,9 +358,9 @@ class Polygon extends Shape implements Transparency, Colour {
 
     public Polygon(int numOfPoints, Color colour) {
         this.numOfPoints = numOfPoints;
-        points = new FloatPoint[numOfPoints];
+        this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {
-            points[i] = new FloatPoint(0, 0);
+            this.points[i] = new FloatPoint(0, 0);
         }
         tris = new ArrayList<>(numOfPoints - 2);
         lock = new FunctionLock();
@@ -370,23 +370,15 @@ class Polygon extends Shape implements Transparency, Colour {
     }
     public Polygon(int numOfPoints, Color colour, float alpha) {
         this.numOfPoints = numOfPoints;
-        points = new FloatPoint[numOfPoints];
+        this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {
-            points[i] = new FloatPoint(0, 0);
+            this.points[i] = new FloatPoint(0, 0);
         }
-        tris = new ArrayList<>(numOfPoints - 2);
+        tris = new ArrayList<>();
         lock = new FunctionLock();
         GameData.getInstance().locks.add(lock);
         this.colour = colour;
         this.alpha = alpha;
-    }
-    public Polygon(FloatPoint[] Points, Color colour) {
-        points = Points;
-        numOfPoints = points.length;
-        tris = new ArrayList<>(numOfPoints - 2);
-        lock = new FunctionLock();
-        this.colour = colour;
-        this.alpha = 1;
     }
 
     public void setColour(Color colour) {
@@ -443,7 +435,7 @@ class Polygon extends Shape implements Transparency, Colour {
     }
     private boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
         for (int n = 0; n < vertices.size() - 3; n++) {
-            int index = (currentPoint + 2 + n);
+            int index = (currentPoint + 2 + n) % vertices.size();
             FloatPoint point = new FloatPoint(vertices.get(index).getX(), vertices.get(index).getY());
             if (tri.isPointInShape(point)) return true;
         }
