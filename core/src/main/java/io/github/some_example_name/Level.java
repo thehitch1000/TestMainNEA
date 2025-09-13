@@ -542,7 +542,8 @@ public class Level {
         if (stage == levelStage.NORMAL) {
             player.MoveY(GameData.getInstance().getPlayerSpeedY());
         } else {
-            if (Y != 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+            if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+            System.out.println("Y: " + Y);
             switch (screenHeight) {
                 case FIXED:
                     player.MoveY(Y);
@@ -784,24 +785,23 @@ public class Level {
         GameData.getInstance().setStop(false);
     }
     public void ZigZagRespawning(Obstacle obstacle) {
-        float move;
+        float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.7f) / 10f;
+        System.out.println(move);
         if (obstacle instanceof RectPath) {
             RectPath rectPath = (RectPath) obstacle;
 
-            move = (drill.points[3].getY() - drill.points[0].getY()) * 0.7f;
             if (!rectPath.isBottom()) {
-                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move/10));
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
             } else {
-                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move/10));
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
             }
         } else {
             TriPath triPath = (TriPath) obstacle;
-
-            move = (drill.points[3].getY() - drill.points[0].getY());
             if (!triPath.isBottom()) {
-                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move/10));
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
+                GameData.getInstance().timers.runA
             } else {
-                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move/10));
+                GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
             }
         }
     }
@@ -864,9 +864,9 @@ public class Level {
             }
 
             if (player.getDirection() == Player.Direction.UP) {
-                player.setStartingPosition(750, drill.points[0].getY() + 15);
+                player.setStartingPosition(750, drill.points[0].getY() + 30);
             } else {
-                player.setStartingPosition(750, drill.points[3].getY() - 15);
+                player.setStartingPosition(750, drill.points[3].getY() - 30);
             }
 
             CreateZigZagLevel();
