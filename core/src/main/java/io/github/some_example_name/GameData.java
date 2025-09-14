@@ -181,6 +181,23 @@ class FunctionTimer {
         return task;
     }
 
+    public Timer.Task runTasksAfter(float seconds, Runnable[] runnable) {
+        Timer.Task task = new Timer.Task() {
+            @Override
+            public void run() {
+                for (Runnable r : runnable) {
+                    r.run();
+                }
+                ActiveTasks.remove(this);
+            }
+        };
+
+        Timer.schedule(task, seconds);
+        ActiveTasks.add(task);
+
+        return task;
+    }
+
     public Timer.Task runRepeating(float seconds, float interval, Runnable runnable) {
         Timer.Task task = new Timer.Task() {
             @Override

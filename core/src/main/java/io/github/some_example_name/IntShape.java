@@ -2,10 +2,12 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public interface IntShape {
     void Draw(ShapeRenderer sr);
@@ -311,6 +313,12 @@ class Circle extends Shape {
         this.x = 0;
         this.y = 0;
     }
+    public Circle(float x, float y, float radius) {
+        this.radius = radius;
+        points = null;
+        this.x = x;
+        this.y = y;
+    }
 
     public float getRadius() {
         return radius;
@@ -348,15 +356,81 @@ class Circle extends Shape {
     public boolean onScreen() {
         return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
+
+    public Node.NodeState overlaps(Polygon obstacle) {
+        if (obstacle.getVertices().length == 6) {
+            return CircleTriOverlap(obstacle);
+        } else {
+            return CircleRectOverlap(obstacle);
+        }
+    }
+    public Node.NodeState CircleRectOverlap(Polygon obstacle) {
+
+        // Center in Rect?
+        if (x >= obstacle.getVertices()[0] && x <= obstacle.getVertices()[2]) {
+            if (y >= obstacle.getVertices()[1] && y <= obstacle.getVertices()[5]) {
+                return Node.NodeState.REMOVE;
+            }
+        }
+
+        // Closest Point to Rect
+        float closestX = Clamp(obstacle.getVertices()[0], obstacle.getVertices()[2], x);
+        float closestY = Clamp(obstacle.getVertices()[1], obstacle.getVertices()[5], y);
+
+        float ChangeX = closestX - x;
+        float ChangeY = closestY - y;
+        float Distance = (float) Math.sqrt(Math.pow(ChangeX, 2) + Math.pow(ChangeY, 2));
+
+        if (Distance <= radius) {
+            return Node.NodeState.UNWALKABLE;
+        }
+
+        return Node.NodeState.WALKABLE;
+    }
+    public Node.NodeState CircleTriOverlap(Polygon obstacle) {
+        FloatPoint point = new FloatPoint(x, y);
+
+        Tri tri = new Tri(new FloatPoint(obstacle.getVertices()[0], obstacle.getVertices()[1]),
+                          new FloatPoint(obstacle.getVertices()[2], obstacle.getVertices()[3]),
+                          new FloatPoint(obstacle.getVertices()[4], obstacle.getVertices()[5]));
+
+        if (tri.isPointInShape(point)) {
+            return Node.NodeState.REMOVE;
+        }
+
+        // Circle Touching or Intersecting
+        for (int i = 0; i < obstacle.getVertices().length; i += 2) {
+            int length = obstacle.getVertices().length;
+            Vector2 A = new Vector2(obstacle.getVertices()[i], obstacle.getVertices()[i + 1]);
+            Vector2 B = new Vector2(obstacle.getVertices()[(i + 2) % length], obstacle.getVertices()[(i + 3) % length]);
+            Vector2 C = new Vector2(x, y);
+
+            Vector2 AB = B.cpy().sub(A);
+            Vector2 AC = C.cpy().sub(A);
+            float t = Clamp(0, 1, (AC.dot(AB) / AB.len2()));
+            Vector2 closest = A.cpy().add(AB.scl(t));
+            float SquaredDistance = closest.dst2(C);
+
+            if (SquaredDistance <= radius * radius) {
+                return Node.NodeState.UNWALKABLE;
+            }
+        }
+        return Node.NodeState.WALKABLE;
+    }
+    public float Clamp(float min, float max, float value) {
+        if (value < min) value = min;
+        if (value > max) value = max;
+        return value;
+    }
 }
-class Polygon extends Shape implements Transparency, Colour {
+class polygon extends Shape implements Transparency, Colour {
     private int numOfPoints;
     private float alpha;
     FunctionLock lock;
     ArrayList<Tri> tris;
     Color colour;
 
-    public Polygon(int numOfPoints, Color colour) {
+    public polygon(int numOfPoints, Color colour) {
         this.numOfPoints = numOfPoints;
         this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {
@@ -368,7 +442,7 @@ class Polygon extends Shape implements Transparency, Colour {
         this.colour = colour;
         this.alpha = 1;
     }
-    public Polygon(int numOfPoints, Color colour, float alpha) {
+    public polygon(int numOfPoints, Color colour, float alpha) {
         this.numOfPoints = numOfPoints;
         this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {

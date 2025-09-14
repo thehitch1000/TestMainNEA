@@ -91,46 +91,47 @@ class Bullet extends Ammo {
     }
 }
 
-class missile extends Ammo {
+class Missile extends Ammo {
 
-    public missile() {
-        shape = new Circle(0);
-        path = new ArrayList<>();
+    Circle shape;
+    LineSegment[] path;
+    FloatPoint startPoint, endPoint;
+    private float speed;
+
+    public Missile(FloatPoint startPoint, FloatPoint endPoint, float speed) {
+        this.speed = speed;
+        this.startPoint = startPoint;
+        this.endPoint = endPoint;
+
+        this.shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
+
+        this.path = new LineSegment[10];
     }
-
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
     }
 
-    public void MoveAlongPath() {
-        Circle c = (Circle) shape;
-        float progress = 1f;
-        while (progress > 0) {
-            if (path.isEmpty()) break;
-            LineSegment line = path.get(0);
-            FloatPoint tempPoint = new FloatPoint(c.getX() + (speed * progress * CosValue(Radians(line.getAngle()))), c.getY() + (speed * progress * SinValue(Radians(line.getAngle()))));
-            if (line.isPointInSegment(tempPoint)) {
-                c.MoveX(CosValue(Radians(line.getAngle())) * speed * progress);
-                c.MoveY(SinValue(Radians(line.getAngle())) * speed * progress);
-                progress = 0;
-            } else {
-                Vector2 Diff = new Vector2(line.endPoint.getX() - c.getX(), line.endPoint.getY() - c.getY());
-                float multi = Diff.x / (speed * CosValue(Radians(line.getAngle())));
-                if (multi > progress) multi = progress;
-                c.MoveX(CosValue(Radians(line.getAngle())) * multi * speed);
-                c.MoveY(SinValue(Radians(line.getAngle())) * multi * speed);
-                progress -= multi;
-                path.remove(0);
-            }
+    public void MoveX(float X) {
+        shape.MoveX(X);
+    }
+    public void MoveY(float Y) {
+        shape.MoveY(Y);
+    }
+
+    public float getSpeed() {
+        return speed;
+    }
+    public void setSpeed(float speed) {
+        this.speed = speed;
+    }
+
+    public void setPath(LineSegment[] path) {
+        this.path = path;
+    }
+
+    public void PrintPath(ShapeRenderer sr) {
+        for (int i = 0; i < path.length; i++) {
+            sr.line(path[i].startPoint.getX(), path[i].startPoint.getY(), path[i].endPoint.getX(), path[i].endPoint.getY());
         }
-    }
-    private float CosValue(float radians) {
-        return (float) Math.cos(radians);
-    }
-    private float SinValue(float radians) {
-        return (float) Math.sin(radians);
-    }
-    private float Radians(float angle) {
-        return (float) (angle * (Math.PI / 180));
     }
 }

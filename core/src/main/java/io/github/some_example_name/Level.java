@@ -3,6 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,6 +16,9 @@ import java.util.List;
 import static com.badlogic.gdx.Gdx.input;
 
 public class Level {
+    enum Status {
+        WALKABLE, UNWALKABLE
+    }
     public enum levelStage {
         NORMAL, ZIGZAG
     }
@@ -25,6 +29,7 @@ public class Level {
     List<Rect> baseRects;
     List<Obstacle> obstacles;
     List<Zone> zones;
+    List<com.badlogic.gdx.math.Polygon> shapes;
     levelStage stage;
     ScreenHeight screenHeight;
     Player player;
@@ -33,7 +38,9 @@ public class Level {
     LineSegment BaseLine;
     Shape base;
     Drill drill;
+    Node[][] grid;
     int levelDistance = 3000;
+    int cellSize = 4;
 
     private float xTravelled, topOfLevel, bottomOfLevel, currentHeight;
     private int shapeNumber;
@@ -48,8 +55,11 @@ public class Level {
         obstacles = new ArrayList<>();
         baseRects = new ArrayList<>();
         zones = new ArrayList<>();
+        shapes = new ArrayList<>();
 
         drill = new Drill();
+
+        grid = new Node[GameData.getInstance().getScreenWidth()/cellSize][GameData.getInstance().getScreenHeight()/cellSize];
 
         this.xTravelled = 0;
         this.shapeNumber = 0;
@@ -619,7 +629,7 @@ public class Level {
         player.CreateTrail();
     }
     public void CheckDisplay() {
-        for (Polygon polygon : player.zigTrail) {
+        for (polygon polygon : player.zigTrail) {
             if (!polygon.onScreen()) {
                 player.zigTrail.remove(polygon);
                 return;
@@ -726,7 +736,7 @@ public class Level {
     }
     public void NormalRespawning(Obstacle obstacle) {
         if (obstacle instanceof Spike) {
-            Polygon poly = (Polygon) player.shape;
+            polygon poly = (polygon) player.shape;
             MoveObstaclesX(-40);
             if (Math.abs(poly.points[player.getBL()].getY() - 200f) <= 0.5f) {
                 poly.points[player.getBL()].setPoint(player.getOriginPosX(), 200);
@@ -745,7 +755,7 @@ public class Level {
             }
         } else if (obstacle instanceof Box) {
             Rect rect = (Rect) obstacle.shape;
-            Polygon poly = (Polygon) player.shape;
+            polygon poly = (polygon) player.shape;
             MoveObstaclesX(-30);
             poly.points[player.getBL()].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
             poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
@@ -786,22 +796,37 @@ public class Level {
     }
     public void ZigZagRespawning(Obstacle obstacle) {
         float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.7f) / 10f;
-        System.out.println(move);
+
         if (obstacle instanceof RectPath) {
             RectPath rectPath = (RectPath) obstacle;
 
             if (!rectPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
+                if (player.direction == Player.Direction.UP) {
+                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(-90, player.midPoint));
+                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.DOWN));
+                }
             } else {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
+                if (player.direction == Player.Direction.DOWN) {
+                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(90, player.midPoint));
+                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.UP));
+                }
             }
         } else {
             TriPath triPath = (TriPath) obstacle;
             if (!triPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
-                GameData.getInstance().timers.runA
+                if (player.direction == Player.Direction.UP) {
+                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(-90, player.midPoint));
+                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.DOWN));
+                }
             } else {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
+                if (player.direction == Player.Direction.DOWN) {
+                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(90, player.midPoint));
+                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.UP));
+                }
             }
         }
     }
@@ -891,9 +916,86 @@ public class Level {
         }
         while (ReadFile());
     }
-    
+
+    public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
+        Missile missile = new Missile(startPoint, endPoint, 6);
+
+        CheckWalkability();
+
+        CreateMissilePath(missile, missile.startPoint, endPoint);
+        player.ammo.add(missile);
+    }
+    public void CreateMissilePath(Missile missile, FloatPoint startPoint, FloatPoint endPoint) {
+        Node[] pathNodes = FindPathNodes(startPoint, endPoint);
+
+        if (pathNodes == null || pathNodes.length < 2) {
+            LineSegment[] directPath = new LineSegment[1];
+            directPath[0] = new LineSegment(startPoint, endPoint);
+            missile.setPath(directPath);
+            return;
+        }
+
+        LineSegment[] pathSegments = new LineSegment[pathNodes.length - 1];
+        int j = 0;
+
+        for (int i = pathNodes.length - 1; i > 0; i--) {
+            FloatPoint point1 = new FloatPoint(pathNodes[i].getX(), pathNodes[i].getY());
+            FloatPoint point2 = new FloatPoint(pathNodes[i - 1].getX(), pathNodes[i - 1].getY());
+            pathSegments[j] = new LineSegment(point1, point2);
+            j++;
+        }
+
+        missile.setPath(pathSegments);
+    }
+    public Node[] FindPathNodes(FloatPoint startPoint, FloatPoint endPoint) {
+        Node start = new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE);
+        Node end = new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE);
+
+        NodePrioQueue openList = new NodePrioQueue(150);
+        openList.enqueue(start);
+
+        while (!openList.isEmpty()) {
+            Node current = openList.dequeue();
+
+            if (current == end) {
+                return ConstructMissilePath(end);
+            }
+
+            for (Node neighbour : getNeighbours(current)) {
+                if (neighbour != null) {
+                    if (neighbour.getState() == Node.NodeState.WALKABLE) {
+                        ProcessNeighbour(current, neighbour, end, openList);
+                    }
+                }
+            }
+        }
+        System.out.println("No path found");
+        return null;
+    }
+    public void TransformShapes() {
+        shapes.clear();
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle.shape instanceof Rect) {
+                Rect rect = (Rect) obstacle.shape;
+                shapes.add(new Polygon(new float[] {
+                    rect.getX(), rect.getY(),
+                    rect.getX() + rect.getWidth(), rect.getY(),
+                    rect.getX() + rect.getWidth(), rect.getY() + rect.getHeight(),
+                    rect.getX(), rect.getY() + rect.getHeight()
+                }));
+            } else {
+                Tri tri = (Tri) obstacle.shape;
+                shapes.add(new Polygon(new float[] {
+                    tri.points[0].getX(), tri.points[0].getY(),
+                    tri.points[1].getX(), tri.points[1].getY(),
+                    tri.points[2].getX(), tri.points[2].getY()
+                }));
+            }
+        }
+    }
     public void CheckWalkability() {
         TransformShapes();
+        ResetGrid();
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
                 Node.NodeState tempState = isMissileSafeAt(grid[x][y].getX(), grid[x][y].getY());
@@ -909,21 +1011,25 @@ public class Level {
                 }
             }
         }
-        ClearObstacles();
+    }
+    public void ResetGrid() {
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                grid[x][y] = new Node(x, y, Node.NodeState.WALKABLE);
+            }
+        }
     }
     public Node.NodeState isMissileSafeAt(float x, float y) {
         Circle missile = new Circle(x, y, 10);
         Node.NodeState tempState;
-        for (Zone zone : zones.zones) {
+        for (Zone zone : zones) {
             if (zone.isPointInZone(x,y)) {
-                for (Polygon obstacle : obstacles) {
-                    if (obstacle != null) {
-                        tempState = missile.overlaps(obstacle);
-                        switch (tempState) {
-                            case UNWALKABLE:
-                            case REMOVE:
-                                return tempState;
-                        }
+                for (Polygon shape : shapes) {
+                    tempState = missile.overlaps(shape);
+                    switch (tempState) {
+                        case UNWALKABLE:
+                        case REMOVE:
+                            return tempState;
                     }
                 }
                 return Node.NodeState.WALKABLE;
@@ -942,7 +1048,7 @@ public class Level {
         while (!ended) {
             testMissile.MoveX(testMissile.getSpeed() * (float) Math.cos(segment.getAngle()));
             testMissile.MoveY(testMissile.getSpeed() * (float) Math.sin(segment.getAngle()));
-            if (!segment.isPointInSegment(testMissile.shape.getX(), testMissile.shape.getY())) {
+            if (!segment.isPointInSegment(new FloatPoint(testMissile.shape.getX(), testMissile.shape.getY()))) {
                 ended = true;
             }
             Node.NodeState state = isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY());

@@ -6,7 +6,7 @@ public class Monster {
     Shape shape, healthShape;
 
     public Monster() {
-        shape = new Polygon(4, Color.RED, 0.5f);
-        healthShape = new Polygon(4, Color.RED);
+        shape = new polygon(4, Color.RED, 0.5f);
+        healthShape = new polygon(4, Color.RED);
     }
 }

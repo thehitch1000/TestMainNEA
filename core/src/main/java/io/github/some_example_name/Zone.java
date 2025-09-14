@@ -4,16 +4,16 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Zone {
-    Polygon polygon;
+    polygon polygon;
     private int type;
 
     public Zone (int type) {
         this.type = type;
 
         if (type == 0) {
-            polygon = new Polygon(4, new Color(1,0,0,0.5f), 0.5f);
+            polygon = new polygon(4, new Color(1,0,0,0.5f), 0.5f);
         } else {
-            polygon = new Polygon(4, new Color(0,1,0, 0.5f), 0.5f);
+            polygon = new polygon(4, new Color(0,1,0, 0.5f), 0.5f);
         }
     }
 

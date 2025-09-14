@@ -20,7 +20,7 @@ public class Player {
     private boolean Clockwise;
     List<Ammo> ammo;
     List<Rect> normalTrail;
-    List<Polygon> zigTrail;
+    List<polygon> zigTrail;
     FloatPoint[] upPoints, downPoints, lineMidPoints;
     LineEquation[] lines, tempLines;
 
@@ -54,8 +54,8 @@ public class Player {
         lowestPoint = new FloatPoint(0, 0);
         midPoint = new FloatPoint(0, 0);
 
-        healthShape = new Polygon(4, Color.WHITE);
-        shape = new Polygon(4, Color.WHITE, 0.5f);
+        healthShape = new polygon(4, Color.WHITE);
+        shape = new polygon(4, Color.WHITE, 0.5f);
 
         downPoints = new FloatPoint[4];
         upPoints = new FloatPoint[4];
@@ -300,7 +300,7 @@ public class Player {
         }
     }
     public void FirstTrail() {
-        Polygon trail = new Polygon(4, Color.WHITE);
+        polygon trail = new polygon(4, Color.WHITE);
         CreateLines();
         float intersectPoint2X, intersectPoint3X;
         if (direction == Direction.UP) {
@@ -321,7 +321,7 @@ public class Player {
         zigTrail.add(trail);
     }
     public void CreateTrail() {
-        Polygon polygon = new Polygon(4, Color.WHITE);
+        polygon polygon = new polygon(4, Color.WHITE);
         int index = CalcIndex();
         float intersectPoint0X, intersectPoint1X, intersectPoint2X, intersectPoint3X, intersectPoint2XN, intersectPoint3XN;
         CreateLines();
@@ -376,7 +376,7 @@ public class Player {
         }
         return index;
     }
-    public void CalcTrailY(Polygon polygon) {
+    public void CalcTrailY(polygon polygon) {
         polygon.points[0].setY(lines[1].FindY(polygon.points[0].getX()));
         polygon.points[1].setY(lines[0].FindY(polygon.points[1].getX()));
         polygon.points[2].setY(lines[1].FindY(polygon.points[2].getX()));
