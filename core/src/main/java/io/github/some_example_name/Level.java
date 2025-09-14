@@ -891,4 +891,135 @@ public class Level {
         }
         while (ReadFile());
     }
+    
+    public void CheckWalkability() {
+        TransformShapes();
+        for (int x = 0; x < grid.length; x++) {
+            for (int y = 0; y < grid[x].length; y++) {
+                Node.NodeState tempState = isMissileSafeAt(grid[x][y].getX(), grid[x][y].getY());
+                switch (tempState) {
+                    case UNWALKABLE:
+                    case WALKABLE:
+                    case UNKNOWN:
+                        grid[x][y].setState(tempState);
+                        break;
+                    case REMOVE:
+                        grid[x][y] = null;
+                        break;
+                }
+            }
+        }
+        ClearObstacles();
+    }
+    public Node.NodeState isMissileSafeAt(float x, float y) {
+        Circle missile = new Circle(x, y, 10);
+        Node.NodeState tempState;
+        for (Zone zone : zones.zones) {
+            if (zone.isPointInZone(x,y)) {
+                for (Polygon obstacle : obstacles) {
+                    if (obstacle != null) {
+                        tempState = missile.overlaps(obstacle);
+                        switch (tempState) {
+                            case UNWALKABLE:
+                            case REMOVE:
+                                return tempState;
+                        }
+                    }
+                }
+                return Node.NodeState.WALKABLE;
+            }
+        }
+        return Node.NodeState.REMOVE;
+    }
+    public boolean LineOfSight(Node start, Node end) {
+        FloatPoint startPoint = new FloatPoint(start.getX(), start.getY());
+        FloatPoint endPoint = new FloatPoint(end.getX(), end.getY());
+        LineSegment segment = new LineSegment(startPoint, endPoint);
+        segment.setSegment();
+        Missile testMissile = new Missile(startPoint, endPoint, 6);
+        boolean ended = false;
+        Status status = Status.WALKABLE;
+        while (!ended) {
+            testMissile.MoveX(testMissile.getSpeed() * (float) Math.cos(segment.getAngle()));
+            testMissile.MoveY(testMissile.getSpeed() * (float) Math.sin(segment.getAngle()));
+            if (!segment.isPointInSegment(testMissile.shape.getX(), testMissile.shape.getY())) {
+                ended = true;
+            }
+            Node.NodeState state = isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY());
+            switch (state) {
+                case UNWALKABLE:
+                case REMOVE:
+                    status = Status.UNWALKABLE;
+                    ended = true;
+                    break;
+            }
+        }
+        switch (status) {
+            case UNWALKABLE:
+                return false;
+            case WALKABLE:
+                return true;
+        }
+        return false;
+    }
+    public Node[] getNeighbours(Node currentNode) {
+        Node[] Neighbours = new Node[8];
+        int i = 0;
+        int X = NodeFindXCoordinates(currentNode);
+        int Y = NodeFindYCoordinates(currentNode);
+        for (int x = -1; x < 2; x++) {
+            for (int y = -1; y < 2; y++) {
+                if (x == 0 && y == 0) continue;
+                Neighbours[i] = grid[X + x][Y + y];
+                i++;
+            }
+        }
+        return Neighbours;
+    }
+    public int NodeFindXCoordinates(Node node) {
+        return (node.getX() - 4) / 8;
+    }
+    public int NodeFindYCoordinates(Node node) {
+        return (node.getY() - 4) / 8;
+    }
+    public void ProcessNeighbour(Node current, Node neighbour, Node end, NodePrioQueue openList) {
+        Node parent = current.getParent();
+        float tempG;
+        Node tempParent;
+
+        if (LineOfSight(parent, neighbour)) {
+            tempG = parent.getG() + distance(parent, neighbour);
+            tempParent = parent;
+        } else {
+            tempG = current.getG() + distance(current,neighbour);
+            tempParent = current;
+        }
+
+        if (tempG < neighbour.getG()) {
+            neighbour.setG(tempG);
+            neighbour.setH(heuristic(neighbour, end));
+            neighbour.setF(neighbour.getG() + neighbour.getH());
+            neighbour.setParent(tempParent);
+            openList.enqueue(neighbour);
+        }
+    }
+    public float distance(Node a, Node b) {
+        return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
+    }
+    public float heuristic(Node a, Node b) {
+        return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
+    }
+    public Node[] ConstructMissilePath(Node end) {
+        Node[] path = new Node[15];
+        Node current = end;
+        int i = 0;
+
+        while (current != current.getParent()) {
+            path[i] = current;
+            i++;
+            current = current.getParent();
+        }
+        path[i] = current; // Add the start node
+        return path;
+    }
 }
