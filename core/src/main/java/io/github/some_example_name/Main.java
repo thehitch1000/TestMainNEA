@@ -72,7 +72,6 @@ public class Main extends ApplicationAdapter {
         if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
         }
-
         if (input.isKeyJustPressed(Input.Keys.F1)) {
             a = (a + 1) % 2;
         }
@@ -86,8 +85,8 @@ public class Main extends ApplicationAdapter {
 
                     if (level.stage == Level.levelStage.NORMAL) {
                         level.Update();
-                        level.Move();
                         level.Checking();
+                        level.Move();
                     } else {
                         level.MovePlayerY(0);
                         level.MoveWorldX();

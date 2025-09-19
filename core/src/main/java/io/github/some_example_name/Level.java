@@ -48,7 +48,7 @@ public class Level {
     public Level() {
         player = new Player(100);
         monster = new Monster();
-        background = new Background();
+        background = new Background(20, 0);
         base = new Rect(0, 0, new Color(0.2f, 0.38f, 0.66f, 1f));
         BaseLine = new LineSegment(new FloatPoint(0, 0), new FloatPoint(0, 0));
 
@@ -278,7 +278,7 @@ public class Level {
             }
 
             String line = lines.get(shapeNumber);
-            String[] parts = line.split(":\\s+|\\s+");  // Split by ": " or whitespace
+            String[] parts = line.split(":\\s+|\\s+");  // Split by ":" or whitespace
 
             float x1 = Float.parseFloat(parts[1]);
 
@@ -473,7 +473,6 @@ public class Level {
                             && Math.abs(player.lowestPoint.getY() - rect.getY() - rect.getHeight()) <= 0.1) {
                             player.Rotate(-27, player.midPoint);
                             player.setState(Player.State.FALLING);
-
                         }
                     }
                 }
@@ -553,7 +552,6 @@ public class Level {
             player.MoveY(GameData.getInstance().getPlayerSpeedY());
         } else {
             if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
-            System.out.println("Y: " + Y);
             switch (screenHeight) {
                 case FIXED:
                     player.MoveY(Y);
@@ -759,8 +757,8 @@ public class Level {
             MoveObstaclesX(-30);
             poly.points[player.getBL()].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
             poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight() + player.getWidth());
-            poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight() + player.getWidth());
+            poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
+            poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
             if (TriCheckRespawn()) {
                 GameData.getInstance().setDefaultSpeeds();
             }
@@ -795,38 +793,22 @@ public class Level {
         GameData.getInstance().setStop(false);
     }
     public void ZigZagRespawning(Obstacle obstacle) {
-        float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.7f) / 10f;
+        float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.5f) / 10f;
 
         if (obstacle instanceof RectPath) {
             RectPath rectPath = (RectPath) obstacle;
 
             if (!rectPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
-                if (player.direction == Player.Direction.UP) {
-                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(-90, player.midPoint));
-                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.DOWN));
-                }
             } else {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
-                if (player.direction == Player.Direction.DOWN) {
-                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(90, player.midPoint));
-                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.UP));
-                }
             }
         } else {
             TriPath triPath = (TriPath) obstacle;
             if (!triPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
-                if (player.direction == Player.Direction.UP) {
-                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(-90, player.midPoint));
-                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.DOWN));
-                }
             } else {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
-                if (player.direction == Player.Direction.DOWN) {
-                    GameData.getInstance().timers.runAfter(1f, () -> player.Rotate(90, player.midPoint));
-                    GameData.getInstance().timers.runAfter(1f, () -> player.setDirection(Player.Direction.UP));
-                }
             }
         }
     }
@@ -856,6 +838,7 @@ public class Level {
             }
             BaseLine = new LineSegment(new FloatPoint(0, 200), new FloatPoint(GameData.getInstance().getScreenWidth(), 200));
             base = new Rect(0,0,1500, 200, new Color(0.2f, 0.38f, 0.66f, 1f));
+            background = new Background(600, BaseLine.startPoint.getY());
             CreateNormalLevel();
         } else if (stage == levelStage.ZIGZAG) {
             AddObstacle(new RectPath(0, bottomOfLevel, 700, topOfLevel - bottomOfLevel, false));
@@ -908,6 +891,8 @@ public class Level {
             player.CalcMidPoints();
             player.CreateLines();
             player.FirstTrail();
+
+            background = new Background(topOfLevel - bottomOfLevel, bottomOfLevel);
         }
         this.stage = stage;
 

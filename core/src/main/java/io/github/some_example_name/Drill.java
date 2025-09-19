@@ -11,7 +11,6 @@ public class Drill {
         UP_RIGHT, RIGHT, DOWN_RIGHT
     }
 
-
     List<Obstacle> currentShapes;
     FloatPoint[] IntersectionPoints, points;
     LineEquation[] lines, oldLines;
@@ -21,10 +20,6 @@ public class Drill {
     int timesInARow = 0;
 
     Matrix Angles, OldPoints, NewPoints;
-
-    // 0 - up right
-    // 1 - right
-    // 2 - down right
 
     // BUFFER:
     // 0 - top square

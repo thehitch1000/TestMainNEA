@@ -24,7 +24,6 @@ public class Player {
     FloatPoint[] upPoints, downPoints, lineMidPoints;
     LineEquation[] lines, tempLines;
 
-
     Direction direction;
     State state;
     FloatPoint lowestPoint, midPoint;
@@ -37,7 +36,7 @@ public class Player {
         this.BL = 0;
         this.LP = 0;
         this.totalAngle = 0;
-        this.originPosX = GameData.getInstance().getScreenWidth() / 2f - width / 2;
+        this.originPosX = 730;
         this.originPosY = 200;
 
         this.direction = Direction.NULL;
@@ -456,5 +455,12 @@ public class Player {
         sr.setColor(Color.YELLOW);
         sr.line(0, EndLine.FindY(0), 1500, EndLine.FindY(1500));
         sr.line(0, EndLine.FindY(0), 1500, EndLine.FindY(1500));
+    }
+    public void PrintPoints() {
+        System.out.println("X: " + shape.points[0].getX() + " Y: " + shape.points[0].getY());
+        System.out.println("X: " + shape.points[1].getX() + " Y: " + shape.points[1].getY());
+        System.out.println("X: " + shape.points[2].getX() + " Y: " + shape.points[2].getY());
+        System.out.println("X: " + shape.points[3].getX() + " Y: " + shape.points[3].getY());
+        System.out.println();
     }
 }
