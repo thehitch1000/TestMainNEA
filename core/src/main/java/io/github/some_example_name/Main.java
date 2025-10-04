@@ -18,7 +18,7 @@ import static com.badlogic.gdx.Gdx.input;
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
     public enum Stage {
-        MENUS, PLAYING, PAUSED, DEADMENU, ENDING
+        STARTMENU, PLAYING, PAUSED, DEADMENU, ENDING
     }
 
     ShapeRenderer sr;
@@ -26,6 +26,7 @@ public class Main extends ApplicationAdapter {
     BitmapFont font;
 
     Menu startMenu;
+    Menu pauseMenu;
     Level level;
     Stage stage;
 
@@ -43,6 +44,15 @@ public class Main extends ApplicationAdapter {
         add(() -> Gdx.app.exit());
     }};
 
+    List<Runnable> pause1 = new ArrayList<Runnable>() {{
+        add(() -> pauseMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> GameData.getInstance().timers.runAfter(0.5f, () -> GameData.getInstance().setStop(false)));
+    }};
+    List<Runnable> pause2 = new ArrayList<Runnable>() {{
+        add(() -> Gdx.app.exit());
+    }};
+
     int a = 0;
 
     @Override
@@ -55,13 +65,18 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
 
         startMenu = new Menu();
+        pauseMenu = new Menu();
         level = new Level();
-        stage = Stage.MENUS;
+        stage = Stage.STARTMENU;
 
         startMenu.AddButton(new Button("Play Normal Level", start1, 750, 600, font));
         startMenu.AddButton(new Button("Play ZigZag Level", start2, 750, 400, font));
         startMenu.AddButton(new Button("Leave", start3, 750, 200, font));
         startMenu.Open();
+
+        pauseMenu.AddButton(new Button("Resume", pause1, 750, 500, font));
+        pauseMenu.AddButton(new Button("Leave", pause2, 750, 300, font));
+        pauseMenu.Close();
     }
 
     @Override
@@ -69,16 +84,23 @@ public class Main extends ApplicationAdapter {
         ScreenUtils.clear(0.2f, 0.38f, 0.66f, 1f);
         GameData.getInstance().Maintenance();
 
-        if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            Gdx.app.exit();
-        }
         if (input.isKeyJustPressed(Input.Keys.F1)) {
             a = (a + 1) % 2;
+        }
+        if (input.isKeyJustPressed(Input.Keys.F2)) {
+            Gdx.app.exit();
         }
 
         switch (stage) {
             case PLAYING:
+                if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                    stage = Stage.PAUSED;
+                    GameData.getInstance().setStop(true);
+                    pauseMenu.Open();
+                }
+
                 while (level.ReadFile());
+
 
                 if (!GameData.getInstance().isStop()) {
                     level.CheckBackground();
@@ -88,8 +110,12 @@ public class Main extends ApplicationAdapter {
                         level.Checking();
                         level.Move();
                     } else {
+                        GameData.getInstance().setStop(true);
+
                         level.MovePlayerY(0);
                         level.MoveWorldX();
+
+//                        GameData.getInstance().timers.runAfter(1, () -> level.MoveMonsterAlongPath());
 
                         level.player.CalcMidPoints();
                         level.CheckChangePlayerDirection();
@@ -99,6 +125,12 @@ public class Main extends ApplicationAdapter {
 
                         level.CheckObstacleCollision();
                     }
+                }
+
+                level.MoveMissiles();
+
+                if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                    level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                 }
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
@@ -111,12 +143,26 @@ public class Main extends ApplicationAdapter {
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
                 level.player.ammo.forEach(ammo -> ammo.Draw(sr));
 
+                if (input.isKeyPressed(Input.Keys.P)) {
+                    for (Node[] gridRow : level.grid) {
+                        for (Node node : gridRow) {
+                            if (node != null) {
+                                node.Draw(sr);
+                            }
+                        }
+                    }
+                }
+
                 sr.end();
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
                 sr.setColor(Color.WHITE);
                 level.BaseLine.Draw(sr);
+
+                if (!level.player.ammo.isEmpty()) {
+                    level.player.ammo.forEach(ammo -> ammo.PrintPath(sr));
+                }
 
                 if (a == 1) {
                     level.player.PrintLines(sr);
@@ -131,16 +177,38 @@ public class Main extends ApplicationAdapter {
 
                 level.player.normalTrail.forEach(trail -> trail.Draw(sr));
                 level.player.Draw(sr);
+                level.monster.Draw(sr);
 
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
+
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+
+                if (input.isKeyPressed(Input.Keys.P)) {
+                    for (Node[] gridRow : level.grid) {
+                        for (Node node : gridRow) {
+                            if (node != null) {
+                                node.Draw(sr);
+                            }
+                        }
+                    }
+                }
+
+                level.DrawObstacles(sr);
+
+                sr.end();
                 break;
 
-            case MENUS:
+            case STARTMENU:
                 startMenu.CheckClick();
 
                 startMenu.Draw(sr, batch, font);
+                break;
+            case PAUSED:
+                pauseMenu.CheckClick();
+
+                pauseMenu.Draw(sr, batch, font);
                 break;
         }
     }

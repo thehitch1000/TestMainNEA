@@ -188,6 +188,29 @@ class Rect extends Shape implements Transparency, Colour{
     public boolean onScreen() {
         return (x - width < GameData.getInstance().getScreenWidth() && x + width > 0);
     }
+
+    public Node.NodeState Overlaps(Polygon obstacle) {
+        FloatPoint[] obstaclePoints = new FloatPoint[obstacle.getVertices().length/2];
+        for (int i = 0; i < obstaclePoints.length; i++) {
+            obstaclePoints[i] = new FloatPoint(obstacle.getVertices()[i*2], obstacle.getVertices()[i*2 + 1]);
+        }
+        if (obstaclePoints.length == 3) {
+            for (FloatPoint point : obstaclePoints) {
+                if (isPointInShape(point)) {
+                    return Node.NodeState.REMOVE;
+                }
+            }
+        } else {
+            Rect obstacleRect = new Rect(obstaclePoints[0].getX(), obstaclePoints[0].getY(), obstaclePoints[1].getX() - obstaclePoints[0].getX(), obstaclePoints[2].getY() - obstaclePoints[1].getY());
+            if (rectIntersect(this, obstacleRect)) {
+                return Node.NodeState.REMOVE;
+            }
+        }
+        return Node.NodeState.WALKABLE;
+    }
+    private boolean rectIntersect(Rect a, Rect b) {
+        return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
+    }
 }
 class Tri extends Shape {
     public Tri(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
@@ -357,19 +380,19 @@ class Circle extends Shape {
         return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
 
-    public Node.NodeState overlaps(Polygon obstacle) {
+    public boolean overlaps(Polygon obstacle) {
         if (obstacle.getVertices().length == 6) {
             return CircleTriOverlap(obstacle);
         } else {
             return CircleRectOverlap(obstacle);
         }
     }
-    public Node.NodeState CircleRectOverlap(Polygon obstacle) {
+    public boolean CircleRectOverlap(Polygon obstacle) {
 
         // Center in Rect?
         if (x >= obstacle.getVertices()[0] && x <= obstacle.getVertices()[2]) {
             if (y >= obstacle.getVertices()[1] && y <= obstacle.getVertices()[5]) {
-                return Node.NodeState.REMOVE;
+                return true;
             }
         }
 
@@ -382,12 +405,12 @@ class Circle extends Shape {
         float Distance = (float) Math.sqrt(Math.pow(ChangeX, 2) + Math.pow(ChangeY, 2));
 
         if (Distance <= radius) {
-            return Node.NodeState.UNWALKABLE;
+            return true;
         }
 
-        return Node.NodeState.WALKABLE;
+        return false;
     }
-    public Node.NodeState CircleTriOverlap(Polygon obstacle) {
+    public boolean CircleTriOverlap(Polygon obstacle) {
         FloatPoint point = new FloatPoint(x, y);
 
         Tri tri = new Tri(new FloatPoint(obstacle.getVertices()[0], obstacle.getVertices()[1]),
@@ -395,7 +418,7 @@ class Circle extends Shape {
                           new FloatPoint(obstacle.getVertices()[4], obstacle.getVertices()[5]));
 
         if (tri.isPointInShape(point)) {
-            return Node.NodeState.REMOVE;
+            return true;
         }
 
         // Circle Touching or Intersecting
@@ -412,10 +435,10 @@ class Circle extends Shape {
             float SquaredDistance = closest.dst2(C);
 
             if (SquaredDistance <= radius * radius) {
-                return Node.NodeState.UNWALKABLE;
+                return true;
             }
         }
-        return Node.NodeState.WALKABLE;
+        return false;
     }
     public float Clamp(float min, float max, float value) {
         if (value < min) value = min;

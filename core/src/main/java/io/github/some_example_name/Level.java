@@ -3,6 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
@@ -16,9 +17,6 @@ import java.util.List;
 import static com.badlogic.gdx.Gdx.input;
 
 public class Level {
-    enum Status {
-        WALKABLE, UNWALKABLE
-    }
     public enum levelStage {
         NORMAL, ZIGZAG
     }
@@ -29,7 +27,7 @@ public class Level {
     List<Rect> baseRects;
     List<Obstacle> obstacles;
     List<Zone> zones;
-    List<com.badlogic.gdx.math.Polygon> shapes;
+    List<Polygon> shapes;
     levelStage stage;
     ScreenHeight screenHeight;
     Player player;
@@ -59,7 +57,7 @@ public class Level {
 
         drill = new Drill();
 
-        grid = new Node[GameData.getInstance().getScreenWidth()/cellSize][GameData.getInstance().getScreenHeight()/cellSize];
+        grid = new Node[][]{};
 
         this.xTravelled = 0;
         this.shapeNumber = 0;
@@ -70,8 +68,6 @@ public class Level {
 
         screenHeight = ScreenHeight.NEUTRAL;
         stage = null;
-
-
     }
 
     public void CreateNormalLevel() {
@@ -341,8 +337,10 @@ public class Level {
                         zone.polygon.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
                         zones.add(zone);
                         shapeNumber++;
+                        return true;
+                    } else {
+                        return false;
                     }
-                    break;
 
                 default:
                     System.out.println("Unknown obstacle type: " + parts[0]);
@@ -851,7 +849,6 @@ public class Level {
                 drill.setDrill(700, 300, 20, drill.CalcHeight());
             }
 
-
             switch (drill.getNewDirection()) {
                 case UP_RIGHT: // up right
                     drill.RotateDrill(-45, drill.points[3]);
@@ -877,6 +874,11 @@ public class Level {
                 player.setStartingPosition(750, drill.points[3].getY() - 30);
             }
 
+            monster.setPosition(720, drill.points[0].getY() + 70);
+            monster.CalcMidPoint();
+            System.out.println("MidPoint: " + monster.midPoint.getX() + " " + monster.midPoint.getY());
+            monster.setAwake(true);
+
             CreateZigZagLevel();
             AdjustShapesHeights();
 
@@ -893,8 +895,12 @@ public class Level {
             player.FirstTrail();
 
             background = new Background(topOfLevel - bottomOfLevel, bottomOfLevel);
+
+//            CheckMonsterWalkability();
         }
         this.stage = stage;
+
+        grid = new Node[GameData.getInstance().getScreenWidth() / cellSize][(int) (topOfLevel - bottomOfLevel) / cellSize];
 
         while(background.columns.size() < 20) {
             background.addColumn();
@@ -905,45 +911,46 @@ public class Level {
     public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
         Missile missile = new Missile(startPoint, endPoint, 6);
 
-        CheckWalkability();
+        CheckMissileWalkability();
 
-        CreateMissilePath(missile, missile.startPoint, endPoint);
+        missile.setPath(CreatePath(missile.startPoint, endPoint));
+
         player.ammo.add(missile);
     }
-    public void CreateMissilePath(Missile missile, FloatPoint startPoint, FloatPoint endPoint) {
-        Node[] pathNodes = FindPathNodes(startPoint, endPoint);
+    public ArrayList<LineSegment> CreatePath(FloatPoint startPoint, FloatPoint endPoint) {
+        ArrayList<Node> pathNodes = FindPathNodes(startPoint, endPoint);
+        ArrayList<LineSegment> pathSegments = new ArrayList<>();
 
-        if (pathNodes == null || pathNodes.length < 2) {
-            LineSegment[] directPath = new LineSegment[1];
-            directPath[0] = new LineSegment(startPoint, endPoint);
-            missile.setPath(directPath);
-            return;
+        if (pathNodes.size() < 2) {
+            pathSegments.add(new LineSegment(startPoint, endPoint));
+            return pathSegments;
         }
 
-        LineSegment[] pathSegments = new LineSegment[pathNodes.length - 1];
-        int j = 0;
-
-        for (int i = pathNodes.length - 1; i > 0; i--) {
-            FloatPoint point1 = new FloatPoint(pathNodes[i].getX(), pathNodes[i].getY());
-            FloatPoint point2 = new FloatPoint(pathNodes[i - 1].getX(), pathNodes[i - 1].getY());
-            pathSegments[j] = new LineSegment(point1, point2);
-            j++;
+        for (int i = pathNodes.size() - 1; i > 0; i--) {
+            FloatPoint point1 = new FloatPoint(pathNodes.get(i).getX(), pathNodes.get(i).getY());
+            FloatPoint point2 = new FloatPoint(pathNodes.get(i - 1).getX(), pathNodes.get(i - 1).getY());
+            pathSegments.add(new LineSegment(point1, point2));
         }
-
-        missile.setPath(pathSegments);
+        return pathSegments;
     }
-    public Node[] FindPathNodes(FloatPoint startPoint, FloatPoint endPoint) {
-        Node start = new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE);
-        Node end = new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE);
+    public ArrayList<Node> FindPathNodes(FloatPoint startPoint, FloatPoint endPoint) {
+        Node start = FindClosestNode(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
+        Node end = FindClosestNode(new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE));
 
-        NodePrioQueue openList = new NodePrioQueue(150);
+        start.setG(0f);
+        start.setH(heuristic(start, end));
+        start.setF(start.getG() + start.getH());
+        start.setParent(start);
+
+        NodePrioQueue openList = new NodePrioQueue(500);
         openList.enqueue(start);
 
         while (!openList.isEmpty()) {
             Node current = openList.dequeue();
 
             if (current == end) {
-                return ConstructMissilePath(end);
+                System.out.println("Found path");
+                return ConstructPath(current);
             }
 
             for (Node neighbour : getNeighbours(current)) {
@@ -954,7 +961,20 @@ public class Level {
                 }
             }
         }
+
         System.out.println("No path found");
+        return null;
+    }
+    private Node FindClosestNode(Node node) {
+        int gridX = (node.getX() - cellSize / 2) / cellSize;
+        int gridY = (node.getY() - cellSize / 2) / cellSize;
+        if (inBound(gridX, gridY) ) {
+            if (grid[gridX][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY];
+            if (grid[gridX][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY - 1];
+            if (grid[gridX][gridY + 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY + 1];
+            if (grid[gridX - 1][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY];
+            if (grid[gridX - 1][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY - 1];
+        }
         return null;
     }
     public void TransformShapes() {
@@ -978,49 +998,42 @@ public class Level {
             }
         }
     }
-    public void CheckWalkability() {
+    public void CheckMissileWalkability() {
         TransformShapes();
         ResetGrid();
-        for (int x = 0; x < grid.length; x++) {
-            for (int y = 0; y < grid[x].length; y++) {
-                Node.NodeState tempState = isMissileSafeAt(grid[x][y].getX(), grid[x][y].getY());
-                switch (tempState) {
-                    case UNWALKABLE:
-                    case WALKABLE:
-                    case UNKNOWN:
-                        grid[x][y].setState(tempState);
-                        break;
-                    case REMOVE:
-                        grid[x][y] = null;
-                        break;
+        for (Node[] nodes : grid) {
+            for (Node node : nodes) {
+                if (isMissileSafeAt(node.getX(), node.getY())) {
+                    node.setState(Node.NodeState.WALKABLE);
+                } else {
+                    node.setState(Node.NodeState.UNWALKABLE);
                 }
             }
         }
+        shapes.clear();
     }
     public void ResetGrid() {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
-                grid[x][y] = new Node(x, y, Node.NodeState.WALKABLE);
+                grid[x][y] = new Node((x * cellSize) + 2, (y * cellSize) + 2, Node.NodeState.WALKABLE);
             }
         }
     }
-    public Node.NodeState isMissileSafeAt(float x, float y) {
+    public boolean isMissileSafeAt(float x, float y) {
         Circle missile = new Circle(x, y, 10);
-        Node.NodeState tempState;
         for (Zone zone : zones) {
-            if (zone.isPointInZone(x,y)) {
-                for (Polygon shape : shapes) {
-                    tempState = missile.overlaps(shape);
-                    switch (tempState) {
-                        case UNWALKABLE:
-                        case REMOVE:
-                            return tempState;
+            if (zone.isPointInZone(x, y)) {
+                for (Polygon obstacle : shapes) {
+                    if (obstacle != null) {
+                        if (missile.overlaps(obstacle)) {
+                            return false;
+                        }
                     }
                 }
-                return Node.NodeState.WALKABLE;
+                return true;
             }
         }
-        return Node.NodeState.REMOVE;
+        return false;
     }
     public boolean LineOfSight(Node start, Node end) {
         FloatPoint startPoint = new FloatPoint(start.getX(), start.getY());
@@ -1028,30 +1041,20 @@ public class Level {
         LineSegment segment = new LineSegment(startPoint, endPoint);
         segment.setSegment();
         Missile testMissile = new Missile(startPoint, endPoint, 6);
-        boolean ended = false;
-        Status status = Status.WALKABLE;
-        while (!ended) {
+        boolean endOfLine = false;
+        while (!endOfLine){
             testMissile.MoveX(testMissile.getSpeed() * (float) Math.cos(segment.getAngle()));
             testMissile.MoveY(testMissile.getSpeed() * (float) Math.sin(segment.getAngle()));
-            if (!segment.isPointInSegment(new FloatPoint(testMissile.shape.getX(), testMissile.shape.getY()))) {
-                ended = true;
+
+            if (!segment.isPointInSegment(testMissile.shape.getX(), testMissile.shape.getY())) {
+                System.out.println("HERE");
+                endOfLine = true;
             }
-            Node.NodeState state = isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY());
-            switch (state) {
-                case UNWALKABLE:
-                case REMOVE:
-                    status = Status.UNWALKABLE;
-                    ended = true;
-                    break;
-            }
-        }
-        switch (status) {
-            case UNWALKABLE:
+            if (!isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY())) {
                 return false;
-            case WALKABLE:
-                return true;
+            }
         }
-        return false;
+        return true;
     }
     public Node[] getNeighbours(Node currentNode) {
         Node[] Neighbours = new Node[8];
@@ -1061,20 +1064,31 @@ public class Level {
         for (int x = -1; x < 2; x++) {
             for (int y = -1; y < 2; y++) {
                 if (x == 0 && y == 0) continue;
+                if (!inBound(X + x, Y + y)) continue;
                 Neighbours[i] = grid[X + x][Y + y];
                 i++;
             }
         }
         return Neighbours;
     }
+    private boolean inBound(int x, int y) {
+        return x >= 0 && x < grid.length && y >= 0 && y < grid[x].length;
+    }
     public int NodeFindXCoordinates(Node node) {
-        return (node.getX() - 4) / 8;
+        int index = (node.getX() - cellSize / 2) / cellSize;
+        if (index < 0) index = 0;
+        if (index >= grid.length) index = grid.length - 1;
+        return index;
     }
     public int NodeFindYCoordinates(Node node) {
-        return (node.getY() - 4) / 8;
+        int index = (node.getY() - cellSize / 2) / cellSize;
+        if (index < 0) index = 0;
+        if (index >= grid[0].length) index = grid[0].length - 1;
+        return index;
     }
     public void ProcessNeighbour(Node current, Node neighbour, Node end, NodePrioQueue openList) {
         Node parent = current.getParent();
+        if (parent == null) System.out.println("Parent is null");
         float tempG;
         Node tempParent;
 
@@ -1100,17 +1114,127 @@ public class Level {
     public float heuristic(Node a, Node b) {
         return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
     }
-    public Node[] ConstructMissilePath(Node end) {
-        Node[] path = new Node[15];
+    public ArrayList<Node> ConstructPath(Node end) {
+        ArrayList<Node> path = new ArrayList<>();
         Node current = end;
-        int i = 0;
 
         while (current != current.getParent()) {
-            path[i] = current;
-            i++;
+            path.add(current);
             current = current.getParent();
         }
-        path[i] = current; // Add the start node
+        path.add(current);
         return path;
     }
+
+    public void DrawObstacles(ShapeRenderer sr) {
+        sr.setColor(Color.RED);
+        for (Polygon obstacle : shapes) {
+            if (obstacle != null) {
+                float[] vertices = obstacle.getTransformedVertices();
+                for (int i = 0; i < vertices.length; i += 2) {
+                    int next = (i + 2) % vertices.length;
+                    sr.line(vertices[i], vertices[i + 1], vertices[next], vertices[next + 1]);
+                }
+            }
+        }
+    }
+
+//    public void MoveMonsterAlongPath() {
+//        if (monster.currentPath.isEmpty()) {
+//            FindNewMonsterPath();
+//        }
+//
+//        float angleRad = monster.currentPath.get(0).getAngle();
+//        FloatPoint tempPoint = new FloatPoint(
+//            monster.shape.points[0].getX() + (monster.getSpeed() * (float) Math.cos(angleRad)),
+//            monster.shape.points[0].getY() + (monster.getSpeed() * (float) Math.sin(angleRad))
+//        );
+//        if (monster.currentPath.get(0).isPointInSegment(tempPoint)) {
+//            monster.shape.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
+//            monster.shape.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
+//        } else {
+//            monster.shape.MoveX(monster.currentPath.get(0).endPoint.getX() - monster.shape.points[0].getX());
+//            monster.shape.MoveY(monster.currentPath.get(0).endPoint.getY() - monster.shape.points[0].getY());
+//            monster.currentPath.remove(0);
+//        }
+//    }
+
+    public void MoveMissiles() {
+        for (int i = 0; i < player.ammo.size(); i++) {
+            if (player.ammo.get(i) instanceof Missile) {
+                Missile missile = (Missile) player.ammo.get(i);
+                missile.MoveAlongPath();
+                if (missile.path.isEmpty()) {
+                    player.ammo.remove(missile);
+                }
+            }
+        }
+        for (Ammo ammo : monster.ammo) {
+            if (ammo instanceof Missile) {
+                ammo.MoveAlongPath();
+                if (ammo.path.isEmpty()) {
+                    monster.ammo.remove(ammo);
+                }
+            }
+        }
+    }
 }
+
+
+
+//    public Node.NodeState isMonsterSafeAt(float x, float y) {
+//        Rect rect = new Rect(x + monster.shape.getWidth() / 2, y + monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight());
+//        Node.NodeState tempState;
+//        for (Zone zone : zones) {
+//            if (zone.isPointInZone(x,y)) {
+//                for (Polygon shape : shapes) {
+//                    tempState = rect.Overlaps(shape);
+//                    if (tempState == Node.NodeState.REMOVE) {
+//                        return tempState;
+//                    }
+//                }
+//                return Node.NodeState.WALKABLE;
+//            }
+//        }
+//        return Node.NodeState.REMOVE;
+//    }
+//    public void CheckMonsterWalkability() {
+//        TransformShapes();
+//        ResetGrid();
+//        for (int x = 0; x < grid.length; x++) {
+//            for (int y = 0; y < grid[x].length; y++) {
+//                Node.NodeState tempState = isMonsterSafeAt(grid[x][y].getX(), grid[x][y].getY());
+//                switch (tempState) {
+//                    case WALKABLE:
+//                        System.out.println("Node: " + grid[x][y].getX() + " " + grid[x][y].getY());
+//                        grid[x][y].setState(tempState);
+//                        break;
+//                    case REMOVE:
+//                        System.out.println("Node: " + grid[x][y].getX() + " " + grid[x][y].getY() + "  REMOVED");
+//                        grid[x][y] = null;
+//                        break;
+//                }
+//            }
+//        }
+//    }
+
+//    public void FindNewMonsterPath() {
+//        CheckMonsterWalkability();
+//
+//        monster.CalcMidPoint();
+//
+//        monster.setNewPath(CreatePath(monster.midPoint, FindMonsterEndPoint()));
+//    }
+//public FloatPoint FindMonsterEndPoint() {
+//    Node[] Column = grid[grid.length - 1];
+//    boolean valid = false;
+//    do {
+//        float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - 2f;
+//        float difference = yLevel % 4;
+//        float nodeY = (yLevel - difference) / cellSize;
+//        if (Column[(int) nodeY] != null) {
+//            return new FloatPoint(Column[(int) nodeY].getX(), Column[(int) nodeY].getY());
+//        }
+//    } while (!valid);
+//    return null;
+//}

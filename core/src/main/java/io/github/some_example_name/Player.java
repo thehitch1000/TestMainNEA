@@ -155,10 +155,10 @@ public class Player {
                 this.healthShape.points[i].setWholePoint(this.shape.points[i]);
             }
         } else {
-            this.shape.points[0].setPoint(x, y);
-            this.shape.points[1].setPoint(x - 5, y + 15);
-            this.shape.points[2].setPoint(x + 25, y);
-            this.shape.points[3].setPoint(x - 5, y - 15);
+            shape.points[0].setPoint(730, y);
+            shape.points[1].setPoint(725, y + 15);
+            shape.points[2].setPoint(755, y);
+            shape.points[3].setPoint(725, y - 15);
             for (int i = 0; i < healthShape.points.length; i++) {
                 this.healthShape.points[i].setWholePoint(this.shape.points[i]);
             }

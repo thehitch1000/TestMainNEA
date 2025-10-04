@@ -1,5 +1,6 @@
 package io.github.some_example_name;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 
@@ -18,6 +19,7 @@ abstract class Ammo implements IntAmmo {
 
     public void Draw(ShapeRenderer sr){}
     public void MoveAlongPath(){}
+    public void PrintPath(ShapeRenderer sr){}
 }
 
 class Bullet extends Ammo {
@@ -80,21 +82,20 @@ class Bullet extends Ammo {
             shape.points[0].getX() + (speed * (float) Math.cos(angleRad)),
             shape.points[0].getY() + (speed * (float) Math.sin(angleRad))
         );
-        if (path.get(0).isPointInSegment(tempPoint)) {
+        if (path.get(0).isPointInSegment(tempPoint.getX(), tempPoint.getY())) {
             shape.MoveX((float) Math.cos(angleRad) * speed);
             shape.MoveY((float) Math.sin(angleRad) * speed);
         } else {
             shape.MoveX(path.get(0).endPoint.getX() - shape.points[0].getX());
             shape.MoveY(path.get(0).endPoint.getY() - shape.points[0].getY());
         }
-
     }
 }
 
 class Missile extends Ammo {
 
     Circle shape;
-    LineSegment[] path;
+    List<LineSegment> path;
     FloatPoint startPoint, endPoint;
     private float speed;
 
@@ -103,10 +104,11 @@ class Missile extends Ammo {
         this.startPoint = startPoint;
         this.endPoint = endPoint;
 
-        this.shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
+        shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
 
-        this.path = new LineSegment[10];
+        path = new ArrayList<>();
     }
+
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
     }
@@ -125,13 +127,38 @@ class Missile extends Ammo {
         this.speed = speed;
     }
 
-    public void setPath(LineSegment[] path) {
+    public void setPath(ArrayList<LineSegment> path) {
         this.path = path;
     }
 
-    public void PrintPath(ShapeRenderer sr) {
-        for (int i = 0; i < path.length; i++) {
-            sr.line(path[i].startPoint.getX(), path[i].startPoint.getY(), path[i].endPoint.getX(), path[i].endPoint.getY());
+    public void PrintPath(ShapeRenderer sr){
+        for (LineSegment line : path) {
+            if (line == null) continue;
+            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
         }
+    }
+
+    public void MoveAlongPath() {
+        if (path.isEmpty()) {
+            Explode();
+            System.out.println(endPoint.equals(new FloatPoint(shape.getX(), shape.getY())));
+            return;
+        }
+        float angleRad = path.get(0).getAngle();
+        FloatPoint tempPoint = new FloatPoint(
+            shape.getX() + (speed * (float) Math.cos(angleRad)),
+            shape.getY() + (speed * (float) Math.sin(angleRad))
+        );
+        if (path.get(0).isPointInSegment(tempPoint.getX(), tempPoint.getY())) {
+            shape.MoveX((float) Math.cos(angleRad) * speed);
+            shape.MoveY((float) Math.sin(angleRad) * speed);
+        } else {
+            shape.MoveX(path.get(0).endPoint.getX() - shape.getX());
+            shape.MoveY(path.get(0).endPoint.getY() - shape.getY());
+            path.remove(0);
+        }
+    }
+    public void Explode() {
+
     }
 }

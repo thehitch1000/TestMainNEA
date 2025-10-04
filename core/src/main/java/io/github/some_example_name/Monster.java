@@ -1,12 +1,64 @@
 package io.github.some_example_name;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+
+import java.util.ArrayList;
 
 public class Monster {
+    private float speed;
+    private boolean awake;
+    ArrayList<LineSegment> currentPath;
+    ArrayList<Ammo> ammo;
     Shape shape, healthShape;
+    FloatPoint midPoint;
+
 
     public Monster() {
-        shape = new polygon(4, Color.RED, 0.5f);
-        healthShape = new polygon(4, Color.RED);
+        shape = new Rect(40, 40, Color.RED);
+        healthShape = new Rect(40, 40, Color.RED);
+
+        currentPath = new ArrayList<>();
+        ammo = new ArrayList<>();
+
+        this.speed = 20;
+        this.awake = false;
+    }
+
+    public float getSpeed() {
+        return speed;
+    }
+
+    public void setAwake(boolean awake) {
+        this.awake = awake;
+    }
+
+    public void setNewPath(ArrayList<LineSegment> path) {
+        this.currentPath = path;
+    }
+
+    public void setPosition(float x, float y) {
+        shape.setShape(x, y);
+        healthShape.setShape(x, y);
+    }
+
+    public void CalcMidPoint() {
+        midPoint = new FloatPoint(shape.getX() + shape.getWidth()/2, shape.getY() + shape.getHeight()/2);
+    }
+
+    public void Draw(ShapeRenderer sr) {
+        if (awake) {
+            shape.Draw(sr);
+            healthShape.Draw(sr);
+        }
+    }
+
+    public void MoveX(float x) {
+        shape.MoveX(x);
+        healthShape.MoveX(x);
+    }
+    public void MoveY(float y) {
+        shape.MoveY(y);
+        healthShape.MoveY(y);
     }
 }
