@@ -22,6 +22,7 @@ public interface IntShape {
 abstract class Shape implements IntShape {
     protected FloatPoint[] points;
     Matrix Angles, OldPoints, NewPoints;
+    FloatPoint midPoint;
 
     public void Draw(ShapeRenderer sr) {}
     public void setShape(float x, float y) {}
@@ -54,6 +55,10 @@ abstract class Shape implements IntShape {
             points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
         }
     }
+    public boolean overlaps(Polygon obstacle) {
+        return false;
+    }
+    public void CalcMidPoint() {}
 
     public float getX() {
         return 0;
@@ -97,6 +102,7 @@ class Rect extends Shape implements Transparency, Colour{
         this.alpha = 1;
         points = null;
         this.colour = colour;
+        midPoint = new FloatPoint(x + (width / 2), y + (height / 2));
     }
     public Rect(float x, float y, float width, float height) {
         this.x = x;
@@ -106,6 +112,7 @@ class Rect extends Shape implements Transparency, Colour{
         this.alpha = 1;
         points = null;
         this.colour = new Color(1, 1, 1, 1);
+        midPoint = new FloatPoint(x + (width / 2), y + (height / 2));
     }
     public Rect(float width, float height) {
         this.x = 0;
@@ -115,6 +122,7 @@ class Rect extends Shape implements Transparency, Colour{
         this.alpha = 1;
         points = null;
         this.colour = new Color(1, 1, 1, 1);
+        midPoint = new FloatPoint(0,0);
     }
     public Rect(float width, float height, Color colour) {
         this.x = 0;
@@ -124,6 +132,7 @@ class Rect extends Shape implements Transparency, Colour{
         this.alpha = 1;
         points = null;
         this.colour = colour;
+        midPoint = new FloatPoint(0,0);
     }
 
     public void setColour(Color colour) {
@@ -168,6 +177,9 @@ class Rect extends Shape implements Transparency, Colour{
         return alpha;
     }
 
+    public void CalcMidPoint() {
+        midPoint = new FloatPoint(x + (width / 2), y + (height / 2));
+    }
     public void setShape(float x, float y) {
         this.x = x;
         this.y = y;
@@ -178,9 +190,11 @@ class Rect extends Shape implements Transparency, Colour{
     }
     public void MoveX(float X) {
         x += X;
+        CalcMidPoint();
     }
     public void MoveY(float Y) {
         y += Y;
+        CalcMidPoint();
     }
     public boolean isPointInShape(FloatPoint point) {
         return point.getX() > x && point.getX() < x + width && point.getY() > y && point.getY() < y + height;
@@ -189,7 +203,7 @@ class Rect extends Shape implements Transparency, Colour{
         return (x - width < GameData.getInstance().getScreenWidth() && x + width > 0);
     }
 
-    public Node.NodeState Overlaps(Polygon obstacle) {
+    public boolean overlaps(Polygon obstacle) {
         FloatPoint[] obstaclePoints = new FloatPoint[obstacle.getVertices().length/2];
         for (int i = 0; i < obstaclePoints.length; i++) {
             obstaclePoints[i] = new FloatPoint(obstacle.getVertices()[i*2], obstacle.getVertices()[i*2 + 1]);
@@ -197,16 +211,16 @@ class Rect extends Shape implements Transparency, Colour{
         if (obstaclePoints.length == 3) {
             for (FloatPoint point : obstaclePoints) {
                 if (isPointInShape(point)) {
-                    return Node.NodeState.REMOVE;
+                    return true;
                 }
             }
         } else {
             Rect obstacleRect = new Rect(obstaclePoints[0].getX(), obstaclePoints[0].getY(), obstaclePoints[1].getX() - obstaclePoints[0].getX(), obstaclePoints[2].getY() - obstaclePoints[1].getY());
             if (rectIntersect(this, obstacleRect)) {
-                return Node.NodeState.REMOVE;
+                return true;
             }
         }
-        return Node.NodeState.WALKABLE;
+        return false;
     }
     private boolean rectIntersect(Rect a, Rect b) {
         return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
@@ -341,6 +355,7 @@ class Circle extends Shape {
         points = null;
         this.x = x;
         this.y = y;
+        midPoint = new FloatPoint(x, y);
     }
 
     public float getRadius() {
@@ -364,9 +379,11 @@ class Circle extends Shape {
 
     public void MoveX(float X) {
         x += X;
+        CalcMidPoint();
     }
     public void MoveY(float Y) {
         y += Y;
+        CalcMidPoint();
     }
 
     public boolean IsPointInShape(FloatPoint point) {
@@ -374,6 +391,10 @@ class Circle extends Shape {
         Vector2 P = new Vector2(point.getX(), point.getY());
 
         return (C.dst(P) <= radius);
+    }
+
+    public void CalcMidPoint() {
+        midPoint = new FloatPoint(x, y);
     }
 
     public boolean onScreen() {

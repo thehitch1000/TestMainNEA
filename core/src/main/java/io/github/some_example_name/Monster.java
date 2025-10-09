@@ -61,4 +61,14 @@ public class Monster {
         shape.MoveY(y);
         healthShape.MoveY(y);
     }
+    public void MovePathX(float x) {
+        for (LineSegment line : currentPath) {
+            line.MoveX(x);
+        }
+    }
+    public void MovePathY(float y) {
+        for (LineSegment line : currentPath) {
+            line.MoveY(y);
+        }
+    }
 }

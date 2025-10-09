@@ -3,7 +3,6 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
@@ -22,6 +21,9 @@ public class Level {
     }
     public enum ScreenHeight {
         TOP, BOTTOM, NEUTRAL, FIXED
+    }
+    enum TypeOfPath {
+        RECT, CIRCLE
     }
 
     List<Rect> baseRects;
@@ -531,6 +533,8 @@ public class Level {
             player.MoveTempLinesX(-3.5f);
             xTravelled += 3.5f;
             zones.forEach(zone -> zone.MoveX(-3.5f));
+            MoveMissiles(-3.5f);
+            monster.MoveX(-3.5f);
         } else {
             obstacles.forEach(obstacle -> obstacle.MoveX(-GameData.getInstance().getObstacleSpeed()));
         }
@@ -538,11 +542,14 @@ public class Level {
     public void MoveWorldY(float Y) {
         if (stage == levelStage.ZIGZAG) {
             currentHeight -= Y;
+            monster.MoveY(Y);
+            monster.MovePathY(Y);
             player.MoveTempLinesY(Y);
             obstacles.forEach(obstacle -> obstacle.MoveY(Y));
             player.zigTrail.forEach(trail -> trail.MoveY(Y));
             zones.forEach(zone -> zone.MoveY(Y));
             MoveBackgroundY(Y/10);
+
         }
     }
     public void MovePlayerY(float Y) {
@@ -913,12 +920,31 @@ public class Level {
 
         CheckMissileWalkability();
 
-        missile.setPath(CreatePath(missile.startPoint, endPoint));
+        missile.setPath(CreatePath(TypeOfPath.CIRCLE, startPoint, endPoint));
 
         player.ammo.add(missile);
     }
-    public ArrayList<LineSegment> CreatePath(FloatPoint startPoint, FloatPoint endPoint) {
-        ArrayList<Node> pathNodes = FindPathNodes(startPoint, endPoint);
+    public void FindNewMonsterPath() {
+        CheckMonsterWalkability();
+
+        monster.CalcMidPoint();
+
+        monster.setNewPath(CreatePath(TypeOfPath.RECT, monster.midPoint, FindMonsterEndPoint()));
+    }
+    public FloatPoint FindMonsterEndPoint() {
+        Node[] Column = grid[grid.length - 1];
+        boolean valid = false;
+        do {
+            int randomIndex = (int) Math.floor(Math.random() * Column.length);
+            if (FindClosestNode(Column[randomIndex]).getState() == Node.NodeState.WALKABLE) {
+                return new FloatPoint(Column[randomIndex].getX(), Column[randomIndex].getY());
+            }
+        } while (!valid);
+        return null;
+    }
+
+    public ArrayList<LineSegment> CreatePath(TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint) {
+        ArrayList<Node> pathNodes = FindPathNodes(type, startPoint, endPoint);
         ArrayList<LineSegment> pathSegments = new ArrayList<>();
 
         if (pathNodes.size() < 2) {
@@ -933,7 +959,7 @@ public class Level {
         }
         return pathSegments;
     }
-    public ArrayList<Node> FindPathNodes(FloatPoint startPoint, FloatPoint endPoint) {
+    public ArrayList<Node> FindPathNodes(TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint) {
         Node start = FindClosestNode(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
         Node end = FindClosestNode(new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE));
 
@@ -942,7 +968,7 @@ public class Level {
         start.setF(start.getG() + start.getH());
         start.setParent(start);
 
-        NodePrioQueue openList = new NodePrioQueue(500);
+        NodePrioQueue openList = new NodePrioQueue(1500);
         openList.enqueue(start);
 
         while (!openList.isEmpty()) {
@@ -956,7 +982,7 @@ public class Level {
             for (Node neighbour : getNeighbours(current)) {
                 if (neighbour != null) {
                     if (neighbour.getState() == Node.NodeState.WALKABLE) {
-                        ProcessNeighbour(current, neighbour, end, openList);
+                        ProcessNeighbour(type, current, neighbour, end, openList);
                     }
                 }
             }
@@ -968,12 +994,12 @@ public class Level {
     private Node FindClosestNode(Node node) {
         int gridX = (node.getX() - cellSize / 2) / cellSize;
         int gridY = (node.getY() - cellSize / 2) / cellSize;
-        if (inBound(gridX, gridY) ) {
-            if (grid[gridX][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY];
-            if (grid[gridX][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY - 1];
-            if (grid[gridX][gridY + 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY + 1];
-            if (grid[gridX - 1][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY];
-            if (grid[gridX - 1][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY - 1];
+        if (inBound(gridX, gridY)) {
+            if (grid[gridX][gridY].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY];
+            if (grid[gridX][gridY - 1].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY - 1];
+            if (grid[gridX][gridY + 1].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY + 1];
+            if (grid[gridX - 1][gridY].getState() == Node.NodeState.WALKABLE) return grid[gridX - 1][gridY];
+            if (grid[gridX - 1][gridY - 1].getState() == Node.NodeState.WALKABLE) return grid[gridX - 1][gridY - 1];
         }
         return null;
     }
@@ -998,20 +1024,6 @@ public class Level {
             }
         }
     }
-    public void CheckMissileWalkability() {
-        TransformShapes();
-        ResetGrid();
-        for (Node[] nodes : grid) {
-            for (Node node : nodes) {
-                if (isMissileSafeAt(node.getX(), node.getY())) {
-                    node.setState(Node.NodeState.WALKABLE);
-                } else {
-                    node.setState(Node.NodeState.UNWALKABLE);
-                }
-            }
-        }
-        shapes.clear();
-    }
     public void ResetGrid() {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
@@ -1019,13 +1031,42 @@ public class Level {
             }
         }
     }
-    public boolean isMissileSafeAt(float x, float y) {
-        Circle missile = new Circle(x, y, 10);
+
+    public void CheckMissileWalkability() {
+        shapes.clear();
+        TransformShapes();
+        ResetGrid();
+        for (Node[] nodes : grid) {
+            for (Node node : nodes) {
+                if (isShapeSafeAt(node.getX(), node.getY(), new Circle(node.getX(), node.getY(), 10))) {
+                    node.setState(Node.NodeState.WALKABLE);
+                } else {
+                    node.setState(Node.NodeState.UNWALKABLE);
+                }
+            }
+        }
+    }
+    public void CheckMonsterWalkability() {
+        shapes.clear();
+        TransformShapes();
+        ResetGrid();
+        for (Node[] nodes : grid) {
+            for (Node node : nodes) {
+                if (isShapeSafeAt(node.getX(), node.getY(), new Rect(node.getX() - monster.shape.getWidth() / 2, node.getY() - monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight()))) {
+                    node.setState(Node.NodeState.WALKABLE);
+                } else {
+                    node.setState(Node.NodeState.UNWALKABLE);
+                }
+            }
+        }
+    }
+
+    public boolean isShapeSafeAt(float x, float y, Shape entity) {
         for (Zone zone : zones) {
             if (zone.isPointInZone(x, y)) {
                 for (Polygon obstacle : shapes) {
                     if (obstacle != null) {
-                        if (missile.overlaps(obstacle)) {
+                        if (entity.overlaps(obstacle)) {
                             return false;
                         }
                     }
@@ -1035,22 +1076,27 @@ public class Level {
         }
         return false;
     }
-    public boolean LineOfSight(Node start, Node end) {
+
+    public boolean LineOfSight(Node start, Node end, Shape shape) {
         FloatPoint startPoint = new FloatPoint(start.getX(), start.getY());
         FloatPoint endPoint = new FloatPoint(end.getX(), end.getY());
         LineSegment segment = new LineSegment(startPoint, endPoint);
+        int speed;
+        if (shape instanceof Rect) {
+            speed = 10;
+        } else {
+            speed = 6;
+        }
         segment.setSegment();
-        Missile testMissile = new Missile(startPoint, endPoint, 6);
         boolean endOfLine = false;
         while (!endOfLine){
-            testMissile.MoveX(testMissile.getSpeed() * (float) Math.cos(segment.getAngle()));
-            testMissile.MoveY(testMissile.getSpeed() * (float) Math.sin(segment.getAngle()));
+            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
+            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
 
-            if (!segment.isPointInSegment(testMissile.shape.getX(), testMissile.shape.getY())) {
-                System.out.println("HERE");
+            if (!segment.isPointInSegment(shape.midPoint.getX(), shape.midPoint.getY())) {
                 endOfLine = true;
             }
-            if (!isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY())) {
+            if (!isShapeSafeAt(shape.midPoint.getX(), shape.midPoint.getY(), shape)) {
                 return false;
             }
         }
@@ -1071,8 +1117,8 @@ public class Level {
         }
         return Neighbours;
     }
-    private boolean inBound(int x, int y) {
-        return x >= 0 && x < grid.length && y >= 0 && y < grid[x].length;
+    private boolean inBound(int X, int Y)    {
+        return X >= 0 && X < grid.length - 1 && Y >= 0 && Y < grid[0].length - 1;
     }
     public int NodeFindXCoordinates(Node node) {
         int index = (node.getX() - cellSize / 2) / cellSize;
@@ -1086,13 +1132,19 @@ public class Level {
         if (index >= grid[0].length) index = grid[0].length - 1;
         return index;
     }
-    public void ProcessNeighbour(Node current, Node neighbour, Node end, NodePrioQueue openList) {
+    public void ProcessNeighbour(TypeOfPath type, Node current, Node neighbour, Node end, NodePrioQueue openList) {
+        Shape shape;
+        if (type == TypeOfPath.RECT) {
+            shape = new Rect(current.getX() - monster.shape.getWidth() / 2, current.getY() - monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight());
+        } else {
+            shape = new Circle(current.getX(), current.getY(), 10);
+        }
         Node parent = current.getParent();
-        if (parent == null) System.out.println("Parent is null");
+        if (parent == null) System.out.println("parent is null");
         float tempG;
         Node tempParent;
 
-        if (LineOfSight(parent, neighbour)) {
+        if (LineOfSight(parent, neighbour, shape)) {
             tempG = parent.getG() + distance(parent, neighbour);
             tempParent = parent;
         } else {
@@ -1126,40 +1178,32 @@ public class Level {
         return path;
     }
 
-    public void DrawObstacles(ShapeRenderer sr) {
-        sr.setColor(Color.RED);
+    public void DrawObstacles() {
         for (Polygon obstacle : shapes) {
-            if (obstacle != null) {
-                float[] vertices = obstacle.getTransformedVertices();
-                for (int i = 0; i < vertices.length; i += 2) {
-                    int next = (i + 2) % vertices.length;
-                    sr.line(vertices[i], vertices[i + 1], vertices[next], vertices[next + 1]);
-                }
-            }
+            obstacle.
         }
     }
 
-//    public void MoveMonsterAlongPath() {
-//        if (monster.currentPath.isEmpty()) {
-//            FindNewMonsterPath();
-//        }
-//
-//        float angleRad = monster.currentPath.get(0).getAngle();
-//        FloatPoint tempPoint = new FloatPoint(
-//            monster.shape.points[0].getX() + (monster.getSpeed() * (float) Math.cos(angleRad)),
-//            monster.shape.points[0].getY() + (monster.getSpeed() * (float) Math.sin(angleRad))
-//        );
-//        if (monster.currentPath.get(0).isPointInSegment(tempPoint)) {
-//            monster.shape.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
-//            monster.shape.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
-//        } else {
-//            monster.shape.MoveX(monster.currentPath.get(0).endPoint.getX() - monster.shape.points[0].getX());
-//            monster.shape.MoveY(monster.currentPath.get(0).endPoint.getY() - monster.shape.points[0].getY());
-//            monster.currentPath.remove(0);
-//        }
-//    }
+    public void MoveMonsterAlongPath() {
+        if (monster.currentPath.isEmpty()) {
+            FindNewMonsterPath();
+        }
 
-    public void MoveMissiles() {
+        float angleRad = monster.currentPath.get(0).getAngle();
+        FloatPoint tempPoint = new FloatPoint(
+            monster.shape.points[0].getX() + (monster.getSpeed() * (float) Math.cos(angleRad)),
+            monster.shape.points[0].getY() + (monster.getSpeed() * (float) Math.sin(angleRad))
+        );
+        if (monster.currentPath.get(0).isPointInSegment(tempPoint.getX(), tempPoint.getY())) {
+            monster.shape.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
+            monster.shape.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
+        } else {
+            monster.shape.MoveX(monster.currentPath.get(0).endPoint.getX() - monster.shape.points[0].getX());
+            monster.shape.MoveY(monster.currentPath.get(0).endPoint.getY() - monster.shape.points[0].getY());
+            monster.currentPath.remove(0);
+        }
+    }
+    public void MoveMissilesAlongPath() {
         for (int i = 0; i < player.ammo.size(); i++) {
             if (player.ammo.get(i) instanceof Missile) {
                 Missile missile = (Missile) player.ammo.get(i);
@@ -1178,63 +1222,26 @@ public class Level {
             }
         }
     }
+
+    public void MoveMissiles(float X) {
+        for (Ammo ammo : monster.ammo) {
+            if (ammo instanceof Missile) {
+                Missile missile = (Missile) ammo;
+                missile.MoveX(X);
+            }
+        }
+        for (Ammo ammo : player.ammo) {
+            if (ammo instanceof Missile) {
+                Missile missile = (Missile) ammo;
+                missile.MoveX(X);
+            }
+        }
+    }
+
+    public void CalcMidPoints() {
+        player.CalcMidPoints();
+        monster.CalcMidPoint();
+    }
 }
 
 
-
-//    public Node.NodeState isMonsterSafeAt(float x, float y) {
-//        Rect rect = new Rect(x + monster.shape.getWidth() / 2, y + monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight());
-//        Node.NodeState tempState;
-//        for (Zone zone : zones) {
-//            if (zone.isPointInZone(x,y)) {
-//                for (Polygon shape : shapes) {
-//                    tempState = rect.Overlaps(shape);
-//                    if (tempState == Node.NodeState.REMOVE) {
-//                        return tempState;
-//                    }
-//                }
-//                return Node.NodeState.WALKABLE;
-//            }
-//        }
-//        return Node.NodeState.REMOVE;
-//    }
-//    public void CheckMonsterWalkability() {
-//        TransformShapes();
-//        ResetGrid();
-//        for (int x = 0; x < grid.length; x++) {
-//            for (int y = 0; y < grid[x].length; y++) {
-//                Node.NodeState tempState = isMonsterSafeAt(grid[x][y].getX(), grid[x][y].getY());
-//                switch (tempState) {
-//                    case WALKABLE:
-//                        System.out.println("Node: " + grid[x][y].getX() + " " + grid[x][y].getY());
-//                        grid[x][y].setState(tempState);
-//                        break;
-//                    case REMOVE:
-//                        System.out.println("Node: " + grid[x][y].getX() + " " + grid[x][y].getY() + "  REMOVED");
-//                        grid[x][y] = null;
-//                        break;
-//                }
-//            }
-//        }
-//    }
-
-//    public void FindNewMonsterPath() {
-//        CheckMonsterWalkability();
-//
-//        monster.CalcMidPoint();
-//
-//        monster.setNewPath(CreatePath(monster.midPoint, FindMonsterEndPoint()));
-//    }
-//public FloatPoint FindMonsterEndPoint() {
-//    Node[] Column = grid[grid.length - 1];
-//    boolean valid = false;
-//    do {
-//        float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - 2f;
-//        float difference = yLevel % 4;
-//        float nodeY = (yLevel - difference) / cellSize;
-//        if (Column[(int) nodeY] != null) {
-//            return new FloatPoint(Column[(int) nodeY].getX(), Column[(int) nodeY].getY());
-//        }
-//    } while (!valid);
-//    return null;
-//}

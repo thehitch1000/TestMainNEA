@@ -110,14 +110,21 @@ public class Main extends ApplicationAdapter {
                         level.Checking();
                         level.Move();
                     } else {
+
                         GameData.getInstance().setStop(true);
 
                         level.MovePlayerY(0);
                         level.MoveWorldX();
 
-//                        GameData.getInstance().timers.runAfter(1, () -> level.MoveMonsterAlongPath());
 
-                        level.player.CalcMidPoints();
+
+                        if (level.monster.midPoint.getX() < 150) {
+                            level.MoveMonsterAlongPath();
+                        }
+
+
+
+                        level.CalcMidPoints();
                         level.CheckChangePlayerDirection();
                         level.player.UpdatePoints();
 
@@ -127,11 +134,11 @@ public class Main extends ApplicationAdapter {
                     }
                 }
 
-                level.MoveMissiles();
-
                 if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
                     level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                 }
+
+                level.MoveMissilesAlongPath();
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -160,13 +167,11 @@ public class Main extends ApplicationAdapter {
                 sr.setColor(Color.WHITE);
                 level.BaseLine.Draw(sr);
 
-                if (!level.player.ammo.isEmpty()) {
-                    level.player.ammo.forEach(ammo -> ammo.PrintPath(sr));
-                }
-
                 if (a == 1) {
                     level.player.PrintLines(sr);
                 }
+
+                level.DrawObstacles();
 
                 sr.end();
 
@@ -194,8 +199,6 @@ public class Main extends ApplicationAdapter {
                         }
                     }
                 }
-
-                level.DrawObstacles(sr);
 
                 sr.end();
                 break;

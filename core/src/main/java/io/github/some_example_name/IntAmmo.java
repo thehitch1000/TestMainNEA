@@ -10,6 +10,9 @@ import java.util.List;
 public interface IntAmmo {
     void Draw(ShapeRenderer sr);
     void MoveAlongPath();
+    void MovePathX(float X);
+    void MovePathY(float Y);
+    void PrintPath(ShapeRenderer sr);
 }
 
 abstract class Ammo implements IntAmmo {
@@ -19,7 +22,24 @@ abstract class Ammo implements IntAmmo {
 
     public void Draw(ShapeRenderer sr){}
     public void MoveAlongPath(){}
-    public void PrintPath(ShapeRenderer sr){}
+    public void MovePathX(float X) {
+        for (LineSegment line : path) {
+            line.MoveX(X);
+        }
+    }
+    public void MovePathY(float Y) {
+        for (LineSegment line : path) {
+            line.MoveY(Y);
+        }
+    }
+
+    public void PrintPath(ShapeRenderer sr){
+        if (path == null) return;
+        for (LineSegment line : path) {
+            if (line == null) continue;
+            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
+        }
+    }
 }
 
 class Bullet extends Ammo {
@@ -129,13 +149,6 @@ class Missile extends Ammo {
 
     public void setPath(ArrayList<LineSegment> path) {
         this.path = path;
-    }
-
-    public void PrintPath(ShapeRenderer sr){
-        for (LineSegment line : path) {
-            if (line == null) continue;
-            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
-        }
     }
 
     public void MoveAlongPath() {
