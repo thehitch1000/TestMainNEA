@@ -110,19 +110,10 @@ public class Main extends ApplicationAdapter {
                         level.Checking();
                         level.Move();
                     } else {
-
                         GameData.getInstance().setStop(true);
 
                         level.MovePlayerY(0);
                         level.MoveWorldX();
-
-
-
-                        if (level.monster.midPoint.getX() < 150) {
-                            level.MoveMonsterAlongPath();
-                        }
-
-
 
                         level.CalcMidPoints();
                         level.CheckChangePlayerDirection();
@@ -166,12 +157,11 @@ public class Main extends ApplicationAdapter {
 
                 sr.setColor(Color.WHITE);
                 level.BaseLine.Draw(sr);
+                level.player.ammo.forEach(ammo -> ammo.PrintPath(sr));
 
                 if (a == 1) {
                     level.player.PrintLines(sr);
                 }
-
-                level.DrawObstacles();
 
                 sr.end();
 
@@ -199,6 +189,8 @@ public class Main extends ApplicationAdapter {
                         }
                     }
                 }
+
+                level.DrawObstacles(sr);
 
                 sr.end();
                 break;

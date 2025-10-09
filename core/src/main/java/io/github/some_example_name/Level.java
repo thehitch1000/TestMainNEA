@@ -3,6 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
@@ -21,9 +22,6 @@ public class Level {
     }
     public enum ScreenHeight {
         TOP, BOTTOM, NEUTRAL, FIXED
-    }
-    enum TypeOfPath {
-        RECT, CIRCLE
     }
 
     List<Rect> baseRects;
@@ -920,7 +918,7 @@ public class Level {
 
         CheckMissileWalkability();
 
-        missile.setPath(CreatePath(TypeOfPath.CIRCLE, startPoint, endPoint));
+        missile.setPath(CreatePath(startPoint, endPoint));
 
         player.ammo.add(missile);
     }
@@ -929,7 +927,7 @@ public class Level {
 
         monster.CalcMidPoint();
 
-        monster.setNewPath(CreatePath(TypeOfPath.RECT, monster.midPoint, FindMonsterEndPoint()));
+        monster.setNewPath(CreatePath(monster.midPoint, FindMonsterEndPoint()));
     }
     public FloatPoint FindMonsterEndPoint() {
         Node[] Column = grid[grid.length - 1];
@@ -943,8 +941,8 @@ public class Level {
         return null;
     }
 
-    public ArrayList<LineSegment> CreatePath(TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint) {
-        ArrayList<Node> pathNodes = FindPathNodes(type, startPoint, endPoint);
+    public ArrayList<LineSegment> CreatePath(FloatPoint startPoint, FloatPoint endPoint) {
+        ArrayList<Node> pathNodes = FindPathNodes(startPoint, endPoint);
         ArrayList<LineSegment> pathSegments = new ArrayList<>();
 
         if (pathNodes.size() < 2) {
@@ -959,7 +957,7 @@ public class Level {
         }
         return pathSegments;
     }
-    public ArrayList<Node> FindPathNodes(TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint) {
+    public ArrayList<Node> FindPathNodes(FloatPoint startPoint, FloatPoint endPoint) {
         Node start = FindClosestNode(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
         Node end = FindClosestNode(new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE));
 
@@ -968,7 +966,7 @@ public class Level {
         start.setF(start.getG() + start.getH());
         start.setParent(start);
 
-        NodePrioQueue openList = new NodePrioQueue(1500);
+        NodePrioQueue openList = new NodePrioQueue(500);
         openList.enqueue(start);
 
         while (!openList.isEmpty()) {
@@ -982,7 +980,7 @@ public class Level {
             for (Node neighbour : getNeighbours(current)) {
                 if (neighbour != null) {
                     if (neighbour.getState() == Node.NodeState.WALKABLE) {
-                        ProcessNeighbour(type, current, neighbour, end, openList);
+                        ProcessNeighbour(current, neighbour, end, openList);
                     }
                 }
             }
@@ -994,12 +992,12 @@ public class Level {
     private Node FindClosestNode(Node node) {
         int gridX = (node.getX() - cellSize / 2) / cellSize;
         int gridY = (node.getY() - cellSize / 2) / cellSize;
-        if (inBound(gridX, gridY)) {
-            if (grid[gridX][gridY].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY];
-            if (grid[gridX][gridY - 1].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY - 1];
-            if (grid[gridX][gridY + 1].getState() == Node.NodeState.WALKABLE) return grid[gridX][gridY + 1];
-            if (grid[gridX - 1][gridY].getState() == Node.NodeState.WALKABLE) return grid[gridX - 1][gridY];
-            if (grid[gridX - 1][gridY - 1].getState() == Node.NodeState.WALKABLE) return grid[gridX - 1][gridY - 1];
+        if (inBound(gridX, gridY) ) {
+            if (grid[gridX][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY];
+            if (grid[gridX][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY - 1];
+            if (grid[gridX][gridY + 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY + 1];
+            if (grid[gridX - 1][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY];
+            if (grid[gridX - 1][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY - 1];
         }
         return null;
     }
@@ -1038,7 +1036,7 @@ public class Level {
         ResetGrid();
         for (Node[] nodes : grid) {
             for (Node node : nodes) {
-                if (isShapeSafeAt(node.getX(), node.getY(), new Circle(node.getX(), node.getY(), 10))) {
+                if (isMissileSafeAt(node.getX(), node.getY())) {
                     node.setState(Node.NodeState.WALKABLE);
                 } else {
                     node.setState(Node.NodeState.UNWALKABLE);
@@ -1052,7 +1050,7 @@ public class Level {
         ResetGrid();
         for (Node[] nodes : grid) {
             for (Node node : nodes) {
-                if (isShapeSafeAt(node.getX(), node.getY(), new Rect(node.getX() - monster.shape.getWidth() / 2, node.getY() - monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight()))) {
+                if (isMonsterSafeAt(node.getX(), node.getY())) {
                     node.setState(Node.NodeState.WALKABLE);
                 } else {
                     node.setState(Node.NodeState.UNWALKABLE);
@@ -1061,12 +1059,13 @@ public class Level {
         }
     }
 
-    public boolean isShapeSafeAt(float x, float y, Shape entity) {
+    public boolean isMissileSafeAt(float x, float y) {
+        Circle missile = new Circle(x, y, 10);
         for (Zone zone : zones) {
             if (zone.isPointInZone(x, y)) {
                 for (Polygon obstacle : shapes) {
                     if (obstacle != null) {
-                        if (entity.overlaps(obstacle)) {
+                        if (missile.overlaps(obstacle)) {
                             return false;
                         }
                     }
@@ -1076,27 +1075,38 @@ public class Level {
         }
         return false;
     }
+    public boolean isMonsterSafeAt(float x, float y) {
+        Rect rect = new Rect(x + monster.shape.getWidth() / 2, y + monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight());
+        Node.NodeState tempState;
+        for (Zone zone : zones) {
+            if (zone.isPointInZone(x,y)) {
+                for (Polygon shape : shapes) {
+                    tempState = rect.Overlaps(shape);
+                    if (tempState == Node.NodeState.REMOVE) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 
-    public boolean LineOfSight(Node start, Node end, Shape shape) {
+    public boolean LineOfSight(Node start, Node end) {
         FloatPoint startPoint = new FloatPoint(start.getX(), start.getY());
         FloatPoint endPoint = new FloatPoint(end.getX(), end.getY());
         LineSegment segment = new LineSegment(startPoint, endPoint);
-        int speed;
-        if (shape instanceof Rect) {
-            speed = 10;
-        } else {
-            speed = 6;
-        }
         segment.setSegment();
+        Missile testMissile = new Missile(startPoint, endPoint, 6);
         boolean endOfLine = false;
         while (!endOfLine){
-            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
-            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
+            testMissile.MoveX(testMissile.getSpeed() * (float) Math.cos(segment.getAngle()));
+            testMissile.MoveY(testMissile.getSpeed() * (float) Math.sin(segment.getAngle()));
 
-            if (!segment.isPointInSegment(shape.midPoint.getX(), shape.midPoint.getY())) {
+            if (!segment.isPointInSegment(testMissile.shape.getX(), testMissile.shape.getY())) {
                 endOfLine = true;
             }
-            if (!isShapeSafeAt(shape.midPoint.getX(), shape.midPoint.getY(), shape)) {
+            if (!isMissileSafeAt(testMissile.shape.getX(), testMissile.shape.getY())) {
                 return false;
             }
         }
@@ -1118,7 +1128,7 @@ public class Level {
         return Neighbours;
     }
     private boolean inBound(int X, int Y)    {
-        return X >= 0 && X < grid.length - 1 && Y >= 0 && Y < grid[0].length - 1;
+        return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
     }
     public int NodeFindXCoordinates(Node node) {
         int index = (node.getX() - cellSize / 2) / cellSize;
@@ -1132,19 +1142,13 @@ public class Level {
         if (index >= grid[0].length) index = grid[0].length - 1;
         return index;
     }
-    public void ProcessNeighbour(TypeOfPath type, Node current, Node neighbour, Node end, NodePrioQueue openList) {
-        Shape shape;
-        if (type == TypeOfPath.RECT) {
-            shape = new Rect(current.getX() - monster.shape.getWidth() / 2, current.getY() - monster.shape.getHeight() / 2, monster.shape.getWidth(), monster.shape.getHeight());
-        } else {
-            shape = new Circle(current.getX(), current.getY(), 10);
-        }
+    public void ProcessNeighbour(Node current, Node neighbour, Node end, NodePrioQueue openList) {
         Node parent = current.getParent();
         if (parent == null) System.out.println("parent is null");
         float tempG;
         Node tempParent;
 
-        if (LineOfSight(parent, neighbour, shape)) {
+        if (LineOfSight(parent, neighbour)) {
             tempG = parent.getG() + distance(parent, neighbour);
             tempParent = parent;
         } else {
@@ -1178,9 +1182,16 @@ public class Level {
         return path;
     }
 
-    public void DrawObstacles() {
+    public void DrawObstacles(ShapeRenderer sr) {
+        sr.setColor(Color.RED);
         for (Polygon obstacle : shapes) {
-            obstacle.
+            if (obstacle != null) {
+                float[] vertices = obstacle.getTransformedVertices();
+                for (int i = 0; i < vertices.length; i += 2) {
+                    int next = (i + 2) % vertices.length;
+                    sr.line(vertices[i], vertices[i + 1], vertices[next], vertices[next + 1]);
+                }
+            }
         }
     }
 
