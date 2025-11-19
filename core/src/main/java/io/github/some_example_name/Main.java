@@ -27,18 +27,20 @@ public class Main extends ApplicationAdapter {
 
     Menu startMenu;
     Menu pauseMenu;
+    Menu endingMenu;
+
     Level level;
     Stage stage;
 
     List<Runnable> start1 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(Level.levelStage.NORMAL));
+        add(() -> level.setUpLevel(Level.levelStage.NORMAL, true));
     }};
     List<Runnable> start2 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(Level.levelStage.ZIGZAG));
+        add(() -> level.setUpLevel(Level.levelStage.ZIGZAG, true));
     }};
     List<Runnable> start3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
@@ -50,6 +52,21 @@ public class Main extends ApplicationAdapter {
         add(() -> GameData.getInstance().timers.runAfter(0.5f, () -> GameData.getInstance().setStop(false)));
     }};
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
+        add(() -> Gdx.app.exit());
+    }};
+
+    List<Runnable> ending1 = new ArrayList<Runnable>() {{
+       add(() -> endingMenu.Close());
+       add(() -> stage = Stage.STARTMENU);
+       add(() -> startMenu.Open());
+    }};
+
+    List<Runnable> ending2 = new ArrayList<Runnable>() {{
+        add(() -> endingMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(level.getStage(), false));
+    }};
+    List<Runnable> ending3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
     }};
 
@@ -66,6 +83,7 @@ public class Main extends ApplicationAdapter {
 
         startMenu = new Menu();
         pauseMenu = new Menu();
+        endingMenu = new Menu();
         level = new Level();
         stage = Stage.STARTMENU;
 
@@ -77,6 +95,12 @@ public class Main extends ApplicationAdapter {
         pauseMenu.AddButton(new Button("Resume", pause1, 750, 500, font));
         pauseMenu.AddButton(new Button("Leave", pause2, 750, 300, font));
         pauseMenu.Close();
+
+        endingMenu.AddButton(new Button("Return To Home", ending1, 375, 250, font));
+        endingMenu.AddButton(new Button("Restart", ending2, 750, 250, font));
+        endingMenu.AddButton(new Button("Leave", ending3, 1125, 250, font));
+        endingMenu.AddBody(new Body(750));
+        endingMenu.Close();
     }
 
     @Override
@@ -99,8 +123,22 @@ public class Main extends ApplicationAdapter {
                     pauseMenu.Open();
                 }
 
-                while (level.ReadFile());
+                if (level.CheckLevelEnd()) {
+                    stage = Stage.ENDING;
+                    GameData.getInstance().setStop(true);
+                    endingMenu.Open();
+                    endingMenu.body.ClearLines();
+                    endingMenu.body.AddLine("Your Time: " + (int) (GameData.getInstance().getElapsedTime() - level.getStartTime()) / 1000f + "s", 600, font);
+                }
 
+                if (level.player.getLives() == 0) {
+                    stage = Stage.DEADMENU;
+                    GameData.getInstance().setStop(true);
+                    endingMenu.Open();
+                    endingMenu.body.ClearLines();
+                }
+
+                while (level.ReadFile());
 
                 if (!GameData.getInstance().isStop()) {
                     level.CheckBackground();
@@ -110,12 +148,23 @@ public class Main extends ApplicationAdapter {
                         level.Checking();
                         level.Move();
                     } else {
-                        GameData.getInstance().setStop(true);
+                        level.pathing.forEach(path -> path.Update(100));
 
                         level.MovePlayerY(0);
                         level.MoveWorldX();
 
-                        level.CalcMidPoints();
+                        level.MoveMissiles();
+
+                        if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                            level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
+                        }
+
+                        if (level.monster.midPoint.getX() < 150) {
+                            level.MoveMonsterAlongPath();
+                        }
+
+                        level.player.CalcMidPoints();
+                        level.monster.CalcMidPoint();
                         level.CheckChangePlayerDirection();
                         level.player.UpdatePoints();
 
@@ -123,13 +172,9 @@ public class Main extends ApplicationAdapter {
 
                         level.CheckObstacleCollision();
                     }
-                }
 
-                if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
-                    level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
+                    level.CheckLevelEnd();
                 }
-
-                level.MoveMissilesAlongPath();
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -157,7 +202,6 @@ public class Main extends ApplicationAdapter {
 
                 sr.setColor(Color.WHITE);
                 level.BaseLine.Draw(sr);
-                level.player.ammo.forEach(ammo -> ammo.PrintPath(sr));
 
                 if (a == 1) {
                     level.player.PrintLines(sr);
@@ -173,26 +217,9 @@ public class Main extends ApplicationAdapter {
                 level.player.normalTrail.forEach(trail -> trail.Draw(sr));
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
-
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
-
-                sr.begin(ShapeRenderer.ShapeType.Filled);
-
-                if (input.isKeyPressed(Input.Keys.P)) {
-                    for (Node[] gridRow : level.grid) {
-                        for (Node node : gridRow) {
-                            if (node != null) {
-                                node.Draw(sr);
-                            }
-                        }
-                    }
-                }
-
-                level.DrawObstacles(sr);
-
-                sr.end();
                 break;
 
             case STARTMENU:
@@ -204,6 +231,12 @@ public class Main extends ApplicationAdapter {
                 pauseMenu.CheckClick();
 
                 pauseMenu.Draw(sr, batch, font);
+                break;
+            case DEADMENU:
+            case ENDING:
+                endingMenu.CheckClick();
+
+                endingMenu.Draw(sr, batch, font);
                 break;
         }
     }

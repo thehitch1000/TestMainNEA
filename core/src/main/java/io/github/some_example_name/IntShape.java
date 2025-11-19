@@ -17,6 +17,8 @@ public interface IntShape {
     boolean isPointInShape(FloatPoint point);
     boolean onScreen();
     void Rotate(float angle, FloatPoint point);
+    boolean overlaps(Polygon obstacle);
+    Vector2[][] getEdges();
 }
 
 abstract class Shape implements IntShape {
@@ -53,6 +55,12 @@ abstract class Shape implements IntShape {
             points[i].setX(NewPoints.getMatrixSection(i) + point.getX());
             points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
         }
+    }
+    public boolean overlaps(Polygon obstacle){
+        return false;
+    }
+    public Vector2[][] getEdges() {
+        return null;
     }
 
     public float getX() {
@@ -189,27 +197,79 @@ class Rect extends Shape implements Transparency, Colour{
         return (x - width < GameData.getInstance().getScreenWidth() && x + width > 0);
     }
 
-    public Node.NodeState Overlaps(Polygon obstacle) {
+    public boolean overlaps(Polygon obstacle) {
         FloatPoint[] obstaclePoints = new FloatPoint[obstacle.getVertices().length/2];
         for (int i = 0; i < obstaclePoints.length; i++) {
-            obstaclePoints[i] = new FloatPoint(obstacle.getVertices()[i*2], obstacle.getVertices()[i*2 + 1]);
+            obstaclePoints[i] = new FloatPoint(obstacle.getVertices()[i * 2], obstacle.getVertices()[i * 2 + 1]);
         }
         if (obstaclePoints.length == 3) {
-            for (FloatPoint point : obstaclePoints) {
-                if (isPointInShape(point)) {
-                    return Node.NodeState.REMOVE;
+            Tri tri = new Tri(obstaclePoints);
+            points = new FloatPoint[4];
+            points[0] = new FloatPoint(x, y);
+            points[1] = new FloatPoint(x + width, y);
+            points[2] = new FloatPoint(x + width, y + height);
+            points[3] = new FloatPoint(x, y + height);
+            for (FloatPoint point : points) {
+                if (tri.isPointInShape(point)) {
+                    return true;
                 }
             }
+            Vector2[][] triEdges = tri.getEdges();
+            Vector2[][] rectEdges = getEdges();
+            for (Vector2[] triEdge : triEdges) {
+                for (Vector2[] rectEdge : rectEdges) {
+                    if (segmentsIntersect(triEdge[0], triEdge[1], rectEdge[0], rectEdge[1])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         } else {
             Rect obstacleRect = new Rect(obstaclePoints[0].getX(), obstaclePoints[0].getY(), obstaclePoints[1].getX() - obstaclePoints[0].getX(), obstaclePoints[2].getY() - obstaclePoints[1].getY());
             if (rectIntersect(this, obstacleRect)) {
-                return Node.NodeState.REMOVE;
+                return true;
             }
         }
-        return Node.NodeState.WALKABLE;
+        return false;
     }
     private boolean rectIntersect(Rect a, Rect b) {
         return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
+    }
+    private boolean segmentsIntersect(Vector2 A, Vector2 B, Vector2 C, Vector2 D) {
+        float o1 = orientation(A,B,C);
+        float o2 = orientation(A, B, D);
+        float o3 = orientation(C, D, A);
+        float o4 = orientation(C, D, B);
+
+        if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) {
+            return true;
+        }
+
+        if (o1 == 0 && onSegment(A, B, C)) return true;
+        if (o2 == 0 && onSegment(A, B, D)) return true;
+        if (o3 == 0 && onSegment(C, D, A)) return true;
+        if (o4 == 0 && onSegment(C, D, B)) return true;
+
+        return false;
+    }
+    private float orientation(Vector2 A, Vector2 B, Vector2 C) {
+        return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+    }
+    private boolean onSegment(Vector2 A, Vector2 B, Vector2 C) {
+        return C.x >= Math.min(A.x, B.x) && C.x <= Math.max(A.x, B.x) && C.y >= Math.min(A.y, B.y) && C.y <= Math.max(A.y, B.y);
+    }
+
+    public Vector2[][] getEdges() {
+        Vector2[][] edges = new Vector2[4][2];
+        edges[0][0] = new Vector2(x, y);
+        edges[0][1] = new Vector2(x + width, y);
+        edges[1][0] = new Vector2(x + width, y);
+        edges[1][1] = new Vector2(x + width, y + height);
+        edges[2][0] = new Vector2(x + width, y + height);
+        edges[2][1] = new Vector2(x, y + height);
+        edges[3][0] = new Vector2(x, y + height);
+        edges[3][1] = new Vector2(x, y);
+        return edges;
     }
 }
 class Tri extends Shape {
@@ -266,66 +326,16 @@ class Tri extends Shape {
 
         return case1 && case2 && case3;
     }
-}
-class Arrow extends Shape implements Transparency {
-    private float alpha;
-    Tri[] tris;
-
-    public Arrow(FloatPoint[] Points) {
-        points = Points;
-        tris = new Tri[2];
-        this.alpha = 1;
+    public Vector2[][] getEdges() {
+        Vector2[][] edges = new Vector2[3][2];
+        edges[0][0] = new Vector2(points[0].getX(), points[0].getY());
+        edges[0][1] = new Vector2(points[1].getX(), points[1].getY());
+        edges[1][0] = new Vector2(points[1].getX(), points[1].getY());
+        edges[1][1] = new Vector2(points[2].getX(), points[2].getY());
+        edges[2][0] = new Vector2(points[2].getX(), points[2].getY());
+        edges[2][1] = new Vector2(points[0].getX(), points[0].getY());
+        return edges;
     }
-
-    public void setAlpha(float Alpha) {
-        alpha = Alpha;
-    }
-    public float getAlpha() {
-        return alpha;
-    }
-
-    public void UpdateTriangles() {
-        for (int i = 0; i < tris.length; i++) {
-            for (int j = 0; j < tris[i].points.length; j++) {
-                tris[i].points[j].setWholePoint(points[(2*i) + j]);
-            }
-        }
-    }
-
-    public void Draw (ShapeRenderer sr) {
-        sr.triangle(points[0].getX(), points[0].getY(), points[1].getX(), points[1].getY(), points[2].getX(), points[2].getY());
-    }
-
-    public void MoveX(float X) {
-        for (FloatPoint point : points) {
-            point.MoveX(X);
-        }
-    }
-    public void MoveY(float Y) {
-        for (FloatPoint point : points) {
-            point.MoveY(Y);
-        }
-    }
-
-    public boolean IsPointInShape(FloatPoint point) {
-        UpdateTriangles();
-        for (Tri tri : tris) {
-            if (tri.isPointInShape(point)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean onScreen() {
-        boolean[] cases = new boolean[4];
-        for (int i = 0; i < cases.length; i++) {
-            float x = points[i].getX();
-            cases[i] = (x > 0 && x < GameData.getInstance().getScreenWidth());
-        }
-        return (cases[0] || cases[1] || cases[2] || cases[3]);
-    }
-
 }
 class Circle extends Shape {
     private float radius, x, y;

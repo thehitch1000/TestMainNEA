@@ -17,19 +17,27 @@ import static com.badlogic.gdx.Gdx.input;
 public class Menu {
     private boolean open;
     List<Button> buttons;
+    Body body;
 
     public Menu() {
         buttons = new ArrayList<>();
+        body = null;
         this.open = false;
     }
 
     public void AddButton(Button button) {
         buttons.add(button);
     }
+    public void AddBody(Body body) {
+        this.body = body;
+    }
 
     public void Draw(ShapeRenderer sr, SpriteBatch batch, BitmapFont font) {
         if (open) {
             buttons.forEach(button -> button.Draw(sr, batch, font));
+            if (body != null) {
+                body.Draw(batch, font);
+            }
         }
     }
     public void CheckClick() {
@@ -110,5 +118,64 @@ class Button {
     public void Draw(ShapeRenderer sr, SpriteBatch batch, BitmapFont font) {
         DrawButton(sr);
         DrawText(batch, font);
+    }
+}
+
+class Body {
+    List<Text> lines;
+    private float CentreX;
+
+    public Body(float CentreX) {
+        lines = new ArrayList<>();
+        this.CentreX = CentreX;
+    }
+
+    public void AddLine(String text, float CentreY, BitmapFont font) {
+        lines.add(new Text(text, CentreX, CentreY, font));
+    }
+
+    public void ClearLines() {
+        lines.clear();
+    }
+
+    public void Draw(SpriteBatch batch, BitmapFont font) {
+        batch.begin();
+        for (Text line : lines) {
+            line.Draw(batch, font);
+        }
+        batch.end();
+    }
+}
+
+class Text {
+    private String text;
+    private float x, y;
+
+    public Text(String text, float CentreX, float CentreY, BitmapFont font) {
+        this.text = text;
+        FindTextPosition(font, CentreX, CentreY);
+    }
+    public void FindTextPosition(BitmapFont font, float centreX, float centreY) {
+        GlyphLayout layout = new GlyphLayout();
+        layout.setText(font, text);
+
+        x = centreX - (layout.width / 2f);
+        y = centreY + (layout.height / 2f);
+    }
+
+    public void Draw(SpriteBatch batch, BitmapFont font) {
+        font.draw(batch, text, x, y);
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
     }
 }

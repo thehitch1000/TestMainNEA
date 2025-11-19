@@ -2,7 +2,7 @@ package io.github.some_example_name;
 
 public class NodePrioQueue {
     Node[] nodes;
-    private int size, capacity;
+    private int size;
 
     public NodePrioQueue(int capacity) {
         this.nodes = new Node[capacity];
@@ -10,7 +10,7 @@ public class NodePrioQueue {
     public void enqueue(Node node) {
         int i = size;
         while (i > 0 && nodes[i - 1].getF() > node.getF()) {
-            nodes[i] = nodes[i - 1]; // shift up
+            nodes[i] = nodes[i - 1];
             i--;
         }
         nodes[i] = node;
@@ -30,8 +30,5 @@ public class NodePrioQueue {
 
     public boolean isEmpty() {
         return size == 0;
-    }
-    public boolean isFull() {
-        return size == capacity;
     }
 }

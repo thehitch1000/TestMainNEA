@@ -10,9 +10,6 @@ import java.util.List;
 public interface IntAmmo {
     void Draw(ShapeRenderer sr);
     void MoveAlongPath();
-    void MovePathX(float X);
-    void MovePathY(float Y);
-    void PrintPath(ShapeRenderer sr);
 }
 
 abstract class Ammo implements IntAmmo {
@@ -22,24 +19,7 @@ abstract class Ammo implements IntAmmo {
 
     public void Draw(ShapeRenderer sr){}
     public void MoveAlongPath(){}
-    public void MovePathX(float X) {
-        for (LineSegment line : path) {
-            line.MoveX(X);
-        }
-    }
-    public void MovePathY(float Y) {
-        for (LineSegment line : path) {
-            line.MoveY(Y);
-        }
-    }
-
-    public void PrintPath(ShapeRenderer sr){
-        if (path == null) return;
-        for (LineSegment line : path) {
-            if (line == null) continue;
-            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
-        }
-    }
+    public void PrintPath(ShapeRenderer sr){}
 }
 
 class Bullet extends Ammo {
@@ -113,16 +93,17 @@ class Bullet extends Ammo {
 }
 
 class Missile extends Ammo {
-
-    Circle shape;
-    List<LineSegment> path;
     FloatPoint startPoint, endPoint;
-    private float speed;
+    Color colour;
+    private float speed, nextFlashTime;
+    private boolean flash;
 
     public Missile(FloatPoint startPoint, FloatPoint endPoint, float speed) {
         this.speed = speed;
         this.startPoint = startPoint;
         this.endPoint = endPoint;
+        this.flash = false;
+        this.nextFlashTime = 0;
 
         shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
 
@@ -130,6 +111,20 @@ class Missile extends Ammo {
     }
 
     public void Draw(ShapeRenderer sr) {
+        flash = (path.size() == 1);
+        if (flash) {
+            if (GameData.getInstance().getElapsedTime() > nextFlashTime) {
+                nextFlashTime = GameData.getInstance().getElapsedTime() + 500;
+                if (colour == Color.WHITE) {
+                    colour = Color.RED;
+                } else {
+                    colour = Color.WHITE;
+                }
+            }
+        } else {
+            colour = Color.WHITE;
+        }
+        sr.setColor(colour);
         shape.Draw(sr);
     }
 
@@ -151,24 +146,33 @@ class Missile extends Ammo {
         this.path = path;
     }
 
+    public void PrintPath(ShapeRenderer sr){
+        for (LineSegment line : path) {
+            if (line == null) continue;
+            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
+        }
+    }
+
     public void MoveAlongPath() {
         if (path.isEmpty()) {
             Explode();
-            System.out.println(endPoint.equals(new FloatPoint(shape.getX(), shape.getY())));
             return;
         }
+
         float angleRad = path.get(0).getAngle();
-        FloatPoint tempPoint = new FloatPoint(
-            shape.getX() + (speed * (float) Math.cos(angleRad)),
-            shape.getY() + (speed * (float) Math.sin(angleRad))
-        );
-        if (path.get(0).isPointInSegment(tempPoint.getX(), tempPoint.getY())) {
-            shape.MoveX((float) Math.cos(angleRad) * speed);
-            shape.MoveY((float) Math.sin(angleRad) * speed);
-        } else {
+
+        float xDifference = path.get(0).endPoint.getX() - shape.getX();
+        float yDifference = path.get(0).endPoint.getY() - shape.getY();
+        float distanceToEnd = (float) Math.sqrt(Math.pow(xDifference, 2) + Math.pow(yDifference, 2));
+
+
+        if (distanceToEnd <= speed) {
             shape.MoveX(path.get(0).endPoint.getX() - shape.getX());
             shape.MoveY(path.get(0).endPoint.getY() - shape.getY());
             path.remove(0);
+        } else {
+            shape.MoveX((float) Math.cos(angleRad) * speed);
+            shape.MoveY((float) Math.sin(angleRad) * speed);
         }
     }
     public void Explode() {

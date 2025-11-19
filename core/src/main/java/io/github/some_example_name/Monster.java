@@ -21,8 +21,14 @@ public class Monster {
         currentPath = new ArrayList<>();
         ammo = new ArrayList<>();
 
-        this.speed = 20;
+        this.speed = 8;
         this.awake = false;
+    }
+
+    public void PrintPath(ShapeRenderer sr) {
+        for (LineSegment line : currentPath) {
+            line.Draw(sr);
+        }
     }
 
     public float getSpeed() {
@@ -60,15 +66,5 @@ public class Monster {
     public void MoveY(float y) {
         shape.MoveY(y);
         healthShape.MoveY(y);
-    }
-    public void MovePathX(float x) {
-        for (LineSegment line : currentPath) {
-            line.MoveX(x);
-        }
-    }
-    public void MovePathY(float y) {
-        for (LineSegment line : currentPath) {
-            line.MoveY(y);
-        }
     }
 }

@@ -15,7 +15,7 @@ public class Player {
         IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, NULL
     }
 
-    private int AngleTillFlat, LP, startingHealth, BL;
+    private int AngleTillFlat, lives, startingHealth, BL;
     private float surfaceLandingY, coolDownEndTime, originPosX, originPosY, currentHealth, width, totalAngle;
     private boolean Clockwise;
     List<Ammo> ammo;
@@ -34,7 +34,7 @@ public class Player {
         this.startingHealth = startingHealth;
         this.AngleTillFlat = 0;
         this.BL = 0;
-        this.LP = 0;
+        this.lives = 5;
         this.totalAngle = 0;
         this.originPosX = 730;
         this.originPosY = 200;
@@ -112,6 +112,9 @@ public class Player {
     public float getWidth() {
         return width;
     }
+    public int getLives() {
+        return lives;
+    }
 
     public void setDownPoints() {
         float move = midPoint.getY() - 400;
@@ -179,7 +182,6 @@ public class Player {
     public void EntityUpdate(List<Obstacle> obstacles) {
         AngleTillFlat();
         FindSurfaceY(obstacles);
-        FindLowestPoint();
         FindBottomLeft();
         CalcMidPoints();
     }
@@ -211,17 +213,6 @@ public class Player {
             }
         }
         surfaceLandingY = newSurfaceLandingY;
-    }
-    private void FindLowestPoint() {
-        LP = 0;
-        for (int i = 0; i < shape.points.length; i++) {
-            if (i == 0) {
-                lowestPoint.setPoint(shape.points[i].getX(), shape.points[i].getY());
-            } else if (lowestPoint.getY() > shape.points[i].getY()) {
-                lowestPoint.setPoint(shape.points[i].getX(), shape.points[i].getY());
-                LP = i;
-            }
-        }
     }
     public void CalcMidPoints() {
         float x = shape.points[0].getX() + shape.points[2].getX();
@@ -255,19 +246,14 @@ public class Player {
             lines[0].setGradient(1);
             lines[1].setGradient(1);
             EndLine.setGradient(-1);
-
-            lines[0].CalcYIntercept(lineMidPoints[0]);
-            lines[1].CalcYIntercept(lineMidPoints[1]);
-            EndLine.CalcYIntercept(midPoint);
         } else {
             lines[0].setGradient(-1);
             lines[1].setGradient(-1);
             EndLine.setGradient(1);
-
-            lines[0].CalcYIntercept(lineMidPoints[0]);
-            lines[1].CalcYIntercept(lineMidPoints[1]);
-            EndLine.CalcYIntercept(midPoint);
         }
+        lines[0].CalcYIntercept(lineMidPoints[0]);
+        lines[1].CalcYIntercept(lineMidPoints[1]);
+        EndLine.CalcYIntercept(midPoint);
     }
 
     public void ReCalcSolidPoints() {
@@ -428,17 +414,10 @@ public class Player {
     }
 
     public void PrintLines(ShapeRenderer sr) {
-        if (direction == Direction.DOWN) {
-            sr.setColor(Color.RED);
-            sr.line(0, lines[0].FindY(0), 1500, lines[0].FindY(1500));
-            sr.setColor(Color.ORANGE);
-            sr.line(0, lines[1].FindY(0), 1500, lines[1].FindY(1500));
-        } else {
-            sr.setColor(Color.RED);
-            sr.line(0, lines[0].FindY(0), 1500, lines[0].FindY(1500));
-            sr.setColor(Color.ORANGE);
-            sr.line(0, lines[1].FindY(0), 1500, lines[1].FindY(1500));
-        }
+        sr.setColor(Color.RED);
+        sr.line(0, lines[0].FindY(0), 1500, lines[0].FindY(1500));
+        sr.setColor(Color.ORANGE);
+        sr.line(0, lines[1].FindY(0), 1500, lines[1].FindY(1500));
 
         if (direction == Direction.DOWN) {
             sr.setColor(Color.RED);
