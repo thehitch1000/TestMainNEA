@@ -3,24 +3,33 @@ package io.github.some_example_name;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+import java.util.Arrays;
+
 public class Zone {
+    public enum Type {
+        UPDIAG, RIGHT, DOWNDIAG, CHANGEDIRE
+    }
     polygon polygon;
-    private int type;
+    Type type;
 
-    public Zone (int type) {
+
+    public Zone (Type type) {
         this.type = type;
-
-        if (type == 0) {
-            polygon = new polygon(4, new Color(1,0,0,0.5f), 0.5f);
-        } else {
-            polygon = new polygon(4, new Color(0,1,0, 0.5f), 0.5f);
+        Color colour;
+        switch (type) {
+            case UPDIAG: colour = Color.RED; break;
+            case RIGHT: colour = Color.GREEN; break;
+            case DOWNDIAG: colour = Color.BLUE; break;
+            default: colour = Color.YELLOW;
         }
+        polygon = new polygon(4,colour);
+        polygon.setAlpha(0.5f);
     }
 
-    public int getType() {
+    public Type getType() {
         return type;
     }
-    public void setType(int type) {
+    public void setType(Type type) {
         this.type = type;
     }
 

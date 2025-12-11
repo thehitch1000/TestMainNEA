@@ -3,7 +3,6 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
@@ -17,9 +16,6 @@ import java.util.List;
 import static com.badlogic.gdx.Gdx.input;
 
 public class Level {
-    public enum levelStage {
-        NORMAL, ZIGZAG
-    }
     public enum ScreenHeight {
         TOP, BOTTOM, NEUTRAL, FIXED
     }
@@ -27,37 +23,33 @@ public class Level {
         MONSTER, PLAYERMISSILE, MONSTERMISSILE
     }
 
-    List<Rect> baseRects;
+    String currentFileName;
     List<Obstacle> obstacles;
     List<Zone> zones;
     List<Polygon> shapes;
     List<ThetaStarStepper> pathing;
-    levelStage stage;
     ScreenHeight screenHeight;
     Player player;
     Monster monster;
     Background background;
-    LineSegment BaseLine;
-    Shape base;
     Drill drill;
     Node[][] grid;
     int levelDistance = 3000;
     int cellSize = 5;
+    boolean monsterPathPending = false;
 
-    private float xTravelled, topOfLevel, bottomOfLevel, currentHeight, StartTime;
+    private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
     private int shapeNumber;
 
     public Level() {
         player = new Player(100);
         monster = new Monster();
         background = new Background(20, 0);
-        base = new Rect(0, 0, new Color(0.2f, 0.38f, 0.66f, 1f));
-        BaseLine = new LineSegment(new FloatPoint(0, 0), new FloatPoint(0, 0));
 
         obstacles = new ArrayList<>();
-        baseRects = new ArrayList<>();
         zones = new ArrayList<>();
         shapes = new ArrayList<>();
+        pathing = new ArrayList<>();
 
         drill = new Drill();
 
@@ -66,22 +58,31 @@ public class Level {
         this.xTravelled = 0;
         this.shapeNumber = 0;
 
-        topOfLevel = GameData.getInstance().getScreenHeight();
-        bottomOfLevel = 0;
         currentHeight = 0;
         StartTime = 0;
 
         screenHeight = ScreenHeight.NEUTRAL;
-        stage = null;
+    }
+
+    public void ResetLevel() {
+        xTravelled = 0;
+        player = new Player(100);
+        monster = new Monster();
+        shapeNumber = 0;
+        currentHeight = 0;
+        screenHeight = ScreenHeight.NEUTRAL;
+        StartTime = 0;
+        pathing.clear();
+        GameData.getInstance().setStop(false);
+        obstacles.clear();
+        shapes.clear();
+        zones.clear();
     }
 
     public boolean CheckLevelEnd() {
         return xTravelled > levelDistance;
     }
 
-    public levelStage getStage() {
-        return stage;
-    }
     public float getStartTime() {
         return StartTime;
     }
@@ -91,12 +92,14 @@ public class Level {
     public float getCurrentHeight() {
         return currentHeight;
     }
-
-    public void CreateNormalLevel() {
-        for (int i = 0; i < 5; i++) {
-            AddObstacle(new Box(1800 + (i * 800), 200, 200, 40));
-        }
+    public int getBottomOfLevel() {
+        return (int) drill.getBottomOfLevel();
     }
+
+    public void setCurrentFileName(String fileName) {
+        currentFileName = fileName;
+    }
+
     public void CreateZigZagLevel() {
         while (!drill.isFinished()) {
             if (drill.points[0].getX() + xTravelled >= levelDistance && drill.points[3].getX() + xTravelled >= levelDistance) {
@@ -170,25 +173,26 @@ public class Level {
 
                     // OLD SHAPES
                     drill.EndShapes();
+                    CreateCrossOverZone();
 
                     if (drill.currentShapes.get(0).getHeight() < 0) {
                         float temp = (drill.currentShapes.get(0).getHeight() * -1) + drill.currentShapes.get(0).getY();
-                        if (temp > topOfLevel) {
-                            topOfLevel = temp;
+                        if (temp > drill.getTopOfLevel()) {
+                            drill.setTopOfLevel(temp);
                         }
                     }
                     if (drill.currentShapes.get(1) instanceof RectPath) {
-                        if (drill.currentShapes.get(1).getHeight() < bottomOfLevel) {
-                            bottomOfLevel = drill.currentShapes.get(1).getHeight();
+                        if (drill.currentShapes.get(1).getHeight() < drill.getBottomOfLevel()) {
+                            drill.setBottomOfLevel(drill.currentShapes.get(1).getHeight());
                         }
                     } else if (drill.currentShapes.get(3).getHeight() < 0) {
-                        if (drill.currentShapes.get(3).getHeight() < bottomOfLevel) {
-                            bottomOfLevel = drill.currentShapes.get(3).getHeight();
+                        if (drill.currentShapes.get(3).getHeight() < drill.getBottomOfLevel()) {
+                            drill.setBottomOfLevel(drill.currentShapes.get(3).getHeight());
                         }
                     }
 
-                    CreateZone();
 
+                    CreateZone();
                     TransferShapes();
 
                     // NEW SHAPES
@@ -196,11 +200,15 @@ public class Level {
 
                     drill.setOldDirection(drill.getDirection());
                     drill.setDirection(drill.getNewDirection());
+
+                    drill.FindLines();
+                    drill.FindIntersections();
+
                 }
             }
         }
-        bottomOfLevel -= 50;
-        topOfLevel += 50;
+        drill.setBottomOfLevel(drill.getBottomOfLevel() - 50);
+        drill.setTopOfLevel(drill.getTopOfLevel() + 50);
     }
     public void TransferShapes() {
         if (drill.currentShapes.size() == 2) {
@@ -224,13 +232,15 @@ public class Level {
     }
     public void CreateZone() {
         Zone zone;
-        if (drill.currentShapes.size() == 2) {
-            zone = new Zone(1);
-        } else {
-            zone = new Zone(0);
-        }
-        for (int i = 0; i < zone.polygon.points.length; i++) {
-            zone.polygon.points[i] = new FloatPoint(0, 0);
+        switch (drill.getDirection()) {
+            case DOWN_RIGHT:
+                zone = new Zone(Zone.Type.DOWNDIAG);
+                break;
+            case RIGHT:
+                zone = new Zone(Zone.Type.RIGHT);
+                break;
+            default:
+                zone = new Zone(Zone.Type.UPDIAG);
         }
         switch (drill.getDirection()) {
             case UP_RIGHT:
@@ -248,37 +258,55 @@ public class Level {
         }
         AddZone(zone);
     }
+    public void CreateCrossOverZone() {
+        Zone zone = new Zone(Zone.Type.CHANGEDIRE);
+
+        zone.polygon.points[0].setPoint(drill.intersectionPoints[1].getX(), drill.intersectionPoints[1].getY());
+        zone.polygon.points[1].setPoint(drill.intersectionPoints[0].getX(), drill.intersectionPoints[0].getY());
+        zone.polygon.points[2].setPoint(drill.intersectionPoints[2].getX(), drill.intersectionPoints[2].getY());
+        zone.polygon.points[3].setPoint(drill.intersectionPoints[3].getX(), drill.intersectionPoints[3].getY());
+
+        AddZone(zone);
+    }
     public void AdjustShapesHeights() {
         GameData.getInstance().EmptyFile("tempObstacles.txt");
-        GameData.getInstance().CopyFile("obstacles.txt", "tempObstacles.txt");
-        GameData.getInstance().EmptyFile("obstacles.txt");
+        GameData.getInstance().CopyFile(currentFileName, "tempObstacles.txt");
+        GameData.getInstance().EmptyFile(currentFileName);
 
-        try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("obstacles.txt", false))) {
+        FunctionLock lock = new FunctionLock();
+
+        try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(currentFileName, true))) {
             File file = new File("tempObstacles.txt");
 
             List<String> lines = Files.readAllLines(file.toPath());
 
-            for (String line : lines) {
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
                 String[] parts = line.split(":\\s+|\\s+");
+
+                if (!lock.getState() && parts[0].equals("RectPath")) {
+                    fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
+                        " " + parts[3] + " " + (drill.getTopOfLevel() - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
+                    fileWriter.newLine();
+                    lock.used();
+                }
 
                 switch (parts[0]) {
                     case "RectPath":
                         if (Boolean.parseBoolean(parts[5])) {
-                            fileWriter.write("RectPath: " + parts[1] + " " + (bottomOfLevel - 150) +
-                                " " + parts[3] + " " + (Float.parseFloat(parts[4]) - bottomOfLevel + 150) + " " + Boolean.parseBoolean(parts[5]));
+                            fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
+                                " " + parts[3] + " " + (Float.parseFloat(parts[4]) - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
                             fileWriter.newLine();
                         } else {
                             fileWriter.write("RectPath: " + Float.parseFloat(parts[1]) + " " + Float.parseFloat(parts[2]) +
-                                " " + Float.parseFloat(parts[3]) + " " + (topOfLevel - Float.parseFloat(parts[2]) + 150) +
+                                " " + Float.parseFloat(parts[3]) + " " + (drill.getTopOfLevel() - Float.parseFloat(parts[2]) + 150) +
                                 " " + Boolean.parseBoolean(parts[5]));
                             fileWriter.newLine();
                         }
                         break;
-                    case "TriPath":
-                    case "Zone":
+                    default:
                         fileWriter.write(line);
                         fileWriter.newLine();
-                        break;
                 }
             }
         } catch (IOException e) {
@@ -288,7 +316,7 @@ public class Level {
 
     public boolean ReadFile() {
         try {
-            File file = new File("obstacles.txt");
+            File file = new File(currentFileName);
             List<String> lines = Files.readAllLines(file.toPath());
 
             if (lines.isEmpty() || shapeNumber >= lines.size()) {
@@ -298,74 +326,60 @@ public class Level {
             String line = lines.get(shapeNumber);
             String[] parts = line.split(":\\s+|\\s+");  // Split by ":" or whitespace
 
-            float x1 = Float.parseFloat(parts[1]);
+            if (shapeNumber > lines.size() - 1) {
+                return false;
+            }
 
-            switch (parts[0]) {
-                case "Box":
-                    if (x1 - xTravelled <= 1700) {
-                        Obstacle box = new Box(x1 - xTravelled, Float.parseFloat(parts[2]), Float.parseFloat(parts[3]), Float.parseFloat(parts[4]));
-                        obstacles.add(box);
-                        shapeNumber++;
-                        return true;
-                    } else {
-                        return false;
-                    }
+            if (parts[0].equals("Zone") || parts[0].equals("TriPath") || parts[0].equals("RectPath")) {
+                float x1 = Float.parseFloat(parts[1]);
 
-                case "Spike":
-                    float x3 = Float.parseFloat(parts[3]);
-                    float x5 = Float.parseFloat(parts[5]);
-                    if (x1 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x5 - xTravelled <= 1700) {
-                        Obstacle spike = new Spike(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2])),
-                            new FloatPoint(x3 - xTravelled, Float.parseFloat(parts[4])),
-                            new FloatPoint(x5 - xTravelled, Float.parseFloat(parts[6])));
-                        obstacles.add(spike);
-                        shapeNumber++;
-                        return true;
-                    } else {
-                        return false;
-                    }
+                switch (parts[0]) {
+                    case "RectPath":
+                        if (x1 - xTravelled <= 1700) {
+                            Obstacle rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight, Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
+                            obstacles.add(rectPath);
+                            shapeNumber++;
+                            return true;
+                        } else {
+                            return false;
+                        }
 
-                case "RectPath":
-                    if (x1 - xTravelled <= 1700) {
-                        Obstacle rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight, Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
-                        obstacles.add(rectPath);
-                        shapeNumber++;
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    case "TriPath":
+                        float X3 = Float.parseFloat(parts[3]);
+                        if (x1 - xTravelled <= 1700 || X3 - xTravelled <= 1700) {
+                            Obstacle TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight),
+                                new FloatPoint(X3 - xTravelled, Float.parseFloat(parts[4]) - currentHeight),
+                                new FloatPoint(Float.parseFloat(parts[5]) - xTravelled, Float.parseFloat(parts[6]) - currentHeight), Boolean.parseBoolean(parts[7]));
+                            obstacles.add(TriPath);
+                            shapeNumber++;
+                            return true;
+                        } else {
+                            return false;
+                        }
 
-                case "TriPath":
-                    float X3 = Float.parseFloat(parts[3]);
-                    float X5 = Float.parseFloat(parts[5]);
-                    if (x1 - xTravelled <= 1700 || X3 - xTravelled <= 1700 || X5 - xTravelled <= 1700) {
-                        Obstacle TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight),
-                                                       new FloatPoint(X3 - xTravelled, Float.parseFloat(parts[4]) - currentHeight),
-                                                       new FloatPoint(X5 - xTravelled, Float.parseFloat(parts[6]) - currentHeight), Boolean.parseBoolean(parts[7]));
-                        obstacles.add(TriPath);
-                        shapeNumber++;
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    case "Zone":
+                        float x2 = Float.parseFloat(parts[3]);
+                        float x3 = Float.parseFloat(parts[5]);
+                        float x4 = Float.parseFloat(parts[7]);
+                        if (x1 - xTravelled <= 1700 || x2 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x4 - xTravelled <= 1700) {
+                            Zone zone = new Zone(Zone.Type.valueOf(parts[9]));
+                            zone.polygon.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
+                            zone.polygon.points[1].setPoint(x2 - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
+                            zone.polygon.points[2].setPoint(x3 - xTravelled, Float.parseFloat(parts[6]) - currentHeight);
+                            zone.polygon.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
+                            zones.add(zone);
+                            shapeNumber++;
+                            return true;
+                        } else {
+                            return false;
+                        }
 
-                case "Zone":
-                    float x4 = Float.parseFloat(parts[7]);
-                    if (x1 - xTravelled <= 1700 || x4 - xTravelled <= 1700) {
-                        Zone zone = new Zone(Integer.parseInt(parts[9]));
-                        zone.polygon.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
-                        zone.polygon.points[1].setPoint(Float.parseFloat(parts[3]) - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
-                        zone.polygon.points[2].setPoint(Float.parseFloat(parts[5]) - xTravelled, Float.parseFloat(parts[6]) - currentHeight);
-                        zone.polygon.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
-                        zones.add(zone);
-                        shapeNumber++;
-                        return true;
-                    } else {
-                        return false;
-                    }
-
-                default:
-                    System.out.println("Unknown obstacle type: " + parts[0]);
+                    default:
+                        System.out.println("Unknown obstacle type: " + parts[0]);
+                }
+            } else {
+                shapeNumber++;
+                return true;
             }
         } catch(IOException e) {
             e.printStackTrace();
@@ -373,58 +387,6 @@ public class Level {
         return false;
     }
 
-    public void CheckSlowDown() {
-        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
-            GameData.getInstance().setSpeedMulti(0.5f);
-        } else {
-            GameData.getInstance().setDefaultSpeeds();
-        }
-    }
-
-    public void Update() {
-        if (stage == levelStage.NORMAL) {
-            player.EntityUpdate(obstacles);
-        }
-    }
-    public void Checking() {
-        if (stage == levelStage.NORMAL) {
-            CheckObstacleCollision();
-            CheckPlayerMovement();
-            CheckSlowDown();
-            CheckBulletContact();
-            player.CheckTrail();
-        }
-    }
-    public void Move() {
-        if (stage == levelStage.NORMAL) {
-            MoveAmmo();
-            PlayerMovement();
-            MoveObstaclesX(GameData.getInstance().getObstacleSpeed());
-            MovePlayerY(0);
-        }
-    }
-
-    public boolean PlayerSpikeCollision(Tri tri) {
-        for (FloatPoint point : tri.points) {
-            if (player.shape.isPointInShape(point)) {
-                return true;
-            }
-        }
-        for (FloatPoint point : player.shape.points) {
-            if (tri.isPointInShape(point)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    public boolean PlayerBoxCollision(Rect rect) {
-        if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY() + rect.getHeight()))) return true;
-        if (player.shape.isPointInShape(new FloatPoint(rect.getX(), rect.getY()))) return true;
-        if (rect.getX() <= player.shape.points[player.getBL()].getX() + player.getWidth() && rect.getX() >= player.shape.points[player.getBL()].getX() + (player.getWidth() / 2)) {
-            return player.shape.points[player.getBL()].getY() <= rect.getY() + rect.getHeight() && player.shape.points[player.getBL()].getY() + player.getWidth() >= rect.getY();
-        }
-        return false;
-    }
     public boolean PlayerRectPathCollision(Rect rect) {
         for (FloatPoint point : player.shape.points) {
             if (rect.isPointInShape(point)) {
@@ -443,179 +405,82 @@ public class Level {
     }
     public void CheckObstacleCollision() {
         for (Obstacle obstacle : obstacles) {
-            if (obstacle instanceof Box) {
-                if (PlayerBoxCollision((Rect) obstacle.shape)) {
-                    PlayerRespawn(obstacle);
-                }
-            } else if (obstacle instanceof Spike) {
-                if (PlayerSpikeCollision((Tri) obstacle.shape)) {
-                    PlayerRespawn(obstacle);
-                }
-            } else if (obstacle instanceof RectPath) {
+            if (obstacle instanceof RectPath) {
                 if (PlayerRectPathCollision((Rect) obstacle.shape)) {
+                    player.LoseLife();
+                    monster.setAwake(true);
                     PlayerRespawn(obstacle);
                 }
             } else if (obstacle instanceof TriPath) {
                 if (PlayerTriPathCollision((Tri) obstacle.shape)) {
+                    player.LoseLife();
+                    monster.setAwake(true);
                     PlayerRespawn(obstacle);
                 }
             }
         }
     }
 
-    public void CheckJumping(){
-        if (input.isKeyJustPressed(Input.Keys.SPACE)) {
-            if (player.getState() == Player.State.IDLE) {
-                player.setState(Player.State.JUMPING);
-                GameData.getInstance().setPlayerSpeedY(30);
-            }
-        }
-    }
-    public void CheckTipping() {
-        if (player.getState() == Player.State.FALLING || player.getState() == Player.State.JUMPING) {
-            if (player.lowestPoint.getY() + GameData.getInstance().getPlayerSpeedY() <= player.getSurfaceLandingY()) {
-                player.MoveY(player.getSurfaceLandingY() - player.lowestPoint.getY());
-                player.setState(Player.State.TIPPING);
-                GameData.getInstance().setPlayerSpeedY(0);
-                int angle = (int) player.getAngleTillFlat();
-                player.setClockwise(angle > 45);
-            }
-        }
-    }
-    public void CheckingFalling() {
-        if (player.getState() == Player.State.IDLE) {
-            for (Obstacle obstacle : obstacles) {
-                if (obstacle instanceof Box) {
-                    Rect rect = (Rect) obstacle.shape;
-                    if (rect.onScreen()) {
-                        if (((player.shape.points[player.getBL()].getX() + player.getWidth() / 2f) + 4f >= rect.getX() + rect.getWidth()
-                            && (player.shape.points[player.getBL()].getX() + player.getWidth() / 2f) - 4f <= rect.getX() + rect.getWidth())
-                            && Math.abs(player.lowestPoint.getY() - rect.getY() - rect.getHeight()) <= 0.1) {
-                            player.Rotate(-27, player.midPoint);
-                            player.setState(Player.State.FALLING);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    public void CheckFiring() {
-        if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            if (GameData.getInstance().getElapsedTime() >= player.getCoolDownEndTime()) {
-                FloatPoint mouse = new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-                Bullet bullet = new Bullet(3, new FloatPoint(player.midPoint.getX(), player.midPoint.getY()), mouse);
-                player.ammo.add(bullet);
-                player.setCoolDownEndTime(GameData.getInstance().getElapsedTime() + 150);
-            }
-        }
-    }
-    public void CheckPlayerMovement() {
-        CheckJumping();
-        CheckTipping();
-        CheckingFalling();
-        CheckFiring();
-    }
-
-    public void Falling() {
-        if (player.getState() == Player.State.FALLING) {
-            GameData.getInstance().setPlayerSpeedY(GameData.getInstance().getPlayerSpeedY() - 3);
-            player.Rotate(-9, player.midPoint);
-        }
-    }
-    public void Tipping() {
-        if (player.getState() == Player.State.TIPPING) {
-            if (player.getAngleTillFlat() == 0) {
-                player.setState(Player.State.IDLE);
-                player.CorrectPoints();
-            } else if (player.isClockwise()) {
-                player.Rotate(9, player.lowestPoint);
-            } else {
-                player.Rotate(-9, player.lowestPoint);
-            }
-        }
-    }
-    public void Jumping() {
-        if (player.getState() == Player.State.JUMPING) {
-            GameData.getInstance().setPlayerSpeedY(GameData.getInstance().getPlayerSpeedY() - 3);
-            player.Rotate(-9, player.midPoint);
-        }
-    }
-    public void PlayerMovement() {
-        Falling();
-        Tipping();
-        Jumping();
-    }
-
     public void MoveWorldX() {
-        if (stage == levelStage.ZIGZAG) {
-            obstacles.forEach(obstacle -> obstacle.MoveX(-3.5f));
-            player.zigTrail.forEach(trail -> trail.MoveX(-3.5f));
-            player.MoveTempLinesX(-3.5f);
-            xTravelled += 3.5f;
-            zones.forEach(zone -> zone.MoveX(-3.5f));
-            monster.MoveX(-3.5f);
-            player.ammo.forEach(ammo -> ammo.shape.MoveX(-3.5f));
-            monster.ammo.forEach(ammo -> ammo.shape.MoveX(-3.5f));
-            MoveAllPathsX(-3.5f);
-        } else {
-            obstacles.forEach(obstacle -> obstacle.MoveX(-GameData.getInstance().getObstacleSpeed()));
-        }
+        obstacles.forEach(obstacle -> obstacle.MoveX(-3.5f));
+        player.zigTrail.forEach(trail -> trail.MoveX(-3.5f));
+        player.MoveTempLinesX(-3.5f);
+        xTravelled += 3.5f;
+        zones.forEach(zone -> zone.MoveX(-3.5f));
+        monster.MoveX(-3.5f);
+        player.missiles.forEach(ammo -> ammo.shape.MoveX(-3.5f));
+        monster.missiles.forEach(ammo -> ammo.shape.MoveX(-3.5f));
+        MoveAllPathsX(-3.5f);
     }
     public void MoveWorldY(float Y) {
-        if (stage == levelStage.ZIGZAG) {
-            currentHeight -= Y;
-            player.MoveTempLinesY(Y);
-            obstacles.forEach(obstacle -> obstacle.MoveY(Y));
-            player.zigTrail.forEach(trail -> trail.MoveY(Y));
-            zones.forEach(zone -> zone.MoveY(Y));
-            MoveBackgroundY(Y/10);
-            monster.MoveY(Y);
-            player.ammo.forEach(ammo -> ammo.shape.MoveY(Y));
-            monster.ammo.forEach(ammo -> ammo.shape.MoveY(Y));
-            MoveAllPathsY(Y);
-        }
+        currentHeight -= Y;
+        player.MoveTempLinesY(Y);
+        obstacles.forEach(obstacle -> obstacle.MoveY(Y));
+        player.zigTrail.forEach(trail -> trail.MoveY(Y));
+        zones.forEach(zone -> zone.MoveY(Y));
+        MoveBackgroundY(Y / 10);
+        monster.MoveY(Y);
+        player.missiles.forEach(ammo -> ammo.shape.MoveY(Y));
+        monster.missiles.forEach(ammo -> ammo.shape.MoveY(Y));
+        MoveAllPathsY(Y);
     }
     public void MovePlayerY(float Y) {
-        if (stage == levelStage.NORMAL) {
-            player.MoveY(GameData.getInstance().getPlayerSpeedY());
-        } else {
-            if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
-            switch (screenHeight) {
-                case FIXED:
-                    player.MoveY(Y);
-                    break;
-                case TOP:
-                    player.MoveY(Y);
-                    if (player.shape.points[0].getY() <= player.downPoints[0].getY()) {
-                        screenHeight = ScreenHeight.NEUTRAL;
-                    }
-                    break;
-                case BOTTOM:
-                    player.MoveY(Y);
-                    if (player.shape.points[0].getY() >= player.upPoints[0].getY()) {
-                        screenHeight = ScreenHeight.NEUTRAL;
-                    }
-                    break;
-                case NEUTRAL:
-                    MoveWorldY(-Y);
-                    if (currentHeight <= bottomOfLevel) {
-                        screenHeight = ScreenHeight.BOTTOM;
-                    } else if (currentHeight + 800 >= topOfLevel) {
-                        screenHeight = ScreenHeight.TOP;
-                    }
-                    break;
-            }
+        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+        switch (screenHeight) {
+            case FIXED:
+                player.MoveY(Y);
+                break;
+            case TOP:
+                player.MoveY(Y);
+                if (player.shape.points[0].getY() <= player.downPoints[0].getY()) {
+                    screenHeight = ScreenHeight.NEUTRAL;
+                }
+                break;
+            case BOTTOM:
+                player.MoveY(Y);
+                if (player.shape.points[0].getY() >= player.upPoints[0].getY()) {
+                    screenHeight = ScreenHeight.NEUTRAL;
+                }
+                break;
+            case NEUTRAL:
+                MoveWorldY(-Y);
+                if (currentHeight <= currentBottomOfLevel) {
+                    screenHeight = ScreenHeight.BOTTOM;
+                } else if (currentHeight + 800 >= currentTopOfLevel) {
+                    screenHeight = ScreenHeight.TOP;
+                }
+                break;
         }
     }
     public void MoveAllPathsX(float X) {
         monster.currentPath.forEach(path -> path.MoveX(X));
-        monster.ammo.forEach(ammo -> ammo.path.forEach(line -> line.MoveX(X)));
-        player.ammo.forEach(ammo -> ammo.path.forEach(line -> line.MoveX(X)));
+        monster.missiles.forEach(ammo -> ammo.path.forEach(line -> line.MoveX(X)));
+        player.missiles.forEach(ammo -> ammo.path.forEach(line -> line.MoveX(X)));
     }
     public void MoveAllPathsY(float Y) {
         monster.currentPath.forEach(path -> path.MoveY(Y));
-        monster.ammo.forEach(ammo -> ammo.path.forEach(line -> line.MoveY(Y)));
-        player.ammo.forEach(ammo -> ammo.path.forEach(line -> line.MoveY(Y)));
+        monster.missiles.forEach(ammo -> ammo.path.forEach(line -> line.MoveY(Y)));
+        player.missiles.forEach(ammo -> ammo.path.forEach(line -> line.MoveY(Y)));
     }
 
     public void MoveBackgroundX(float X) {
@@ -625,15 +490,6 @@ public class Level {
         background.MoveY(Y);
     }
     public void CheckBackground() {
-        if (stage == levelStage.NORMAL) {
-            for (Rect rect : baseRects) {
-                rect.MoveX(GameData.getInstance().getBackgroundBaseSpeed());
-            }
-            if (baseRects.get(0).getX() < -baseRects.get(0).getWidth()) {
-                baseRects.remove(0);
-                baseRects.add(new Rect(1770, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
-            }
-        }
         MoveBackgroundX(-GameData.getInstance().getBackgroundSpeed());
         for (int i = background.columns.size() - 1; i >= 0; i--) {
             if (!background.columns.get(i).onScreen()) {
@@ -673,55 +529,9 @@ public class Level {
         }
     }
 
-    public void MoveAmmo() {
-        for (Ammo ammo : player.ammo) {
-            ammo.MoveAlongPath();
-        }
-    }
-    public void CheckBulletContact()  {
-        for (int i = 0; i < player.ammo.size(); i++) {
-            if (CheckAmmoCollision(player.ammo.get(i), monster.shape)) {
-                player.ammo.remove(i);
-                i--;
-            }
-        }
-    }
-    public boolean CheckAmmoCollision(Ammo ammo, Shape shape) {
-        if (ammo instanceof Bullet) {
-            Bullet bullet = (Bullet) ammo;
-            if (bullet.shape.points[0].getX() == bullet.endPoint.getX() && bullet.shape.points[0].getY() == bullet.endPoint.getY()) {
-                return true;
-            }
-            if (!ammo.shape.onScreen()) {
-                return true;
-            }
-            for (FloatPoint point : shape.points) {
-                if (ammo.shape.isPointInShape(point)) {
-                    return true;
-                }
-            }
-            for (FloatPoint point : ammo.shape.points) {
-                if (shape.isPointInShape(point)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     public void AddObstacle(Obstacle obstacle) {
-        try (FileWriter writer = new FileWriter("obstacles.txt", true)) {
-            if (obstacle instanceof Box) {
-                Rect rect = (Rect) obstacle.shape;
-                writer.write("Box: " + rect.getX() + " " + rect.getY() + " " + rect.getWidth() + " " + rect.getHeight());
-                writer.write("\n");
-            } else if (obstacle instanceof Spike) {
-                Tri tri = (Tri) obstacle.shape;
-                writer.write("Spike: " + tri.points[0].getX() + " " + tri.points[0].getY() + " " +
-                    tri.points[1].getX() + " " + tri.points[1].getY() + " " +
-                    tri.points[2].getX() + " " + tri.points[2].getY());
-                writer.write("\n");
-            } else if (obstacle instanceof RectPath) {
+        try (FileWriter writer = new FileWriter(currentFileName, true)) {
+            if (obstacle instanceof RectPath) {
                 Rect rect = (Rect) obstacle.shape;
                 RectPath rectPath = (RectPath) obstacle;
                 writer.write("RectPath: " + rect.getX() + " " + rect.getY() + " " + rect.getWidth() + " " + rect.getHeight() + " " + rectPath.isBottom());
@@ -739,96 +549,24 @@ public class Level {
         }
     }
     public void AddZone(Zone zone) {
-        try (FileWriter writer = new FileWriter ("obstacles.txt", true)) {
+        zone.polygon.sortPoints();
+        try (FileWriter writer = new FileWriter (currentFileName, true)) {
             writer.write("Zone: " + zone.polygon.points[0].getX() + " " + zone.polygon.points[0].getY() + " " +
                 zone.polygon.points[1].getX() + " " + zone.polygon.points[1].getY() + " " +
                 zone.polygon.points[2].getX() + " " + zone.polygon.points[2].getY() + " " +
                 zone.polygon.points[3].getX() + " " + zone.polygon.points[3].getY() + " " +
-                zone.getType());
-            writer.write("\n");
+                Zone.Type.valueOf(zone.type.toString()));
+                writer.write("\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    public void MoveObstaclesX(float X) {
-        for (Obstacle obstacle : obstacles) {
-            obstacle.MoveX(X);
-        }
-        xTravelled -= X;
-    }
 
     public void PlayerRespawn(Obstacle obstacle) {
-        if (obstacle instanceof Box || obstacle instanceof Spike) {
-            player.setState(Player.State.RESPAWNING);
-            GameData.getInstance().setStop(true);
-            GameData.getInstance().setAllSpeedsToZero();
-            GameData.getInstance().timers.runAfter(0.5f, () -> NormalRespawning(obstacle));
-            GameData.getInstance().timers.runAfter(1f, () -> EndNormalRespawning());
-        } else {
-            GameData.getInstance().setStop(true);
-            GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(obstacle));
-            GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
-        }
-    }
-    public void NormalRespawning(Obstacle obstacle) {
-        if (obstacle instanceof Spike) {
-            polygon poly = (polygon) player.shape;
-            MoveObstaclesX(-40);
-            if (Math.abs(poly.points[player.getBL()].getY() - 200f) <= 0.5f) {
-                poly.points[player.getBL()].setPoint(player.getOriginPosX(), 200);
-                poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200);
-                poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), 200 + player.getWidth());
-                poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), 200 + player.getWidth());
-            } else {
-                poly.points[player.getBL()].setPoint(player.getOriginPosX(), player.getSurfaceLandingY());
-                poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY());
-                poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), player.getSurfaceLandingY() + player.getWidth());
-                poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), player.getSurfaceLandingY() + player.getWidth());
-            }
-
-            if (TriCheckRespawn()) {
-                GameData.getInstance().setDefaultSpeeds();
-            }
-        } else if (obstacle instanceof Box) {
-            Rect rect = (Rect) obstacle.shape;
-            polygon poly = (polygon) player.shape;
-            MoveObstaclesX(-30);
-            poly.points[player.getBL()].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 1) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 2) % 4].setPoint(player.getOriginPosX() + player.getWidth(), rect.getY() + rect.getHeight());
-            poly.points[(player.getBL() + 3) % 4].setPoint(player.getOriginPosX(), rect.getY() + rect.getHeight());
-            if (TriCheckRespawn()) {
-                GameData.getInstance().setDefaultSpeeds();
-            }
-        }
-        player.CorrectPoints();
-        player.EqualPoints();
-        player.EntityUpdate(obstacles);
-    }
-    public boolean TriCheckRespawn() {
-        while (TriCheck()) {
-            MoveObstaclesX(-40);
-        }
-        return true;
-    }
-    public boolean TriCheck() {
-        for (Obstacle obstacle : obstacles) {
-            if (obstacle instanceof Spike) {
-                for (FloatPoint point : player.shape.points) {
-                    if (obstacle.shape.isPointInShape(point)) return true;
-                }
-                for (FloatPoint point : obstacle.shape.points) {
-                    if (player.shape.isPointInShape(point)) return true;
-                }
-            }
-        }
-
-        return false;
-    }
-    public void EndNormalRespawning() {
-        player.setState(Player.State.IDLE);
-        GameData.getInstance().setDefaultSpeeds();
-        GameData.getInstance().setStop(false);
+        System.out.println("Respawning Player");
+        GameData.getInstance().setStop(true);
+        GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(obstacle));
+        GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
     }
     public void ZigZagRespawning(Obstacle obstacle) {
         float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.5f) / 10f;
@@ -865,103 +603,168 @@ public class Level {
         GameData.getInstance().setStop(false);
     }
 
-    public void setUpLevel(levelStage stage, boolean newLevel) {
-        if (stage == levelStage.NORMAL) {
-            player.state = Player.State.IDLE;
-            player.setStartingPosition(730,200);
-            player.ReCalcSolidPoints();
-            GameData.getInstance().timers.runRepeating(0.5f, 0.1f, () -> player.AddToTrail());
-            for (int i = 0; i < 12; i++) {
-                baseRects.add(new Rect(160 * i, 10, 150, 180, new Color(0.12f, 0.28f, 0.51f, 1f)));
-            }
-            BaseLine = new LineSegment(new FloatPoint(0, 200), new FloatPoint(GameData.getInstance().getScreenWidth(), 200));
-            base = new Rect(0,0,1500, 200, new Color(0.2f, 0.38f, 0.66f, 1f));
-            background = new Background(600, BaseLine.startPoint.getY());
-            CreateNormalLevel();
-        } else if (stage == levelStage.ZIGZAG) {
-            AddObstacle(new RectPath(0, bottomOfLevel, 700, topOfLevel - bottomOfLevel, false));
+    public void BuildLevel() {
+        GameData.getInstance().EmptyFile(currentFileName);
 
-            drill.setNewDirection(drill.directions[(int) Math.ceil(Math.random() * 3) % 3]);
+        drill.setNewDirection(drill.directions[(int) Math.ceil(Math.random() * 3) % 3]);
 
-            if (drill.getNewDirection() == Drill.Direction.RIGHT) {
-                drill.setDrill(700, 240, 20, drill.CalcHeight());
-            } else {
-                drill.setDrill(700, 300, 20, drill.CalcHeight());
-            }
-
-            switch (drill.getNewDirection()) {
-                case UP_RIGHT: // up right
-                    drill.RotateDrill(-45, drill.points[3]);
-                    break;
-                case DOWN_RIGHT: // down right
-                    drill.RotateDrill(45, drill.points[0]);
-                    break;
-            }
-
-            drill.FindLines();
-            drill.FirstStartShapes();
-            drill.setDirection(drill.getNewDirection());
-
-            if (drill.getDirection() == Drill.Direction.UP_RIGHT) {
-                player.setDirection(Player.Direction.UP);
-            } else if (drill.getDirection() == Drill.Direction.DOWN_RIGHT) {
-                player.setDirection(Player.Direction.DOWN);
-            }
-
-            if (player.getDirection() == Player.Direction.UP) {
-                player.setStartingPosition(750, drill.points[0].getY() + 30);
-            } else {
-                player.setStartingPosition(750, drill.points[3].getY() - 30);
-            }
-
-            monster.setPosition(720, drill.points[0].getY() + 70);
-            monster.CalcMidPoint();
-            monster.setAwake(true);
-
-            CreateZigZagLevel();
-            AdjustShapesHeights();
-
-            player.CalcMidPoints();
-            player.setUpPoints();
-            player.setDownPoints();
-            if (player.getDirection() == Player.Direction.DOWN) {
-                player.Rotate(-45, player.midPoint);
-            } else {
-                player.Rotate(45, player.midPoint);
-            }
-            player.CalcMidPoints();
-            player.CreateLines();
-            player.FirstTrail();
-
-            background = new Background(topOfLevel - bottomOfLevel, bottomOfLevel);
-
-            StartTime = GameData.getInstance().getElapsedTime();
+        if (drill.getNewDirection() == Drill.Direction.RIGHT) {
+            drill.setDrill(700, 240, 20, drill.CalcHeight());
+        } else {
+            drill.setDrill(700, 300, 20, drill.CalcHeight());
         }
 
-        this.stage = stage;
+        switch (drill.getNewDirection()) {
+            case UP_RIGHT: // up right
+                drill.RotateDrill(-45, drill.points[3]);
+                break;
+            case DOWN_RIGHT: // down right
+                drill.RotateDrill(45, drill.points[0]);
+                break;
+        }
 
-        grid = new Node[GameData.getInstance().getScreenWidth() / cellSize][(int) (topOfLevel - bottomOfLevel) / cellSize];
+        drill.FindLines();
+        drill.FirstStartShapes();
+        drill.setDirection(drill.getNewDirection());
+
+        System.out.println("Drill Point 0: " + drill.points[0].getX() + ", " + drill.points[0].getY());
+        System.out.println("Drill Point 1: " + drill.points[1].getX() + ", " + drill.points[1].getY());
+        System.out.println("Drill Point 2: " + drill.points[2].getX() + ", " + drill.points[2].getY());
+        System.out.println("Drill Point 3: " + drill.points[3].getX() + ", " + drill.points[3].getY());
+
+        try (FileWriter writer = new FileWriter(currentFileName, true)) {
+            writer.write("Direction: " + drill.getDirection().toString() + "\n");
+            writer.write("Monster: " + drill.points[0].getY() + "\n");
+            writer.write("LevelHeight: " + (drill.points[3].getY() - drill.points[0].getY()) + "\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        AddObstacle(new RectPath(0, 0, 700, GameData.getInstance().getScreenHeight(), false));
+
+        CreateZigZagLevel();
+        AdjustShapesHeights();
+
+        try (FileWriter writer = new FileWriter(currentFileName, true)) {
+            writer.write("TopOfLevel: " + drill.getTopOfLevel() + "\n");
+            writer.write("BottomOfLevel: " + drill.getBottomOfLevel() + "\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setUpLevel(boolean newLevel) {
+        if (newLevel) {
+            BuildLevel();
+        }
+
+        Drill.Direction drillDirection = null;
+        float starting0 = 0;
+        try {
+            File read = new File(currentFileName);
+
+            List<String> lines = Files.readAllLines(read.toPath());
+
+            String[] parts = lines.get(0).split(": ");
+            drillDirection = Drill.Direction.valueOf(parts[1]);
+
+            parts = lines.get(1).split(":\\s+|\\s+");
+            starting0 = Float.parseFloat(parts[1]);
+
+            parts = lines.get(2).split(":\\s+|\\s+");
+            levelHeight = Float.parseFloat(parts[1]);
+
+            parts = lines.get(lines.size() - 2).split(":\\s+|\\s+");
+            currentTopOfLevel = Float.parseFloat(parts[1]);
+
+            parts = lines.get(lines.size() - 1).split(":\\s+|\\s+");
+            currentBottomOfLevel = Float.parseFloat(parts[1]);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (drillDirection == Drill.Direction.UP_RIGHT) {
+            player.setDirection(Player.Direction.UP);
+        } else if (drillDirection == Drill.Direction.DOWN_RIGHT) {
+            player.setDirection(Player.Direction.DOWN);
+        } else {
+            player.setDirection(Player.Direction.UP);
+        }
+
+        player.setStartingPosition(starting0 + (0.3f * levelHeight));
+
+        player.PrintPoints();
+
+        monster.setPosition(720, starting0 + (0.5f * levelHeight));
+        monster.CalcMidPoint();
+        monster.setAwake(false);
+
+        player.CalcMidPoints();
+        player.setUpPoints();
+        player.setDownPoints();
+        if (player.getDirection() == Player.Direction.DOWN) {
+            player.Rotate(-45, player.midPoint);
+        } else {
+            player.Rotate(45, player.midPoint);
+        }
+        player.CalcMidPoints();
+        player.CreateLines();
+        player.FirstTrail();
+
+        player.PrintPoints();
+
+        background = new Background(currentTopOfLevel - currentBottomOfLevel, currentBottomOfLevel);
+
+        StartTime = GameData.getInstance().getElapsedTime();
+
+        grid = new Node[GameData.getInstance().getScreenWidth() / cellSize][(int) (currentTopOfLevel - currentBottomOfLevel) / cellSize];
 
         while (background.columns.size() < 20) {
             background.addColumn();
         }
 
         while (ReadFile());
-
-        CheckMonsterWalkability();
     }
 
-    public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint){
+    public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
+        // cooldown checker needed
+
         CheckMissileWalkability();
 
-        pathing.add(new ThetaStarStepper(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this));
+        ThetaStarStepper stepper = new ThetaStarStepper(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+
+        Gdx.app.postRunnable(stepper::FindPath);
     }
     public void FindNewMonsterPath() {
         CheckMonsterWalkability();
 
         monster.CalcMidPoint();
 
-        pathing.add(new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this));
+        synchronized (this) {
+            if (monsterPathPending) {
+                return;
+            }
+            monsterPathPending = true;
+        }
+
+        ThetaStarStepper stepper;
+
+        if (!monster.currentPath.isEmpty()) {
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
+        } else {
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
+        }
+
+        Gdx.app.postRunnable(() -> {
+            try {
+                stepper.FindPath();
+            } finally {
+                synchronized (this) {
+                    monsterPathPending = false;
+                }
+            }
+        });
     }
     public FloatPoint FindMonsterEndPoint() {
         Node[] Column = grid[grid.length / 5];
@@ -971,13 +774,11 @@ public class Level {
             float difference = yLevel % 4;
             float nodeY = (yLevel - difference) / cellSize;
             if (Column[(int) nodeY].getState() == Node.NodeState.WALKABLE) {
-                System.out.println("X: " + Column[(int) nodeY].getX() + " Y: " + nodeY);
                 return new FloatPoint(Column[(int) nodeY].getX(), Column[(int) nodeY].getY());
             }
         } while (!valid);
         return null;
     }
-
 
     public void TransformShapes() {
         shapes.clear();
@@ -1003,7 +804,7 @@ public class Level {
     public void ResetGrid() {
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
-                grid[x][y] = new Node((x * cellSize) + 2, (y * cellSize) + 2, Node.NodeState.WALKABLE);
+                grid[x][y] = new Node((x * cellSize) + 2, (int) currentBottomOfLevel + (y * cellSize) + 2, Node.NodeState.WALKABLE);
             }
         }
     }
@@ -1069,7 +870,7 @@ public class Level {
     }
 
     public void MoveMonsterAlongPath() {
-        if (monster.currentPath.isEmpty()) {
+        if (monster.currentPath.size() <= 1) {
             FindNewMonsterPath();
             return;
         }
@@ -1082,31 +883,26 @@ public class Level {
         float distanceToEnd = (float) Math.sqrt(Math.pow(xDifference, 2) + Math.pow(yDifference, 2));
 
         if (distanceToEnd <= monster.getSpeed()) {
-            monster.shape.MoveX(xDifference);
-            monster.shape.MoveY(yDifference);
+            monster.MoveX(xDifference);
+            monster.MoveY(yDifference);
             monster.currentPath.remove(0);
         } else {
-            monster.shape.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
-            monster.shape.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
+            monster.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
+            monster.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
         }
     }
 
     public void MoveMissiles() {
-        for (int i = 0; i < player.ammo.size(); i++) {
-            if (player.ammo.get(i) instanceof Missile) {
-                Missile missile = (Missile) player.ammo.get(i);
-                missile.MoveAlongPath();
-                if (missile.path.isEmpty()) {
-                    player.ammo.remove(missile);
-                }
+        for (Missile missile : player.missiles) {
+            missile.MoveAlongPath();
+            if (missile.path.isEmpty()) {
+                player.missiles.remove(missile);
             }
         }
-        for (Ammo ammo : monster.ammo) {
-            if (ammo instanceof Missile) {
-                ammo.MoveAlongPath();
-                if (ammo.path.isEmpty()) {
-                    monster.ammo.remove(ammo);
-                }
+        for (Missile missile : monster.missiles) {
+            missile.MoveAlongPath();
+            if (missile.path.isEmpty()) {
+                monster.missiles.remove(missile);
             }
         }
     }

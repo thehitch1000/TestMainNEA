@@ -32,32 +32,6 @@ abstract class Obstacle implements IntObstacle {
     }
 }
 
-class Box extends Obstacle {
-
-    public Box(float width, float height) {
-        shape = new Rect(width, height);
-    }
-
-    public Box(float x, float y, float width, float height) {
-        shape = new Rect(x, y, width, height, Color.WHITE);
-    }
-
-    public void setX (float X) {
-        ((Rect)shape).setX(X);
-    }
-}
-
-class Spike extends Obstacle {
-
-    public Spike(FloatPoint[] Points) {
-        shape = new Tri(Points);
-    }
-    public Spike(FloatPoint point1, FloatPoint point2, FloatPoint point3) {
-        shape = new Tri(point1, point2, point3);
-    }
-
-}
-
 class RectPath extends Obstacle {
     private boolean bottom;
 

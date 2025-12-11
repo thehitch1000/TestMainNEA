@@ -5,9 +5,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public interface IntShape {
     void Draw(ShapeRenderer sr);
@@ -90,7 +88,6 @@ abstract class Shape implements IntShape {
     private float Radians(float angle) {
         return (float) (angle * (Math.PI / 180));
     }
-
 }
 
 class Rect extends Shape implements Transparency, Colour{
@@ -505,53 +502,73 @@ class polygon extends Shape implements Transparency, Colour {
     public void UpdateTriangles() {
         if (!lock.getState()) {
             tris.clear();
-            List<FloatPoint> vertices = new ArrayList<>(numOfPoints);
+
+            List<FloatPoint> vertices = new ArrayList<>(points.length);
 
             for (FloatPoint point : points) {
                 vertices.add(new FloatPoint(point.getX(), point.getY()));
             }
+
+            CheckForCCW(vertices);
+
+            int i = 0;
             while (vertices.size() > 3) {
-                for (int i = 0; i < vertices.size(); i++) {
-                    FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size());
-                    FloatPoint cur = vertices.get(i);
-                    FloatPoint nex = vertices.get((i + 1) % vertices.size());
+                FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size());
+                FloatPoint cur = vertices.get(i);
+                FloatPoint nex = vertices.get((i + 1) % vertices.size());
 
-                    FloatPoint pc = new FloatPoint(cur.getX() - pre.getX(), cur.getY() - pre.getY());
-                    FloatPoint cn = new FloatPoint(nex.getX() - cur.getX(), nex.getY() - cur.getY());
+                FloatPoint prev = new FloatPoint(cur.getX() - pre.getX(), cur.getY() - pre.getY());
+                FloatPoint next = new FloatPoint(nex.getX() - cur.getX(), nex.getY() - cur.getY());
 
-                    if (!isConvex(pc, cn)) {
-                        continue;
-                    }
-
-                    Tri tri = new Tri(pre, cur, nex);
-
-                    if (isVerticesInTri(tri, vertices, i)) continue;
-
-                    tris.add(tri);
-
-                    vertices.remove(i);
-                    break;
+                if (!isConvex(prev, next)) {
+                    i = (i + 1) % vertices.size();
+                    continue;
                 }
+
+                Tri tri = new Tri(pre, cur, nex);
+
+                if (isVerticesInTri(tri, vertices, i)) {
+                    i = (i + 1) % vertices.size();
+                    continue;
+                }
+
+                tris.add(tri);
+
+                vertices.remove(i);
+                i = (i + 1) % vertices.size();
             }
+
             tris.add(new Tri(vertices.get(0), vertices.get(1), vertices.get(2)));
             lock.used();
         }
     }
     private boolean isConvex(FloatPoint v1, FloatPoint v2) {
-        return ((v1.getX() * v2.getY()) - (v1.getY() * v2.getX())) >= 0;
+        return (v1.getX() * v2.getY()) - (v1.getY() * v2.getX()) > 0;
     }
     private boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
-        for (int n = 0; n < vertices.size() - 3; n++) {
-            int index = (currentPoint + 2 + n) % vertices.size();
-            FloatPoint point = new FloatPoint(vertices.get(index).getX(), vertices.get(index).getY());
-            if (tri.isPointInShape(point)) return true;
+        for (int n = 0; n < vertices.size(); n++) {
+            if (n == currentPoint) continue;
+            if (n == (currentPoint - 1 + vertices.size()) % vertices.size()) continue;
+            if (n == (currentPoint + 1) % vertices.size()) continue;
+            if (tri.isPointInShape(vertices.get(n))) return true;
         }
         return false;
+    }
+    private float Area(List<FloatPoint> pts) {
+        float area = 0;
+        int j = pts.size() - 1;
+        for (int i = 0; i < pts.size(); i++) {
+            area += (pts.get(j).getX() * pts.get(i).getY()) - (pts.get(i).getX() * pts.get(j).getY());
+            j = i;
+        }
+        return area / 2;
     }
 
     public void Draw(ShapeRenderer sr) {
         UpdateTriangles();
-        sr.setColor(colour.r, colour.g, colour.b, alpha);
+        if (colour != null) {
+            sr.setColor(colour.r, colour.g, colour.b, alpha);
+        }
         for (Tri tri : tris) {
             tri.Draw(sr);
         }
@@ -584,6 +601,30 @@ class polygon extends Shape implements Transparency, Colour {
             }
         }
         return false;
+    }
+
+    public void sortPoints() {
+        float XTotal = 0, YTotal = 0;
+
+        for (FloatPoint p : points) {
+            XTotal += p.getX();
+            YTotal += p.getY();
+        }
+
+        final float centreX = XTotal / points.length;
+        final float centreY = YTotal / points.length;
+
+        Arrays.sort(points, (p1, p2) -> {
+            double angle1 = Math.atan2(p1.getY() - centreY, p1.getX() - centreX);
+            double angle2 = Math.atan2(p2.getY() - centreY, p2.getX() - centreX);
+            return Double.compare(angle1, angle2);
+        });
+    }
+
+    private void CheckForCCW(List<FloatPoint> vertices) {
+        if (Area(vertices) < 0) {
+            Collections.reverse(vertices);
+        }
     }
 }
 

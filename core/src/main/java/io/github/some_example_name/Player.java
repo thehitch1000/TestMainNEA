@@ -11,54 +11,40 @@ public class Player {
     public enum Direction {
         UP, DOWN, NULL
     }
-    public enum State {
-        IDLE, JUMPING, FALLING, TIPPING, RESPAWNING, DEAD, NULL
-    }
 
-    private int AngleTillFlat, lives, startingHealth, BL;
-    private float surfaceLandingY, coolDownEndTime, originPosX, originPosY, currentHealth, width, totalAngle;
-    private boolean Clockwise;
-    List<Ammo> ammo;
-    List<Rect> normalTrail;
+    private int lives, startingHealth;
+    private float coolDownEndTime, currentHealth, minY, maxY;
+    List<Missile> missiles;
     List<polygon> zigTrail;
     FloatPoint[] upPoints, downPoints, lineMidPoints;
     LineEquation[] lines, tempLines;
 
     Direction direction;
-    State state;
-    FloatPoint lowestPoint, midPoint;
-    Shape healthShape, shape;
+    FloatPoint midPoint;
+    polygon healthShape, shape;
     LineEquation EndLine;
 
     public Player(int startingHealth) {
         this.startingHealth = startingHealth;
-        this.AngleTillFlat = 0;
-        this.BL = 0;
-        this.lives = 5;
-        this.totalAngle = 0;
-        this.originPosX = 730;
-        this.originPosY = 200;
+        this.lives = 3;
+        this.currentHealth = startingHealth;
+        this.minY = 0;
+        this.maxY = 0;
 
         this.direction = Direction.NULL;
-        this.state = State.NULL;
 
-        this.surfaceLandingY = 0;
-        this.currentHealth = startingHealth;
-        this.width = 40;
-
-        ammo = new ArrayList<>();
-        normalTrail = new ArrayList<>();
+        missiles = new ArrayList<>();
         zigTrail = new ArrayList<>();
 
-        lowestPoint = new FloatPoint(0, 0);
         midPoint = new FloatPoint(0, 0);
 
-        healthShape = new polygon(4, Color.WHITE);
-        shape = new polygon(4, Color.WHITE, 0.5f);
+        healthShape = new polygon(4, new Color(0.16f, 0.49f, 0.42f, 1f));
+        shape = new polygon(4, new Color(0.16f, 0.49f, 0.42f, 0.5f), 0.5f);
 
         downPoints = new FloatPoint[4];
         upPoints = new FloatPoint[4];
         lineMidPoints = new FloatPoint[2];
+
         for(int i = 0; i < downPoints.length; i++) {
             downPoints[i] = new FloatPoint(0, 0);
         }
@@ -78,13 +64,6 @@ public class Player {
         }
     }
 
-    public State getState() {
-        return state;
-    }
-    public void setState(State state) {
-        this.state = state;
-    }
-
     public Direction getDirection() {
         return direction;
     }
@@ -92,26 +71,6 @@ public class Player {
         this.direction = direction;
     }
 
-    public boolean isClockwise() {
-        return Clockwise;
-    }
-    public void setClockwise(boolean Clockwise) {
-        this.Clockwise = Clockwise;
-    }
-
-    public float getCoolDownEndTime() {
-        return coolDownEndTime;
-    }
-    public void setCoolDownEndTime(float CoolDownEndTime) {
-        coolDownEndTime = CoolDownEndTime;
-    }
-
-    public int getBL() {
-        return BL;
-    }
-    public float getWidth() {
-        return width;
-    }
     public int getLives() {
         return lives;
     }
@@ -126,120 +85,47 @@ public class Player {
         }
         Rotate(45, midPoint);
         MoveY(-move);
+        CalcMidPoints();
     }
     public void setUpPoints() {
         float move = midPoint.getY() - 400;
         MoveY(move);
+        CalcMidPoints();
         Rotate(45, midPoint);
         for (int i = 0; i < upPoints.length; i++) {
             upPoints[i].setPoint(shape.points[i].getX(), shape.points[i].getY());
         }
         Rotate(-45, midPoint);
         MoveY(-move);
-    }
-
-    public float getSurfaceLandingY() {
-        return surfaceLandingY;
-    }
-    public float getOriginPosX() {
-        return originPosX;
-    }
-    public float getAngleTillFlat() {
-        return AngleTillFlat;
-    }
-
-    public void setStartingPosition(float x, float y) {
-        if (state == State.IDLE) {
-            this.shape.points[0].setPoint(x, y);
-            this.shape.points[1].setPoint(x + width, y);
-            this.shape.points[2].setPoint(x + width, y + width);
-            this.shape.points[3].setPoint(x, y + width);
-            for (int i = 0; i < shape.points.length; i++) {
-                this.healthShape.points[i].setWholePoint(this.shape.points[i]);
-            }
-        } else {
-            shape.points[0].setPoint(730, y);
-            shape.points[1].setPoint(725, y + 15);
-            shape.points[2].setPoint(755, y);
-            shape.points[3].setPoint(725, y - 15);
-            for (int i = 0; i < healthShape.points.length; i++) {
-                this.healthShape.points[i].setWholePoint(this.shape.points[i]);
-            }
-        }
-    }
-
-    public void CorrectPoints() {
-        shape.points[BL].setX(originPosX);
-        shape.points[(BL + 1) % 4].setX(originPosX + width);
-        shape.points[(BL + 2) % 4].setX(originPosX + width);
-        shape.points[(BL + 3) % 4].setX(originPosX);
-        for (int i = 0; i < shape.points.length; i++) {
-            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
-        }
-        ReCalcSolidPoints();
-    }
-
-    public void EntityUpdate(List<Obstacle> obstacles) {
-        AngleTillFlat();
-        FindSurfaceY(obstacles);
-        FindBottomLeft();
         CalcMidPoints();
     }
-    private void AngleTillFlat() {
-        int angle = (int) totalAngle % 360;
-        if (angle == 0 || angle == 90 || angle == 180 || angle == 270) {
-            AngleTillFlat = 0;
-        } else if (angle < 90) {
-            AngleTillFlat = 90 - angle;
-        } else if (angle < 180) {
-            AngleTillFlat = 180 - angle;
-        } else if (angle < 270) {
-            AngleTillFlat = 270 - angle;
-        } else {
-            AngleTillFlat = 360 - angle;
-        }
-    }
-    private void FindSurfaceY(List<Obstacle> obstacles) {
-        float newSurfaceLandingY = originPosY;
 
-        for (Obstacle obstacle : obstacles) {
-            if (obstacle instanceof Box) {
-                Rect rect = (Rect) obstacle.shape;
-                if (midPoint.getX() > rect.getX() && midPoint.getX() < rect.getX() + rect.getWidth()) {
-                    if (rect.getY() + rect.getHeight() > newSurfaceLandingY) {
-                        newSurfaceLandingY = rect.getY() + rect.getHeight();
-                    }
-                }
-            }
+    public void setStartingPosition(float y) {
+        shape.points[0].setPoint(740, y);
+        shape.points[1].setPoint(735, y + 15);
+        shape.points[2].setPoint(765, y);
+        shape.points[3].setPoint(735, y - 15);
+        for (int i = 0; i < healthShape.points.length; i++) {
+            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
         }
-        surfaceLandingY = newSurfaceLandingY;
     }
+
     public void CalcMidPoints() {
-        float x = shape.points[0].getX() + shape.points[2].getX();
-        float y = shape.points[0].getY() + shape.points[2].getY();
-        midPoint.setPoint(x/2, y/2);
-
-        if (state == State.NULL) {
-            float x2 = shape.points[0].getX() + shape.points[3].getX();
-            float y2 = shape.points[0].getY() + shape.points[3].getY();
-            lineMidPoints[0].setPoint(x2/2, y2/2);
-
-            float x3 = shape.points[0].getX() + shape.points[1].getX();
-            float y3 = shape.points[0].getY() + shape.points[1].getY();
-            lineMidPoints[1].setPoint(x3/2, y3/2);
+        float TotalX = 0, TotalY = 0;
+        for (FloatPoint p : shape.points) {
+            TotalX += p.getX();
+            TotalY += p.getY();
         }
-    }
-    private void FindBottomLeft() {
-        BL = 0;
-        if (AngleTillFlat == 0) {
-            BL = ((int) totalAngle % 360) / 90;
-        } else {
-            for (int i = 1; i < 4; i++) {
-                if (shape.points[i].getX() < shape.points[BL].getX()) {
-                    BL = i;
-                }
-            }
-        }
+        midPoint.setPoint(TotalX/shape.points.length, TotalY/shape.points.length);
+
+        float x2 = shape.points[0].getX() + shape.points[3].getX();
+        float y2 = shape.points[0].getY() + shape.points[3].getY();
+        lineMidPoints[0].setPoint(x2/2, y2/2);
+
+        float x3 = shape.points[0].getX() + shape.points[1].getX();
+        float y3 = shape.points[0].getY() + shape.points[1].getY();
+        lineMidPoints[1].setPoint(x3/2, y3/2);
+
     }
     public void CreateLines() {
         if (direction == Direction.UP) {
@@ -256,34 +142,6 @@ public class Player {
         EndLine.CalcYIntercept(midPoint);
     }
 
-    public void ReCalcSolidPoints() {
-        if (currentHealth <= 0) {
-            Gdx.app.exit();
-        }
-        float multi = currentHealth / (float) startingHealth;
-        healthShape.points[(BL + 2) % 4].setY(shape.points[(BL + 1) % 4].getY() + (width * multi));
-        healthShape.points[(BL + 3) % 4].setY(shape.points[BL].getY() + (width * multi));
-    }
-
-    public void AddToTrail() {
-        if (state == State.IDLE) {
-            normalTrail.add(new Rect(GameData.getInstance().getScreenWidth()/2, CreateYHeight(), 8,8, Color.WHITE));
-        }
-    }
-    public int CreateYHeight() {
-        return (int) ((Math.random() * (width/2)) + shape.points[BL].getY());
-    }
-    public void CheckTrail() {
-        for (int i = 0; i < normalTrail.size(); i++) {
-            if (normalTrail.get(i).getAlpha() <= 0) {
-                normalTrail.remove(i);
-            } else {
-                normalTrail.get(i).setAlpha(normalTrail.get(i).getAlpha() - 0.04f);
-                normalTrail.get(i).MoveX(-5f);
-                normalTrail.get(i).MoveY(0.5f);
-            }
-        }
-    }
     public void FirstTrail() {
         polygon trail = new polygon(4, Color.WHITE);
         CreateLines();
@@ -398,19 +256,17 @@ public class Player {
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
         healthShape.Draw(sr);
+//        System.out.println("Player Triangle Points 1: " + shape.tris.get(0).points[0].getX() + "," + shape.tris.get(0).points[0].getY() + " " +
+//                shape.tris.get(0).points[1].getX() + "," + shape.tris.get(0).points[1].getY() + " " +
+//                shape.tris.get(0).points[2].getX() + "," + shape.tris.get(0).points[2].getY());
+//        System.out.println("Player Triangle Points 2: " + shape.tris.get(1).points[0].getX() + "," + shape.tris.get(1).points[0].getY() + " " +
+//                shape.tris.get(1).points[1].getX() + "," + shape.tris.get(1).points[1].getY() + " " +
+//                shape.tris.get(1).points[2].getX() + "," + shape.tris.get(1).points[2].getY());
     }
 
     public void Rotate(float angle, FloatPoint pivot) {
         shape.Rotate(angle, pivot);
         healthShape.Rotate(angle, pivot);
-        totalAngle -= angle;
-    }
-
-    public void EqualPoints() {
-        for (int i = 0; i < shape.points.length; i++) {
-            this.healthShape.points[i].setWholePoint(this.shape.points[i]);
-        }
-        ReCalcSolidPoints();
     }
 
     public void PrintLines(ShapeRenderer sr) {
@@ -441,5 +297,34 @@ public class Player {
         System.out.println("X: " + shape.points[2].getX() + " Y: " + shape.points[2].getY());
         System.out.println("X: " + shape.points[3].getX() + " Y: " + shape.points[3].getY());
         System.out.println();
+    }
+
+    public void TakeDamage(float damage) {
+        currentHealth -= damage;
+    }
+    public boolean CheckHealth() {
+        return currentHealth <= 0;
+    }
+    public void LoseLife() {
+        lives--;
+    }
+    public void ResetHealth() {
+        currentHealth = startingHealth;
+    }
+
+    public void calcHealthVisual() {
+        FindMaxMinPoints();
+
+        LineEquation healthLine = new LineEquation(0, minY + ((maxY - minY) * (currentHealth / startingHealth)), LineEquation.LineDirection.HORIZONTAL);
+    }
+    public void FindMaxMinPoints() {
+        for (FloatPoint p : shape.points) {
+            if (p.getY() > maxY) {
+                maxY = p.getY();
+            }
+            if (p.getY() < minY) {
+                minY = p.getY();
+            }
+        }
     }
 }

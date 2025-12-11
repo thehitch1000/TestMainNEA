@@ -4,12 +4,13 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class Monster {
     private float speed;
     private boolean awake;
-    ArrayList<LineSegment> currentPath;
-    ArrayList<Ammo> ammo;
+    List<LineSegment> currentPath;
+    List<Missile> missiles;
     Shape shape, healthShape;
     FloatPoint midPoint;
 
@@ -19,7 +20,7 @@ public class Monster {
         healthShape = new Rect(40, 40, Color.RED);
 
         currentPath = new ArrayList<>();
-        ammo = new ArrayList<>();
+        missiles = new ArrayList<>();
 
         this.speed = 8;
         this.awake = false;

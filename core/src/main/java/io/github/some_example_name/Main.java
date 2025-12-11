@@ -18,7 +18,7 @@ import static com.badlogic.gdx.Gdx.input;
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
     public enum Stage {
-        STARTMENU, PLAYING, PAUSED, DEADMENU, ENDING
+        STARTMENU, PLAYING, PAUSED, DEADMENU, ENDING, LEVELSTATUSMENU
     }
 
     ShapeRenderer sr;
@@ -28,28 +28,55 @@ public class Main extends ApplicationAdapter {
     Menu startMenu;
     Menu pauseMenu;
     Menu endingMenu;
+    Menu levelStatusMenu;
 
     Level level;
     Stage stage;
 
     List<Runnable> start1 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
-        add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(Level.levelStage.NORMAL, true));
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles1"));
     }};
     List<Runnable> start2 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
-        add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(Level.levelStage.ZIGZAG, true));
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles2"));
     }};
     List<Runnable> start3 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles3"));
+    }};
+    List<Runnable> start4 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles4"));
+    }};
+    List<Runnable> start5 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles5"));
+    }};
+    List<Runnable> start6 = new ArrayList<Runnable>() {{
+        add(() -> startMenu.Close());
+        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> levelStatusMenu.Open());
+        add(() -> level.setCurrentFileName("obstacles6"));
+    }};
+    List<Runnable> start7 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
     }};
 
     List<Runnable> pause1 = new ArrayList<Runnable>() {{
         add(() -> pauseMenu.Close());
         add(() -> stage = Stage.PLAYING);
-        add(() -> GameData.getInstance().timers.runAfter(0.5f, () -> GameData.getInstance().setStop(false)));
+        add(() -> GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false)));
     }};
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
@@ -60,23 +87,31 @@ public class Main extends ApplicationAdapter {
        add(() -> stage = Stage.STARTMENU);
        add(() -> startMenu.Open());
     }};
-
     List<Runnable> ending2 = new ArrayList<Runnable>() {{
+        add(() -> level.ResetLevel());
         add(() -> endingMenu.Close());
         add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(level.getStage(), false));
+        add(() -> level.setUpLevel(false));
     }};
     List<Runnable> ending3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
+    }};
+
+    List<Runnable> ResetLevel = new ArrayList<Runnable>() {{
+        add(() -> levelStatusMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(true));
+    }};
+    List<Runnable> KeepLevel = new ArrayList<Runnable>() {{
+        add(() -> levelStatusMenu.Close());
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(false));
     }};
 
     int a = 0;
 
     @Override
     public void create() {
-        GameData.getInstance().EmptyFile("obstacles.txt");
-        GameData.getInstance().EmptyFile("tempObstacles.txt");
-
         sr = new ShapeRenderer();
         batch = new SpriteBatch();
         font = new BitmapFont();
@@ -84,12 +119,18 @@ public class Main extends ApplicationAdapter {
         startMenu = new Menu();
         pauseMenu = new Menu();
         endingMenu = new Menu();
+        levelStatusMenu = new Menu();
+
         level = new Level();
         stage = Stage.STARTMENU;
 
-        startMenu.AddButton(new Button("Play Normal Level", start1, 750, 600, font));
-        startMenu.AddButton(new Button("Play ZigZag Level", start2, 750, 400, font));
-        startMenu.AddButton(new Button("Leave", start3, 750, 200, font));
+        startMenu.AddButton(new Button("Level 1", start1, 375, 600, font));
+        startMenu.AddButton(new Button("Level 2", start2, 750, 600, font));
+        startMenu.AddButton(new Button("Level 3", start3, 1225, 600, font));
+        startMenu.AddButton(new Button("Level 4", start4, 375, 400, font));
+        startMenu.AddButton(new Button("Level 5", start5, 750, 400, font));
+        startMenu.AddButton(new Button("Level 6", start6, 1225, 400, font));
+        startMenu.AddButton(new Button("Leave", start7, 750, 200, font));
         startMenu.Open();
 
         pauseMenu.AddButton(new Button("Resume", pause1, 750, 500, font));
@@ -101,6 +142,10 @@ public class Main extends ApplicationAdapter {
         endingMenu.AddButton(new Button("Leave", ending3, 1125, 250, font));
         endingMenu.AddBody(new Body(750));
         endingMenu.Close();
+
+        levelStatusMenu.AddButton(new Button("Reset Level", ResetLevel, 750, 500, font));
+        levelStatusMenu.AddButton(new Button("Keep Level", KeepLevel, 750, 300, font));
+        levelStatusMenu.Close();
     }
 
     @Override
@@ -123,6 +168,11 @@ public class Main extends ApplicationAdapter {
                     pauseMenu.Open();
                 }
 
+                if (input.isKeyJustPressed(Input.Keys.D)) {
+                    System.out.println("Player Lives: " + level.player.getLives());
+                    System.out.println("Player Triangles: " + level.player.healthShape.tris.size());
+                }
+
                 if (level.CheckLevelEnd()) {
                     stage = Stage.ENDING;
                     GameData.getInstance().setStop(true);
@@ -131,11 +181,12 @@ public class Main extends ApplicationAdapter {
                     endingMenu.body.AddLine("Your Time: " + (int) (GameData.getInstance().getElapsedTime() - level.getStartTime()) / 1000f + "s", 600, font);
                 }
 
-                if (level.player.getLives() == 0) {
+                if (level.player.getLives() <= 0 || level.player.CheckHealth()) {
                     stage = Stage.DEADMENU;
                     GameData.getInstance().setStop(true);
                     endingMenu.Open();
                     endingMenu.body.ClearLines();
+                    endingMenu.body.AddLine("You Lost!", 600, font);
                 }
 
                 while (level.ReadFile());
@@ -143,48 +194,38 @@ public class Main extends ApplicationAdapter {
                 if (!GameData.getInstance().isStop()) {
                     level.CheckBackground();
 
-                    if (level.stage == Level.levelStage.NORMAL) {
-                        level.Update();
-                        level.Checking();
-                        level.Move();
-                    } else {
-                        level.pathing.forEach(path -> path.Update(100));
+                    level.MovePlayerY(0);
+                    level.MoveWorldX();
 
-                        level.MovePlayerY(0);
-                        level.MoveWorldX();
+                    level.MoveMissiles();
 
-                        level.MoveMissiles();
-
-                        if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
-                            level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
-                        }
-
-                        if (level.monster.midPoint.getX() < 150) {
-                            level.MoveMonsterAlongPath();
-                        }
-
-                        level.player.CalcMidPoints();
-                        level.monster.CalcMidPoint();
-                        level.CheckChangePlayerDirection();
-                        level.player.UpdatePoints();
-
-                        level.CheckDisplay();
-
-                        level.CheckObstacleCollision();
+                    if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                        level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                     }
+
+                    if (level.monster.midPoint.getX() < 250) {
+                        level.MoveMonsterAlongPath();
+                    }
+
+                    level.player.CalcMidPoints();
+                    level.monster.CalcMidPoint();
+                    level.CheckChangePlayerDirection();
+                    level.player.UpdatePoints();
+
+                    level.CheckDisplay();
+
+                    level.CheckObstacleCollision();
 
                     level.CheckLevelEnd();
                 }
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                level.base.Draw(sr);
-                level.baseRects.forEach(rect -> rect.Draw(sr));
                 level.background.Draw(sr);
 
                 level.obstacles.forEach(obstacle -> obstacle.Draw(sr));
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
-                level.player.ammo.forEach(ammo -> ammo.Draw(sr));
+                level.player.missiles.forEach(missile -> missile.Draw(sr));
 
                 if (input.isKeyPressed(Input.Keys.P)) {
                     for (Node[] gridRow : level.grid) {
@@ -200,9 +241,6 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
-                sr.setColor(Color.WHITE);
-                level.BaseLine.Draw(sr);
-
                 if (a == 1) {
                     level.player.PrintLines(sr);
                 }
@@ -214,9 +252,9 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                level.player.normalTrail.forEach(trail -> trail.Draw(sr));
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
+
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -237,6 +275,11 @@ public class Main extends ApplicationAdapter {
                 endingMenu.CheckClick();
 
                 endingMenu.Draw(sr, batch, font);
+                break;
+            case LEVELSTATUSMENU:
+                levelStatusMenu.CheckClick();
+
+                levelStatusMenu.Draw(sr, batch, font);
                 break;
         }
     }

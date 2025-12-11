@@ -12,12 +12,14 @@ public class Drill {
     }
 
     List<Obstacle> currentShapes;
-    FloatPoint[] IntersectionPoints, points;
+    FloatPoint[] intersectionPoints, points;
     LineEquation[] lines, oldLines;
     Direction newDirection, oldDirection, direction;
     public Drill.Direction[] directions = Drill.Direction.values();
     private boolean finished;
-    int timesInARow = 0;
+    private int timesInARow;
+
+    float topOfLevel, bottomOfLevel;
 
     Matrix Angles, OldPoints, NewPoints;
 
@@ -51,15 +53,19 @@ public class Drill {
 
         this.currentShapes = new ArrayList<>();
 
-        this.IntersectionPoints = new FloatPoint[4];
-        for (int i = 0; i < IntersectionPoints.length; i++) {
-            this.IntersectionPoints[i] = new FloatPoint(0, 0);
+        this.intersectionPoints = new FloatPoint[4];
+        for (int i = 0; i < intersectionPoints.length; i++) {
+            this.intersectionPoints[i] = new FloatPoint(0, 0);
         }
 
         points = new FloatPoint[4];
         for (int i = 0; i < points.length; i++) {
             points[i] = new FloatPoint(0, 0);
         }
+
+        bottomOfLevel = 0;
+        topOfLevel = GameData.getInstance().getScreenHeight();
+        timesInARow = 0;
     }
 
     public Direction getDirection() {
@@ -88,6 +94,20 @@ public class Drill {
     }
     public void setOldDirection(Direction oldDirection) {
         this.oldDirection = oldDirection;
+    }
+
+    public float getTopOfLevel() {
+        return topOfLevel;
+    }
+    public void setTopOfLevel(float topOfLevel) {
+        this.topOfLevel = topOfLevel;
+    }
+
+    public float getBottomOfLevel() {
+        return bottomOfLevel;
+    }
+    public void setBottomOfLevel(float bottomOfLevel) {
+        this.bottomOfLevel = bottomOfLevel;
     }
 
     public void MoveX(float X) {
@@ -165,25 +185,25 @@ public class Drill {
         FindIntersections();
     }
     public void FindIntersections() {
-        for (int i = 0; i < IntersectionPoints.length; i++) {
-            IntersectionPoints[i] = new FloatPoint(0,0);
+        for (int i = 0; i < intersectionPoints.length; i++) {
+            intersectionPoints[i] = new FloatPoint(0,0);
         }
         if (newDirection == Direction.RIGHT) {
-            IntersectionPoints[0].setPoint(oldLines[0].FindX(lines[0].getYIntercept()), lines[0].getYIntercept()); // line 0 and old line 0
-            IntersectionPoints[1] = null;
-            IntersectionPoints[2] = null;
-            IntersectionPoints[3].setPoint(oldLines[1].FindX(lines[1].getYIntercept()), lines[1].getYIntercept()); // line 1 and old line 1
+            intersectionPoints[0].setPoint(oldLines[0].FindX(lines[0].getYIntercept()), lines[0].getYIntercept()); // line 0 and old line 0
+            intersectionPoints[1].setPoint(oldLines[0].FindX(lines[1].getYIntercept()), lines[1].getYIntercept());
+            intersectionPoints[2].setPoint(oldLines[1].FindX(lines[0].getYIntercept()), lines[0].getYIntercept());
+            intersectionPoints[3].setPoint(oldLines[1].FindX(lines[1].getYIntercept()), lines[1].getYIntercept()); // line 1 and old line 1
         } else {
             if (direction == Direction.RIGHT) {
-                IntersectionPoints[0].setPoint(lines[0].FindX(oldLines[0].getYIntercept()), oldLines[0].getYIntercept());
-                IntersectionPoints[1] = null;
-                IntersectionPoints[2] = null;
-                IntersectionPoints[3].setPoint(lines[1].FindX(oldLines[1].getYIntercept()), oldLines[1].getYIntercept());
+                intersectionPoints[0].setPoint(lines[0].FindX(oldLines[0].getYIntercept()), oldLines[0].getYIntercept());
+                intersectionPoints[1].setPoint(lines[0].FindX(oldLines[1].getYIntercept()), oldLines[1].getYIntercept());
+                intersectionPoints[2].setPoint(lines[1].FindX(oldLines[0].getYIntercept()), oldLines[0].getYIntercept());
+                intersectionPoints[3].setPoint(lines[1].FindX(oldLines[1].getYIntercept()), oldLines[1].getYIntercept());
             } else {
-                IntersectionPoints[0].setWholePoint(LineIntersection(lines[0], oldLines[0]));
-                IntersectionPoints[1].setWholePoint(LineIntersection(lines[0], oldLines[1]));
-                IntersectionPoints[2].setWholePoint(LineIntersection(lines[1], oldLines[0]));
-                IntersectionPoints[3].setWholePoint(LineIntersection(lines[1], oldLines[1]));
+                intersectionPoints[0].setWholePoint(LineIntersection(lines[0], oldLines[0]));
+                intersectionPoints[1].setWholePoint(LineIntersection(lines[0], oldLines[1]));
+                intersectionPoints[2].setWholePoint(LineIntersection(lines[1], oldLines[0]));
+                intersectionPoints[3].setWholePoint(LineIntersection(lines[1], oldLines[1]));
             }
         }
     }
@@ -262,49 +282,49 @@ public class Drill {
         switch (newDirection) {
             case UP_RIGHT:
                 if (direction == Direction.RIGHT) {
-                    currentShapes.get(0).setX(IntersectionPoints[3].getX());
-                    currentShapes.get(1).shape.points[0].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(1).shape.points[1].setX(IntersectionPoints[3].getX());
-                    currentShapes.get(2).shape.points[0].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(2).shape.points[1].setY(IntersectionPoints[0].getY());
-                    currentShapes.get(3).setX(IntersectionPoints[0].getX());
-                    currentShapes.get(3).setHeight(IntersectionPoints[0].getY());
+                    currentShapes.get(0).setX(intersectionPoints[3].getX());
+                    currentShapes.get(1).shape.points[0].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(1).shape.points[1].setX(intersectionPoints[3].getX());
+                    currentShapes.get(2).shape.points[0].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(2).shape.points[1].setY(intersectionPoints[0].getY());
+                    currentShapes.get(3).setX(intersectionPoints[0].getX());
+                    currentShapes.get(3).setHeight(intersectionPoints[0].getY());
                 } else if (direction == Direction.DOWN_RIGHT) {
-                    currentShapes.get(0).setX(IntersectionPoints[0].getX());
-                    currentShapes.get(1).shape.points[0].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(1).shape.points[1].setX(IntersectionPoints[3].getX());
-                    currentShapes.get(2).shape.points[0].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(2).shape.points[1].setY(IntersectionPoints[0].getY());
-                    currentShapes.get(3).setX(IntersectionPoints[0].getX());
-                    currentShapes.get(3).setHeight(IntersectionPoints[0].getY());
+                    currentShapes.get(0).setX(intersectionPoints[0].getX());
+                    currentShapes.get(1).shape.points[0].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(1).shape.points[1].setX(intersectionPoints[3].getX());
+                    currentShapes.get(2).shape.points[0].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(2).shape.points[1].setY(intersectionPoints[0].getY());
+                    currentShapes.get(3).setX(intersectionPoints[0].getX());
+                    currentShapes.get(3).setHeight(intersectionPoints[0].getY());
                 }
                 break;
             case RIGHT:
-                currentShapes.get(0).setX(IntersectionPoints[3].getX());
-                currentShapes.get(0).setY(IntersectionPoints[3].getY());
-                currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                currentShapes.get(1).setX(IntersectionPoints[0].getX());
-                currentShapes.get(1).setHeight(IntersectionPoints[0].getY());
+                currentShapes.get(0).setX(intersectionPoints[3].getX());
+                currentShapes.get(0).setY(intersectionPoints[3].getY());
+                currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - intersectionPoints[3].getY());
+                currentShapes.get(1).setX(intersectionPoints[0].getX());
+                currentShapes.get(1).setHeight(intersectionPoints[0].getY());
                 break;
             case DOWN_RIGHT:
                 if (direction == Direction.UP_RIGHT) {
-                    currentShapes.get(0).setX(IntersectionPoints[3].getX());
-                    currentShapes.get(0).setY(IntersectionPoints[3].getY());
-                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                    currentShapes.get(1).shape.points[0].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(1).shape.points[1].setY(IntersectionPoints[3].getY());
-                    currentShapes.get(2).shape.points[0].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(2).shape.points[1].setX(IntersectionPoints[0].getX());
-                    currentShapes.get(3).setX(IntersectionPoints[0].getX());
+                    currentShapes.get(0).setX(intersectionPoints[3].getX());
+                    currentShapes.get(0).setY(intersectionPoints[3].getY());
+                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - intersectionPoints[3].getY());
+                    currentShapes.get(1).shape.points[0].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(1).shape.points[1].setY(intersectionPoints[3].getY());
+                    currentShapes.get(2).shape.points[0].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(2).shape.points[1].setX(intersectionPoints[0].getX());
+                    currentShapes.get(3).setX(intersectionPoints[0].getX());
                 } else if (direction == Direction.RIGHT) {
-                    currentShapes.get(0).setX(IntersectionPoints[3].getX());
-                    currentShapes.get(0).setY(IntersectionPoints[3].getY());
-                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                    currentShapes.get(1).shape.points[0].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(1).shape.points[1].setY(IntersectionPoints[3].getY());
-                    currentShapes.get(2).shape.points[0].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(2).shape.points[1].setX(IntersectionPoints[0].getX());
-                    currentShapes.get(3).setX(IntersectionPoints[0].getX());
+                    currentShapes.get(0).setX(intersectionPoints[3].getX());
+                    currentShapes.get(0).setY(intersectionPoints[3].getY());
+                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - intersectionPoints[3].getY());
+                    currentShapes.get(1).shape.points[0].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(1).shape.points[1].setY(intersectionPoints[3].getY());
+                    currentShapes.get(2).shape.points[0].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(2).shape.points[1].setX(intersectionPoints[0].getX());
+                    currentShapes.get(3).setX(intersectionPoints[0].getX());
                 }
                 break;
         }
@@ -334,46 +354,46 @@ public class Drill {
         switch (direction)  {
             case UP_RIGHT:
                 if (newDirection == Direction.RIGHT) {
-                    currentShapes.get(0).setY(IntersectionPoints[3].getY());
-                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                    currentShapes.get(0).setWidth(IntersectionPoints[3].getX() - currentShapes.get(0).getX());
-                    currentShapes.get(1).shape.points[1].setY(IntersectionPoints[3].getY());
-                    currentShapes.get(1).shape.points[2].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(2).shape.points[1].setX(IntersectionPoints[0].getX());
-                    currentShapes.get(2).shape.points[2].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(3).setWidth(IntersectionPoints[0].getX() - currentShapes.get(3).getX());
+                    currentShapes.get(0).setY(intersectionPoints[3].getY());
+                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - intersectionPoints[3].getY());
+                    currentShapes.get(0).setWidth(intersectionPoints[3].getX() - currentShapes.get(0).getX());
+                    currentShapes.get(1).shape.points[1].setY(intersectionPoints[3].getY());
+                    currentShapes.get(1).shape.points[2].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(2).shape.points[1].setX(intersectionPoints[0].getX());
+                    currentShapes.get(2).shape.points[2].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(3).setWidth(intersectionPoints[0].getX() - currentShapes.get(3).getX());
                 } else if (newDirection == Direction.DOWN_RIGHT) {
-                    currentShapes.get(0).setY(IntersectionPoints[3].getY());
-                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - IntersectionPoints[3].getY());
-                    currentShapes.get(0).setWidth(IntersectionPoints[0].getX() - currentShapes.get(0).getX());
-                    currentShapes.get(1).shape.points[1].setY(IntersectionPoints[3].getY());
-                    currentShapes.get(1).shape.points[2].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(2).shape.points[1].setX(IntersectionPoints[0].getX());
-                    currentShapes.get(2).shape.points[2].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(3).setWidth(IntersectionPoints[0].getX() - currentShapes.get(3).getX());
+                    currentShapes.get(0).setY(intersectionPoints[3].getY());
+                    currentShapes.get(0).setHeight(GameData.getInstance().getScreenHeight() - intersectionPoints[3].getY());
+                    currentShapes.get(0).setWidth(intersectionPoints[0].getX() - currentShapes.get(0).getX());
+                    currentShapes.get(1).shape.points[1].setY(intersectionPoints[3].getY());
+                    currentShapes.get(1).shape.points[2].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(2).shape.points[1].setX(intersectionPoints[0].getX());
+                    currentShapes.get(2).shape.points[2].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(3).setWidth(intersectionPoints[0].getX() - currentShapes.get(3).getX());
                 }
                 break;
             case RIGHT:
-                currentShapes.get(0).setWidth(IntersectionPoints[3].getX() - currentShapes.get(0).getX());
-                currentShapes.get(1).setWidth(IntersectionPoints[0].getX() - currentShapes.get(1).getX());
+                currentShapes.get(0).setWidth(intersectionPoints[3].getX() - currentShapes.get(0).getX());
+                currentShapes.get(1).setWidth(intersectionPoints[0].getX() - currentShapes.get(1).getX());
                 break;
             case DOWN_RIGHT:
                 if (newDirection == Direction.UP_RIGHT) {
-                    currentShapes.get(0).setWidth(IntersectionPoints[3].getX() - currentShapes.get(0).getX());
-                    currentShapes.get(1).shape.points[1].setX(IntersectionPoints[3].getX());
-                    currentShapes.get(1).shape.points[2].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(2).shape.points[1].setY(IntersectionPoints[0].getY());
-                    currentShapes.get(2).shape.points[2].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(3).setHeight(IntersectionPoints[0].getY());
-                    currentShapes.get(3).setWidth(IntersectionPoints[0].getX() - currentShapes.get(3).getX());
+                    currentShapes.get(0).setWidth(intersectionPoints[3].getX() - currentShapes.get(0).getX());
+                    currentShapes.get(1).shape.points[1].setX(intersectionPoints[3].getX());
+                    currentShapes.get(1).shape.points[2].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(2).shape.points[1].setY(intersectionPoints[0].getY());
+                    currentShapes.get(2).shape.points[2].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(3).setHeight(intersectionPoints[0].getY());
+                    currentShapes.get(3).setWidth(intersectionPoints[0].getX() - currentShapes.get(3).getX());
                 } else if (newDirection == Direction.RIGHT) {
-                    currentShapes.get(0).setWidth(IntersectionPoints[3].getX() - currentShapes.get(0).getX());
-                    currentShapes.get(1).shape.points[1].setX(IntersectionPoints[3].getX());
-                    currentShapes.get(1).shape.points[2].setWholePoint(IntersectionPoints[3]);
-                    currentShapes.get(2).shape.points[1].setY(IntersectionPoints[0].getY());
-                    currentShapes.get(2).shape.points[2].setWholePoint(IntersectionPoints[0]);
-                    currentShapes.get(3).setWidth(IntersectionPoints[0].getX() - currentShapes.get(3).getX());
-                    currentShapes.get(3).setHeight(IntersectionPoints[0].getY());
+                    currentShapes.get(0).setWidth(intersectionPoints[3].getX() - currentShapes.get(0).getX());
+                    currentShapes.get(1).shape.points[1].setX(intersectionPoints[3].getX());
+                    currentShapes.get(1).shape.points[2].setWholePoint(intersectionPoints[3]);
+                    currentShapes.get(2).shape.points[1].setY(intersectionPoints[0].getY());
+                    currentShapes.get(2).shape.points[2].setWholePoint(intersectionPoints[0]);
+                    currentShapes.get(3).setWidth(intersectionPoints[0].getX() - currentShapes.get(3).getX());
+                    currentShapes.get(3).setHeight(intersectionPoints[0].getY());
                 }
                 break;
         }
