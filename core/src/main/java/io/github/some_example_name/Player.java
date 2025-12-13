@@ -1,6 +1,5 @@
 package io.github.some_example_name;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -256,12 +255,6 @@ public class Player {
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
         healthShape.Draw(sr);
-//        System.out.println("Player Triangle Points 1: " + shape.tris.get(0).points[0].getX() + "," + shape.tris.get(0).points[0].getY() + " " +
-//                shape.tris.get(0).points[1].getX() + "," + shape.tris.get(0).points[1].getY() + " " +
-//                shape.tris.get(0).points[2].getX() + "," + shape.tris.get(0).points[2].getY());
-//        System.out.println("Player Triangle Points 2: " + shape.tris.get(1).points[0].getX() + "," + shape.tris.get(1).points[0].getY() + " " +
-//                shape.tris.get(1).points[1].getX() + "," + shape.tris.get(1).points[1].getY() + " " +
-//                shape.tris.get(1).points[2].getX() + "," + shape.tris.get(1).points[2].getY());
     }
 
     public void Rotate(float angle, FloatPoint pivot) {
@@ -316,6 +309,8 @@ public class Player {
         FindMaxMinPoints();
 
         LineEquation healthLine = new LineEquation(0, minY + ((maxY - minY) * (currentHealth / startingHealth)), LineEquation.LineDirection.HORIZONTAL);
+
+
     }
     public void FindMaxMinPoints() {
         for (FloatPoint p : shape.points) {

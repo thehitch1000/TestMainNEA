@@ -130,6 +130,15 @@ class Rect extends Shape implements Transparency, Colour{
         points = null;
         this.colour = colour;
     }
+    public Rect(float width, float height, Color colour, float alpha) {
+        this.x = 0;
+        this.y = 0;
+        this.width = width;
+        this.height = height;
+        this.alpha = alpha;
+        points = null;
+        this.colour = colour;
+    }
 
     public void setColour(Color colour) {
         this.colour = colour;

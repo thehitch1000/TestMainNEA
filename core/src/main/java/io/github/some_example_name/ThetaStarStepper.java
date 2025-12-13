@@ -42,6 +42,11 @@ public class ThetaStarStepper {
     }
 
     public void FindPath() {
+        if (LineOfSight(type, start, end)) {
+            pathFound = true;
+            ConstructSimplePath();
+            return;
+        }
         while (!pathFound) {
             if (openList.isEmpty()) {
                 System.out.println("No Path Found");
@@ -50,7 +55,7 @@ public class ThetaStarStepper {
                 Node current = openList.dequeue();
                 if (current == end) {
                     pathFound = true;
-                    ConstructPath();
+                    ConstructComplexPath();
                     return;
                 }
                 if (pathFound) return;
@@ -185,7 +190,7 @@ public class ThetaStarStepper {
         return null;
     }
 
-    public void ConstructPath() {
+    public void ConstructComplexPath() {
         ArrayList<Node> nodes = new ArrayList<>();
         Node current = end;
 
@@ -223,8 +228,24 @@ public class ThetaStarStepper {
         return level.getCurrentHeight() - currentY;
     }
 
-    public boolean isPathFound() {
-        return pathFound;
-    }
+    public void ConstructSimplePath() {
+        FloatPoint point1 = new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference());
+        FloatPoint point2 = new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference());
+        path.add(new LineSegment(point1, point2));
 
+        Missile missile = new Missile(new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference()), new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference()), 6, level);
+        missile.setPath(path);
+        missile.path.forEach(line -> line.MoveX(XDifference()));
+        missile.path.forEach(line -> line.MoveY(YDifference()));
+
+        if (type == Level.TypeOfPath.MONSTER) {
+            level.monster.currentPath.add(path.get(0));
+        } else if (type == Level.TypeOfPath.MONSTERMISSILE) {
+            missile.setType(Missile.Type.MONSTER);
+            level.monster.missiles.add(missile);
+        } else if (type == Level.TypeOfPath.PLAYERMISSILE) {
+            missile.setType(Missile.Type.PLAYER);
+            level.player.missiles.add(missile);
+        }
+    }
 }

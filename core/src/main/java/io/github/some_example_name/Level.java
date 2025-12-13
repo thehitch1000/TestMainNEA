@@ -36,7 +36,7 @@ public class Level {
     Node[][] grid;
     int levelDistance = 3000;
     int cellSize = 5;
-    boolean monsterPathPending = false;
+    boolean monsterPathPending = false, playerMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
     private int shapeNumber;
@@ -94,6 +94,9 @@ public class Level {
     }
     public int getBottomOfLevel() {
         return (int) drill.getBottomOfLevel();
+    }
+    public Level.ScreenHeight getScreenHeight() {
+        return screenHeight;
     }
 
     public void setCurrentFileName(String fileName) {
@@ -446,31 +449,39 @@ public class Level {
     }
     public void MovePlayerY(float Y) {
         if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+        FloatPoint tempMidPoint = new FloatPoint(player.midPoint.getX(), player.midPoint.getY() + Y);
+
+        float PlayerMove = 0, WorldMove = 0;
+        int deadZone = 15;
+
         switch (screenHeight) {
             case FIXED:
-                player.MoveY(Y);
+                PlayerMove = Y;
                 break;
             case TOP:
-                player.MoveY(Y);
-                if (player.shape.points[0].getY() <= player.downPoints[0].getY()) {
+                if (tempMidPoint.getY() < GameData.getInstance().getScreenHeight()/2f - deadZone) {
                     screenHeight = ScreenHeight.NEUTRAL;
                 }
+                PlayerMove = Y;
                 break;
             case BOTTOM:
-                player.MoveY(Y);
-                if (player.shape.points[0].getY() >= player.upPoints[0].getY()) {
+                if (tempMidPoint.getY() > GameData.getInstance().getScreenHeight()/2f + deadZone) {
                     screenHeight = ScreenHeight.NEUTRAL;
                 }
+                PlayerMove = Y;
                 break;
             case NEUTRAL:
-                MoveWorldY(-Y);
-                if (currentHeight <= currentBottomOfLevel) {
-                    screenHeight = ScreenHeight.BOTTOM;
-                } else if (currentHeight + 800 >= currentTopOfLevel) {
+                if (currentHeight + GameData.getInstance().getScreenHeight() >= currentTopOfLevel + deadZone) {
                     screenHeight = ScreenHeight.TOP;
+                } else if (currentHeight <= currentBottomOfLevel - deadZone) {
+                    screenHeight = ScreenHeight.BOTTOM;
                 }
+                WorldMove = -Y;
                 break;
         }
+
+        player.MoveY(PlayerMove);
+        MoveWorldY(WorldMove);
     }
     public void MoveAllPathsX(float X) {
         monster.currentPath.forEach(path -> path.MoveX(X));
@@ -694,11 +705,9 @@ public class Level {
 
         player.setStartingPosition(starting0 + (0.3f * levelHeight));
 
-        player.PrintPoints();
-
         monster.setPosition(720, starting0 + (0.5f * levelHeight));
         monster.CalcMidPoint();
-        monster.setAwake(false);
+        monster.setAwake(true);
 
         player.CalcMidPoints();
         player.setUpPoints();
@@ -711,8 +720,6 @@ public class Level {
         player.CalcMidPoints();
         player.CreateLines();
         player.FirstTrail();
-
-        player.PrintPoints();
 
         background = new Background(currentTopOfLevel - currentBottomOfLevel, currentBottomOfLevel);
 
@@ -728,13 +735,26 @@ public class Level {
     }
 
     public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
-        // cooldown checker needed
-
         CheckMissileWalkability();
 
-        ThetaStarStepper stepper = new ThetaStarStepper(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+        synchronized (this) {
+            if (playerMissilePathPending) {
+                return;
+            }
+            playerMissilePathPending = true;
+        }
 
-        Gdx.app.postRunnable(stepper::FindPath);
+        ThetaStarStepper stepper = new ThetaStarStepper (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+
+        Gdx.app.postRunnable(() -> {
+            try {
+                stepper.FindPath();
+            } finally {
+                synchronized (this) {
+                    playerMissilePathPending = false;
+                }
+            }
+        });
     }
     public void FindNewMonsterPath() {
         CheckMonsterWalkability();
@@ -767,11 +787,16 @@ public class Level {
         });
     }
     public FloatPoint FindMonsterEndPoint() {
-        Node[] Column = grid[grid.length / 5];
+        Node[] Column;
+        if (!monster.currentPath.isEmpty()) {
+            Column = grid[(int) ((monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() / cellSize) + grid.length/cellSize)];
+        } else {
+            Column = grid[grid.length / 6];
+        }
         boolean valid = false;
         do {
             float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - 2f;
-            float difference = yLevel % 4;
+            float difference = yLevel % cellSize;
             float nodeY = (yLevel - difference) / cellSize;
             if (Column[(int) nodeY].getState() == Node.NodeState.WALKABLE) {
                 return new FloatPoint(Column[(int) nodeY].getX(), Column[(int) nodeY].getY());
@@ -896,13 +921,13 @@ public class Level {
         for (Missile missile : player.missiles) {
             missile.MoveAlongPath();
             if (missile.path.isEmpty()) {
-                player.missiles.remove(missile);
+                Gdx.app.postRunnable(() -> player.missiles.remove(missile));
             }
         }
         for (Missile missile : monster.missiles) {
             missile.MoveAlongPath();
             if (missile.path.isEmpty()) {
-                monster.missiles.remove(missile);
+                Gdx.app.postRunnable(() -> monster.missiles.remove(missile));
             }
         }
     }

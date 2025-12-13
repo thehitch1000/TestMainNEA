@@ -241,6 +241,8 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
+                level.monster.currentPath.forEach(line -> line.Draw(sr));
+
                 if (a == 1) {
                     level.player.PrintLines(sr);
                 }
