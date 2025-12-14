@@ -13,6 +13,16 @@ public class LineEquation {
         this.YIntercept = YIntercept;
         this.direction = direction;
     }
+    public LineEquation(FloatPoint point1, FloatPoint point2) {
+        CalcLine(point1, point2);
+        if (point1.getX() == point2.getX()) {
+            direction = LineDirection.VERTICAL;
+        } else if (point1.getY() == point2.getY()) {
+            direction = LineDirection.HORIZONTAL;
+        } else {
+            direction = LineDirection.DIAGONAL;
+        }
+    }
 
     public float getGradient() {
         return Gradient;

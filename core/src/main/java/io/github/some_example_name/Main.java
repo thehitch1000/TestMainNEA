@@ -90,8 +90,7 @@ public class Main extends ApplicationAdapter {
     List<Runnable> ending2 = new ArrayList<Runnable>() {{
         add(() -> level.ResetLevel());
         add(() -> endingMenu.Close());
-        add(() -> stage = Stage.PLAYING);
-        add(() -> level.setUpLevel(false));
+        add(() -> stage = Stage.LEVELSTATUSMENU);
     }};
     List<Runnable> ending3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());

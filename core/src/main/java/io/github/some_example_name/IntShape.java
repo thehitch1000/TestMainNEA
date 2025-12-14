@@ -635,6 +635,25 @@ class polygon extends Shape implements Transparency, Colour {
             Collections.reverse(vertices);
         }
     }
+
+    public void MakePointsBigger(int amount) {
+        FloatPoint[] tempPoints = new FloatPoint[points.length + amount];
+
+        for (int i = 0; i < points.length; i++) {
+            tempPoints[i] = new FloatPoint(0,0);
+        }
+
+        points = tempPoints;
+    }
+    public void MakePointsSmaller(int amount) {
+        FloatPoint[] tempPoints = new FloatPoint[points.length - amount];
+
+        for (int i = 0; i < tempPoints.length; i++) {
+            tempPoints[i] = new FloatPoint(0,0);
+        }
+
+        points = tempPoints;
+    }
 }
 
 interface Transparency {

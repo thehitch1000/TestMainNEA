@@ -45,22 +45,22 @@ public class ThetaStarStepper {
         if (LineOfSight(type, start, end)) {
             pathFound = true;
             ConstructSimplePath();
-            return;
-        }
-        while (!pathFound) {
-            if (openList.isEmpty()) {
-                System.out.println("No Path Found");
-                return;
-            } else {
-                Node current = openList.dequeue();
-                if (current == end) {
-                    pathFound = true;
-                    ConstructComplexPath();
+        } else {
+            while (!pathFound) {
+                if (openList.isEmpty()) {
+                    System.out.println("No Path Found");
                     return;
-                }
-                if (pathFound) return;
-                for (Node neighbour : getNeighbours(current)) {
-                    ProcessNeighbour(current, neighbour, end);
+                } else {
+                    Node current = openList.dequeue();
+                    if (current == end) {
+                        pathFound = true;
+                        ConstructComplexPath();
+                        return;
+                    }
+                    if (pathFound) return;
+                    for (Node neighbour : getNeighbours(current)) {
+                        ProcessNeighbour(current, neighbour, end);
+                    }
                 }
             }
         }

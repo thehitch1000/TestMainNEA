@@ -530,6 +530,7 @@ public class Level {
         }
         player.CalcMidPoints();
         player.CreateTrail();
+        player.calcHealthVisual();
     }
     public void CheckDisplay() {
         for (polygon polygon : player.zigTrail) {
