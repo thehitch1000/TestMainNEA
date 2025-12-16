@@ -46,6 +46,7 @@ public class ThetaStarStepper {
             pathFound = true;
             ConstructSimplePath();
         } else {
+            System.out.println("CRASH?");
             while (!pathFound) {
                 if (openList.isEmpty()) {
                     System.out.println("No Path Found");
@@ -103,15 +104,15 @@ public class ThetaStarStepper {
         LineSegment segment = new LineSegment(startPoint, endPoint);
         segment.setSegment();
         Shape shape;
-        int speed = 3;
+        int speed = 21;
         if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
             shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
         } else {
-            shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f, startPoint.getY() - level.monster.shape.getHeight()/2f, level.monster.shape.getWidth(), level.monster.shape.getHeight());
+            shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
         }
         while (true) {
             if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
-            if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f, shape.getY() + level.monster.shape.getHeight()/2f)) break;
+            if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
 
             if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE && !isMissileSafeAt((Circle) shape))) return false;
             if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;

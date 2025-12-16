@@ -35,7 +35,7 @@ public class Level {
     Drill drill;
     Node[][] grid;
     int levelDistance = 3000;
-    int cellSize = 5;
+    int cellSize = 4;
     boolean monsterPathPending = false, playerMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
@@ -448,7 +448,7 @@ public class Level {
         MoveAllPathsY(Y);
     }
     public void MovePlayerY(float Y) {
-        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -3.5f : 3.5f;
+        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -4f : 4f;
         FloatPoint tempMidPoint = new FloatPoint(player.midPoint.getX(), player.midPoint.getY() + Y);
 
         float PlayerMove = 0, WorldMove = 0;
@@ -612,6 +612,7 @@ public class Level {
         player.CalcMidPoints();
         player.zigTrail.clear();
         player.FirstTrail();
+        player.calcHealthVisual();
         GameData.getInstance().setStop(false);
     }
 
@@ -721,6 +722,7 @@ public class Level {
         player.CalcMidPoints();
         player.CreateLines();
         player.FirstTrail();
+        player.calcHealthVisual();
 
         background = new Background(currentTopOfLevel - currentBottomOfLevel, currentBottomOfLevel);
 
@@ -792,7 +794,7 @@ public class Level {
         if (!monster.currentPath.isEmpty()) {
             Column = grid[(int) ((monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() / cellSize) + grid.length/cellSize)];
         } else {
-            Column = grid[grid.length / 6];
+            Column = grid[grid.length / cellSize ];
         }
         boolean valid = false;
         do {
@@ -855,7 +857,7 @@ public class Level {
         ResetGrid();
         for (Node[] nodes : grid) {
             for (Node node : nodes) {
-                if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2, node.getY() - monster.shape.getHeight()/2, monster.shape.getWidth(), monster.shape.getHeight()))) {
+                if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2 - 5, node.getY() - monster.shape.getHeight()/2 - 5, monster.shape.getWidth() + 10, monster.shape.getHeight() + 10))) {
                     node.setState(Node.NodeState.WALKABLE);
                 } else {
                     node.setState(Node.NodeState.UNWALKABLE);

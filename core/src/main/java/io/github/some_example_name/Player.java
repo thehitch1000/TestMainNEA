@@ -291,6 +291,13 @@ public class Player {
         System.out.println("X: " + shape.points[3].getX() + " Y: " + shape.points[3].getY());
         System.out.println();
     }
+    public void PrintHealthPoints() {
+        System.out.println("Health Shape Points:");
+        for (FloatPoint p : healthShape.points) {
+            System.out.println("X: " + p.getX() + " Y: " + p.getY());
+        }
+        System.out.println();
+    }
 
     public void TakeDamage(float damage) {
         currentHealth -= damage;
@@ -311,38 +318,40 @@ public class Player {
 
         LineEquation healthLine = new LineEquation(0, minY + ((maxY - minY) * (currentHealth / startingHealth)), LineEquation.LineDirection.HORIZONTAL);
         List<LineEquation> playerPointsLines = new ArrayList<>();
+
         for (int i = 0; i < shape.points.length; i++) {
-            LineEquation line = new LineEquation(shape.points[i], shape.points[i % shape.points.length]);
-            playerPointsLines.add(line);
-        }
-
-        int numOfPoints = 1;
-        List<FloatPoint> intersectionPoints = new ArrayList<>();
-
-        if (direction == Direction.UP) {
-            intersectionPoints.add(shape.points[3]);
-        } else if (direction == Direction.DOWN) {
-            intersectionPoints.add(shape.points[2]);
-        }
-
-        for (int i = 0; i < healthShape.points.length; i++) {
-            FloatPoint intersectionPoint = lineIntersection(healthLine, playerPointsLines.get(i));
-            if (isPointOnPlayer(intersectionPoint, i)) {
-                intersectionPoints.add(intersectionPoint);
-                numOfPoints++;
+            if (isInBetween(shape.points[i].getY(), shape.points[(i+1) % shape.points.length].getY(), healthLine.getYIntercept())) {
+                LineEquation line = new LineEquation(shape.points[i], shape.points[(i + 1) % shape.points.length]);
+                playerPointsLines.add(line);
             }
         }
 
-        if (numOfPoints > healthShape.points.length) {
-            healthShape.MakePointsBigger(numOfPoints - healthShape.points.length);
-        } else if (numOfPoints < healthShape.points.length) {
-            healthShape.MakePointsSmaller(healthShape.points.length - numOfPoints);
+        List<FloatPoint> intersectionPoints = new ArrayList<>();
+
+        for (int i = 0; i < playerPointsLines.size(); i++) {
+            FloatPoint intersection = lineIntersection(healthLine, playerPointsLines.get(i));
+            intersectionPoints.add(intersection);
+        }
+
+        for (FloatPoint p : shape.points) {
+            if (p.getY() < healthLine.getYIntercept()) {
+                if (!intersectionPoints.contains(p)) intersectionPoints.add(p);
+            }
+        }
+
+
+        if (intersectionPoints.size() > healthShape.points.length) {
+            healthShape.MakePointsBigger(intersectionPoints.size() - healthShape.points.length);
+        } else if (intersectionPoints.size() < healthShape.points.length) {
+            healthShape.MakePointsSmaller(healthShape.points.length - intersectionPoints.size());
         }
 
         for (int i = 0; i < intersectionPoints.size(); i++) {
+            healthShape.points[i] = new FloatPoint(0,0);
             healthShape.points[i].setWholePoint(intersectionPoints.get(i));
-            System.out.println("New Health Point Added!");
         }
+
+        healthShape.sortPoints();
     }
     private boolean isPointOnPlayer(FloatPoint point, int lineIndex) {
         FloatPoint p1 = shape.points[lineIndex];
@@ -357,6 +366,8 @@ public class Player {
         return new FloatPoint(x, y);
     }
     public void FindMaxMinPoints() {
+        maxY = 0;
+        minY = Float.MAX_VALUE;
         for (FloatPoint p : shape.points) {
             if (p.getY() > maxY) {
                 maxY = p.getY();
@@ -366,4 +377,11 @@ public class Player {
             }
         }
     }
+    private boolean isEqual(FloatPoint p1, FloatPoint p2) {
+        return p1.getX() == p2.getX() || p1.getY() == p2.getY();
+    }
+    private boolean isInBetween(float a, float b, float c) {
+        return c <= Math.max(a, b) && c >= Math.min(a, b);
+    }
+
 }

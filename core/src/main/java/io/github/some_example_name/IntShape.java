@@ -35,23 +35,23 @@ abstract class Shape implements IntShape {
     }
     public void Rotate(float angle, FloatPoint point) {
         Angles = new Matrix(new float[4]);
-        OldPoints = new Matrix(new float[8]);
-        NewPoints = new Matrix(new float[8]);
+        OldPoints = new Matrix(new float[points.length * 2]);
+        NewPoints = new Matrix(new float[points.length * 2]);
         Angles.setMatrixSection(0, CosValue(Radians(angle)));
         Angles.setMatrixSection(1, -(SinValue(Radians(angle))));
         Angles.setMatrixSection(2, SinValue(Radians(angle)));
         Angles.setMatrixSection(3, CosValue(Radians(angle)));
         for (int i = 0; i < points.length; i++) {
             OldPoints.setMatrixSection(i, points[i].getX() - point.getX());
-            OldPoints.setMatrixSection(i + 4, points[i].getY() - point.getY());
+            OldPoints.setMatrixSection(i + points.length, points[i].getY() - point.getY());
         }
         for (int i = 0; i < points.length; i++) {
-            NewPoints.setMatrixSection(i, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(0)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(1)));
-            NewPoints.setMatrixSection(i + 4, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(2)) + (OldPoints.getMatrixSection(i + 4) * Angles.getMatrixSection(3)));
+            NewPoints.setMatrixSection(i, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(0)) + (OldPoints.getMatrixSection(i + points.length) * Angles.getMatrixSection(1)));
+            NewPoints.setMatrixSection(i + points.length, (OldPoints.getMatrixSection(i) * Angles.getMatrixSection(2)) + (OldPoints.getMatrixSection(i + points.length) * Angles.getMatrixSection(3)));
         }
         for (int i = 0; i < points.length; i++) {
             points[i].setX(NewPoints.getMatrixSection(i) + point.getX());
-            points[i].setY(NewPoints.getMatrixSection(i + 4) + point.getY());
+            points[i].setY(NewPoints.getMatrixSection(i + points.length) + point.getY());
         }
     }
     public boolean overlaps(Polygon obstacle){

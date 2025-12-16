@@ -90,7 +90,8 @@ public class Main extends ApplicationAdapter {
     List<Runnable> ending2 = new ArrayList<Runnable>() {{
         add(() -> level.ResetLevel());
         add(() -> endingMenu.Close());
-        add(() -> stage = Stage.LEVELSTATUSMENU);
+        add(() -> stage = Stage.PLAYING);
+        add(() -> level.setUpLevel(false));
     }};
     List<Runnable> ending3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
@@ -165,11 +166,6 @@ public class Main extends ApplicationAdapter {
                     stage = Stage.PAUSED;
                     GameData.getInstance().setStop(true);
                     pauseMenu.Open();
-                }
-
-                if (input.isKeyJustPressed(Input.Keys.D)) {
-                    System.out.println("Player Lives: " + level.player.getLives());
-                    System.out.println("Player Triangles: " + level.player.healthShape.tris.size());
                 }
 
                 if (level.CheckLevelEnd()) {
