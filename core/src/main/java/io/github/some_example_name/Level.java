@@ -425,15 +425,16 @@ public class Level {
     }
 
     public void MoveWorldX() {
-        obstacles.forEach(obstacle -> obstacle.MoveX(-3.5f));
-        player.zigTrail.forEach(trail -> trail.MoveX(-3.5f));
-        player.MoveTempLinesX(-3.5f);
-        xTravelled += 3.5f;
-        zones.forEach(zone -> zone.MoveX(-3.5f));
-        monster.MoveX(-3.5f);
-        player.missiles.forEach(ammo -> ammo.shape.MoveX(-3.5f));
-        monster.missiles.forEach(ammo -> ammo.shape.MoveX(-3.5f));
-        MoveAllPathsX(-3.5f);
+        float X = -4;
+        obstacles.forEach(obstacle -> obstacle.MoveX(X));
+        player.zigTrail.forEach(trail -> trail.MoveX(X));
+        player.MoveTempLinesX(X);
+        xTravelled -= X;
+        zones.forEach(zone -> zone.MoveX(X));
+        monster.MoveX(X);
+        player.missiles.forEach(ammo -> ammo.shape.MoveX(X));
+        monster.missiles.forEach(ammo -> ammo.shape.MoveX(-X));
+        MoveAllPathsX(X);
     }
     public void MoveWorldY(float Y) {
         currentHeight -= Y;
@@ -794,7 +795,7 @@ public class Level {
         if (!monster.currentPath.isEmpty()) {
             Column = grid[(int) ((monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() / cellSize) + grid.length/cellSize)];
         } else {
-            Column = grid[grid.length / cellSize ];
+            Column = grid[grid.length / cellSize];
         }
         boolean valid = false;
         do {
