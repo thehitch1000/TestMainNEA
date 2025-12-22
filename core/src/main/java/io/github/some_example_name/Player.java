@@ -104,6 +104,9 @@ public class Player {
         shape.points[1].setPoint(735, y + 15);
         shape.points[2].setPoint(765, y);
         shape.points[3].setPoint(735, y - 15);
+        if (healthShape.points.length !=  shape.points.length) {
+            healthShape = new polygon(shape.points.length, new Color(0.16f, 0.49f, 0.42f, 1f));
+        }
         for (int i = 0; i < healthShape.points.length; i++) {
             this.healthShape.points[i].setWholePoint(this.shape.points[i]);
         }
@@ -309,9 +312,7 @@ public class Player {
     public void LoseLife() {
         lives--;
     }
-    public void ResetHealth() {
-        currentHealth = startingHealth;
-    }
+
 
     public void calcHealthVisual() {
         FindMaxMinPoints();

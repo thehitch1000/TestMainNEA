@@ -34,8 +34,7 @@ public class Level {
     Background background;
     Drill drill;
     Node[][] grid;
-    int levelDistance = 3000;
-    int cellSize = 4;
+    int levelDistance = 3000, cellSize = 8, margin = 4 * cellSize;
     boolean monsterPathPending = false, playerMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
@@ -110,12 +109,14 @@ public class Level {
                 drill.FinishPath();
                 drill.EndShapes();
                 CreateZone();
+                CreateCrossOverZone();
                 TransferShapes();
                 drill.StartShapes();
                 drill.setDirection(Drill.Direction.RIGHT);
                 drill.currentShapes.get(0).setWidth(levelDistance + 900 - drill.currentShapes.get(0).getX() - xTravelled);
                 drill.currentShapes.get(1).setWidth(levelDistance + 900 - drill.currentShapes.get(1).getX() - xTravelled);
                 CreateZone();
+                CreateCrossOverZone();
                 TransferShapes();
             } else {
                 drill.CalcDirection();
@@ -176,7 +177,6 @@ public class Level {
 
                     // OLD SHAPES
                     drill.EndShapes();
-                    CreateCrossOverZone();
 
                     if (drill.currentShapes.get(0).getHeight() < 0) {
                         float temp = (drill.currentShapes.get(0).getHeight() * -1) + drill.currentShapes.get(0).getY();
@@ -194,7 +194,6 @@ public class Level {
                         }
                     }
 
-
                     CreateZone();
                     TransferShapes();
 
@@ -204,9 +203,11 @@ public class Level {
                     drill.setOldDirection(drill.getDirection());
                     drill.setDirection(drill.getNewDirection());
 
+
                     drill.FindLines();
                     drill.FindIntersections();
 
+                    CreateCrossOverZone();
                 }
             }
         }
@@ -264,8 +265,8 @@ public class Level {
     public void CreateCrossOverZone() {
         Zone zone = new Zone(Zone.Type.CHANGEDIRE);
 
-        zone.polygon.points[0].setPoint(drill.intersectionPoints[1].getX(), drill.intersectionPoints[1].getY());
-        zone.polygon.points[1].setPoint(drill.intersectionPoints[0].getX(), drill.intersectionPoints[0].getY());
+        zone.polygon.points[0].setPoint(drill.intersectionPoints[0].getX(), drill.intersectionPoints[0].getY());
+        zone.polygon.points[1].setPoint(drill.intersectionPoints[1].getX(), drill.intersectionPoints[1].getY());
         zone.polygon.points[2].setPoint(drill.intersectionPoints[2].getX(), drill.intersectionPoints[2].getY());
         zone.polygon.points[3].setPoint(drill.intersectionPoints[3].getX(), drill.intersectionPoints[3].getY());
 
@@ -288,28 +289,28 @@ public class Level {
                 String[] parts = line.split(":\\s+|\\s+");
 
                 if (!lock.getState() && parts[0].equals("RectPath")) {
-                    fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
+                    fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 75) +
                         " " + parts[3] + " " + (drill.getTopOfLevel() - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
                     fileWriter.newLine();
                     lock.used();
-                }
-
-                switch (parts[0]) {
-                    case "RectPath":
-                        if (Boolean.parseBoolean(parts[5])) {
-                            fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
-                                " " + parts[3] + " " + (Float.parseFloat(parts[4]) - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
+                } else {
+                    switch (parts[0]) {
+                        case "RectPath":
+                            if (Boolean.parseBoolean(parts[5])) {
+                                fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
+                                    " " + parts[3] + " " + (Float.parseFloat(parts[4]) - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
+                                fileWriter.newLine();
+                            } else {
+                                fileWriter.write("RectPath: " + Float.parseFloat(parts[1]) + " " + Float.parseFloat(parts[2]) +
+                                    " " + Float.parseFloat(parts[3]) + " " + (drill.getTopOfLevel() - Float.parseFloat(parts[2]) + 150) +
+                                    " " + Boolean.parseBoolean(parts[5]));
+                                fileWriter.newLine();
+                            }
+                            break;
+                        default:
+                            fileWriter.write(line);
                             fileWriter.newLine();
-                        } else {
-                            fileWriter.write("RectPath: " + Float.parseFloat(parts[1]) + " " + Float.parseFloat(parts[2]) +
-                                " " + Float.parseFloat(parts[3]) + " " + (drill.getTopOfLevel() - Float.parseFloat(parts[2]) + 150) +
-                                " " + Boolean.parseBoolean(parts[5]));
-                            fileWriter.newLine();
-                        }
-                        break;
-                    default:
-                        fileWriter.write(line);
-                        fileWriter.newLine();
+                    }
                 }
             }
         } catch (IOException e) {
@@ -641,11 +642,6 @@ public class Level {
         drill.FirstStartShapes();
         drill.setDirection(drill.getNewDirection());
 
-        System.out.println("Drill Point 0: " + drill.points[0].getX() + ", " + drill.points[0].getY());
-        System.out.println("Drill Point 1: " + drill.points[1].getX() + ", " + drill.points[1].getY());
-        System.out.println("Drill Point 2: " + drill.points[2].getX() + ", " + drill.points[2].getY());
-        System.out.println("Drill Point 3: " + drill.points[3].getX() + ", " + drill.points[3].getY());
-
         try (FileWriter writer = new FileWriter(currentFileName, true)) {
             writer.write("Direction: " + drill.getDirection().toString() + "\n");
             writer.write("Monster: " + drill.points[0].getY() + "\n");
@@ -708,7 +704,7 @@ public class Level {
 
         player.setStartingPosition(starting0 + (0.3f * levelHeight));
 
-        monster.setPosition(720, starting0 + (0.5f * levelHeight));
+        monster.setPosition(750, starting0 + (0.5f * levelHeight));
         monster.CalcMidPoint();
         monster.setAwake(true);
 
@@ -739,8 +735,6 @@ public class Level {
     }
 
     public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
-        CheckMissileWalkability();
-
         synchronized (this) {
             if (playerMissilePathPending) {
                 return;
@@ -749,6 +743,8 @@ public class Level {
         }
 
         ThetaStarStepper stepper = new ThetaStarStepper (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+
+        CheckMissileWalkabilityRegion((int) startPoint.getX() - margin, (int) endPoint.getX() + margin);
 
         Gdx.app.postRunnable(() -> {
             try {
@@ -761,19 +757,14 @@ public class Level {
         });
     }
     public void FindNewMonsterPath() {
-        CheckMonsterWalkability();
-
-        monster.CalcMidPoint();
-
         synchronized (this) {
-            if (monsterPathPending) {
-                return;
-            }
+            if (monsterPathPending) return;
             monsterPathPending = true;
         }
 
-        ThetaStarStepper stepper;
+        monster.CalcMidPoint();
 
+        ThetaStarStepper stepper;
         if (!monster.currentPath.isEmpty()) {
             stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
         } else {
@@ -790,16 +781,32 @@ public class Level {
             }
         });
     }
-    public FloatPoint FindMonsterEndPoint() {
+    public FloatPoint FindMonsterEndPoint(){
         Node[] Column;
+        int X;
         if (!monster.currentPath.isEmpty()) {
-            Column = grid[(int) ((monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() / cellSize) + grid.length/cellSize)];
+            X = (int) (monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() + 150);
         } else {
-            Column = grid[grid.length / cellSize];
+            X = (int) (monster.midPoint.getX() + 150);
         }
+
+        SetGridToOneColumn(X);
+        Column = grid[0];
+        CheckMonsterWalkabilityColumn(Column);
+
+        int WALKABLE_Nodes = 0;
+
+        for (Node node : Column) {
+            if (node.getState() == Node.NodeState.WALKABLE) {
+                WALKABLE_Nodes++;
+            }
+        }
+
+        System.out.println("WALKABLE NODES: " + WALKABLE_Nodes);
+
         boolean valid = false;
         do {
-            float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - 2f;
+            float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - (cellSize/2f) - currentBottomOfLevel;
             float difference = yLevel % cellSize;
             float nodeY = (yLevel - difference) / cellSize;
             if (Column[(int) nodeY].getState() == Node.NodeState.WALKABLE) {
@@ -809,39 +816,56 @@ public class Level {
         return null;
     }
 
-    public void TransformShapes() {
+    public void TransformShapes(int leftBound, int rightBound) {
         shapes.clear();
         for (Obstacle obstacle : obstacles) {
             if (obstacle.shape instanceof Rect) {
                 Rect rect = (Rect) obstacle.shape;
-                shapes.add(new Polygon(new float[] {
+                Polygon box = new Polygon(new float[] {
                     rect.getX(), rect.getY(),
                     rect.getX() + rect.getWidth(), rect.getY(),
                     rect.getX() + rect.getWidth(), rect.getY() + rect.getHeight(),
                     rect.getX(), rect.getY() + rect.getHeight()
-                }));
+                });
+                for (int i = 0; i < box.getVertices().length; i += 2) {
+                    if (box.getVertices()[i] < leftBound || box.getVertices()[i] > rightBound) continue;
+                    shapes.add(box);
+                    break;
+                }
             } else {
                 Tri tri = (Tri) obstacle.shape;
-                shapes.add(new Polygon(new float[] {
+                Polygon triangle = new Polygon(new float[]{
                     tri.points[0].getX(), tri.points[0].getY(),
                     tri.points[1].getX(), tri.points[1].getY(),
                     tri.points[2].getX(), tri.points[2].getY()
-                }));
+                });
+                for (int i = 0; i < triangle.getVertices().length; i += 2) {
+                    if (triangle.getVertices()[i] < leftBound || triangle.getVertices()[i] > rightBound) continue;
+                    shapes.add(triangle);
+                    break;
+                }
             }
         }
     }
-    public void ResetGrid() {
+    public void ResetGridRegion(int start, int end) {
+        grid = new Node[(end - start) / cellSize][(int) ((currentTopOfLevel - currentBottomOfLevel)/ cellSize)];
         for (int x = 0; x < grid.length; x++) {
             for (int y = 0; y < grid[x].length; y++) {
-                grid[x][y] = new Node((x * cellSize) + 2, (int) currentBottomOfLevel + (y * cellSize) + 2, Node.NodeState.WALKABLE);
+                grid[x][y] = new Node(start + (x * cellSize) + (cellSize / 2), (int) currentBottomOfLevel + (y * cellSize) + (cellSize / 2), Node.NodeState.WALKABLE);
             }
+        }
+    }
+    public void SetGridToOneColumn(int x){
+        grid = new Node[1][(int) ((currentTopOfLevel - currentBottomOfLevel)/ cellSize)];
+        for (int y = 0; y < grid[0].length; y++) {
+            grid[0][y] = new Node(x, (int) currentBottomOfLevel + (y * cellSize) + (cellSize / 2), Node.NodeState.WALKABLE);
         }
     }
 
-    public void CheckMissileWalkability() {
+    public void CheckMissileWalkabilityRegion(int start, int end) {
         shapes.clear();
-        TransformShapes();
-        ResetGrid();
+        TransformShapes(start, end);
+        ResetGridRegion(start, end);
         for (Node[] nodes : grid) {
             for (Node node : nodes) {
                 if (isMissileSafeAt(new Circle(node.getX(), node.getY(), 10))) {
@@ -852,17 +876,20 @@ public class Level {
             }
         }
     }
-    public void CheckMonsterWalkability() {
+    public void CheckMonsterWalkabilityRegion(int start, int end) {
         shapes.clear();
-        TransformShapes();
-        ResetGrid();
+        TransformShapes(start, end);
+        ResetGridRegion(start,  end);
         for (Node[] nodes : grid) {
-            for (Node node : nodes) {
-                if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2 - 5, node.getY() - monster.shape.getHeight()/2 - 5, monster.shape.getWidth() + 10, monster.shape.getHeight() + 10))) {
-                    node.setState(Node.NodeState.WALKABLE);
-                } else {
-                    node.setState(Node.NodeState.UNWALKABLE);
-                }
+            CheckMonsterWalkabilityColumn(nodes);
+        }
+    }
+    public void CheckMonsterWalkabilityColumn(Node[] nodes) {
+        for (Node node : nodes) {
+            if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2f, node.getY() - monster.shape.getHeight()/2f, monster.shape.getWidth(), monster.shape.getHeight()))) {
+                node.setState(Node.NodeState.WALKABLE);
+            } else {
+                node.setState(Node.NodeState.UNWALKABLE);
             }
         }
     }
@@ -919,6 +946,9 @@ public class Level {
             monster.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
             monster.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
         }
+    }
+    public boolean inBound(int X, int Y)    {
+        return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
     }
 
     public void MoveMissiles() {

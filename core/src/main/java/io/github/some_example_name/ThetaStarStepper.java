@@ -1,31 +1,38 @@
 package io.github.some_example_name;
 
 import com.badlogic.gdx.math.Polygon;
-
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ThetaStarStepper {
+    final int cellSize = 8;
+
+    private final int margin = 4 * cellSize;
+    private int leftX, rightX;
     private NodePrioQueue openList;
     Node[][] grid;
     Node start, end;
     ArrayList<LineSegment> path;
     Level.TypeOfPath type;
 
-    int cellSize = 5;
 
     private boolean pathFound;
     private Level level;
     private float currentX, currentY;
 
     public ThetaStarStepper(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level) {
+        this.leftX = (int) startPoint.getX() - margin;
+        this.rightX = (int) endPoint.getX() + margin;
+
         this.level = level;
-        this.grid = level.grid;
         this.type = type;
 
         this.currentX = level.getXTravelled();
         this.currentY = level.getCurrentHeight();
 
-        this.start = FindClosestNode(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
+        this.start = FindClosestNodeToStart(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
         this.end = FindClosestNode(new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE));
 
         this.openList = new NodePrioQueue(1500);
@@ -36,17 +43,17 @@ public class ThetaStarStepper {
         start.setG(0f);
         start.setH(distance(start, end));
         start.setF(start.getG() + start.getH());
-        start.setParent(start);
+        start.setParent(null);
 
         openList.enqueue(start);
     }
 
     public void FindPath() {
         if (LineOfSight(type, start, end)) {
-            pathFound = true;
             ConstructSimplePath();
+            pathFound = true;
+            System.out.println("Direct Line of Sight!");
         } else {
-            System.out.println("CRASH?");
             while (!pathFound) {
                 if (openList.isEmpty()) {
                     System.out.println("No Path Found");
@@ -54,11 +61,15 @@ public class ThetaStarStepper {
                 } else {
                     Node current = openList.dequeue();
                     if (current == end) {
+                        System.out.println("Path Found!");
                         pathFound = true;
                         ConstructComplexPath();
                         return;
                     }
-                    if (pathFound) return;
+                    if (pathFound) {
+                        System.out.println("Left this way");
+                        return;
+                    }
                     for (Node neighbour : getNeighbours(current)) {
                         ProcessNeighbour(current, neighbour, end);
                     }
@@ -98,13 +109,13 @@ public class ThetaStarStepper {
         return false;
     }
 
-    public boolean LineOfSight(Level.TypeOfPath type, Node start, Node end) {
-        FloatPoint startPoint = new FloatPoint(start.getX(), start.getY());
-        FloatPoint endPoint = new FloatPoint(end.getX(), end.getY());
+    public boolean LineOfSight(Level.TypeOfPath type, Node startNode, Node endNode) {
+        FloatPoint startPoint = new FloatPoint(startNode.getX(), startNode.getY());
+        FloatPoint endPoint = new FloatPoint(endNode.getX(), endNode.getY());
         LineSegment segment = new LineSegment(startPoint, endPoint);
         segment.setSegment();
         Shape shape;
-        int speed = 21;
+        int speed = 4;
         if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
             shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
         } else {
@@ -114,7 +125,7 @@ public class ThetaStarStepper {
             if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
             if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
 
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE && !isMissileSafeAt((Circle) shape))) return false;
+            if (((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !isMissileSafeAt((Circle) shape))) return false;
             if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;
 
             shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
@@ -122,53 +133,51 @@ public class ThetaStarStepper {
         }
         return true;
     }
-    public Node[] getNeighbours(Node currentNode) {
-        Node[] Neighbours = new Node[8];
-        int i = 0;
+    public ArrayList<Node> getNeighbours(Node currentNode) {
+        ArrayList<Node> neighbours = new ArrayList<>();
         int X = NodeFindXCoordinates(currentNode);
         int Y = NodeFindYCoordinates(currentNode);
         for (int x = -1; x < 2; x++) {
             for (int y = -1; y < 2; y++) {
                 if (x == 0 && y == 0) continue;
                 if (!inBound(X + x, Y + y)) continue;
-                Neighbours[i] = grid[X + x][Y + y];
-                i++;
+                if (grid[X + x][Y + y].getState() == Node.NodeState.UNWALKABLE) continue;
+                neighbours.add(grid[X + x][Y + y]);
             }
         }
-        return Neighbours;
+        return neighbours;
     }
     private boolean inBound(int X, int Y)    {
         return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
     }
     public int NodeFindXCoordinates(Node node) {
-        int index = (node.getX() - cellSize / 2) / cellSize;
+        int index = (node.getX() - leftX - (cellSize / 2)) / cellSize;
         if (index < 0) index = 0;
         if (index >= grid.length) index = grid.length - 1;
         return index;
     }
     public int NodeFindYCoordinates(Node node) {
-        int index = (node.getY() - level.getBottomOfLevel() - cellSize / 2) / cellSize;
+        int index = (node.getY() - level.getBottomOfLevel() - (cellSize / 2)) / cellSize;
         if (index < 0) index = 0;
         if (index >= grid[0].length) index = grid[0].length - 1;
         return index;
     }
-    public void ProcessNeighbour(Node current, Node neighbour, Node end) {
+    public void ProcessNeighbour(Node current, Node neighbour, Node endNode) {
         Node parent = current.getParent();
-        if (parent == null) System.out.println("parent is null");
         float tempG;
         Node tempParent;
 
-        if (LineOfSight(type, parent, neighbour)) {
+        if (parent != null && distance(parent, neighbour) > (cellSize * 1.5f) && LineOfSight(type, parent, neighbour)) {
             tempG = parent.getG() + distance(parent, neighbour);
             tempParent = parent;
         } else {
-            tempG = current.getG() + distance(current,neighbour);
+            tempG = current.getG() + distance(current, neighbour);
             tempParent = current;
         }
 
         if (tempG < neighbour.getG()) {
             neighbour.setG(tempG);
-            neighbour.setH(distance(neighbour, end));
+            neighbour.setH(distance(neighbour, endNode));
             neighbour.setF(neighbour.getG() + neighbour.getH());
             neighbour.setParent(tempParent);
             openList.enqueue(neighbour);
@@ -178,16 +187,57 @@ public class ThetaStarStepper {
         return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
     }
 
-    private Node FindClosestNode(Node node) {
-        int gridX = (node.getX() - cellSize / 2) / cellSize;
-        int gridY = (node.getY() - level.getBottomOfLevel() - cellSize / 2) / cellSize;
-        if (inBound(gridX, gridY) ) {
-            if (grid[gridX][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY];
-            if (grid[gridX][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY - 1];
-            if (grid[gridX][gridY + 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX][gridY + 1];
-            if (grid[gridX - 1][gridY].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY];
-            if (grid[gridX - 1][gridY - 1].getState() != Node.NodeState.UNWALKABLE) return grid[gridX - 1][gridY - 1];
+    private Node FindClosestNodeToStart(Node node) {
+        level.ResetGridRegion(leftX, rightX);
+        level.CheckMonsterWalkabilityRegion(leftX, rightX);
+
+        this.grid = level.grid;
+
+        int gx = (node.getX() - leftX - (cellSize / 2)) / cellSize;
+        int gy = (node.getY() - level.getBottomOfLevel() - (cellSize / 2)) / cellSize;
+
+        if (inBound(gx, gy) && grid[gx][gy].getState() == Node.NodeState.WALKABLE) return node;
+
+        for (Node n : getNeighbours(grid[gx][gy])) {
+            if (n.getState() == Node.NodeState.WALKABLE) {
+                return node;
+            }
         }
+
+        return null;
+    }
+    private Node FindClosestNode(Node node) {
+        int startX = (node.getX() - leftX - (cellSize / 2)) / cellSize;
+        int startY = (node.getY() - level.getBottomOfLevel() - (cellSize / 2)) / cellSize;
+
+        if (!inBound(startX, startY)) return null;
+
+        if (grid[startX][startY].getState() == Node.NodeState.WALKABLE) {
+            return grid[startX][startY];
+        }
+
+        int maxRadius = Math.max(grid.length, grid[0].length);
+
+        for (int r = 1; r <= maxRadius; r++) {
+            // Scan the square ring at radius r
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dy = -r; dy <= r; dy++) {
+
+                    // Only check the perimeter of the square
+                    if (Math.abs(dx) != r && Math.abs(dy) != r) continue;
+
+                    int x = startX + dx;
+                    int y = startY + dy;
+
+                    if (!inBound(x, y)) continue;
+
+                    if (grid[x][y].getState() == Node.NodeState.WALKABLE) {
+                        return grid[x][y];
+                    }
+                }
+            }
+        }
+
         return null;
     }
 
@@ -195,11 +245,10 @@ public class ThetaStarStepper {
         ArrayList<Node> nodes = new ArrayList<>();
         Node current = end;
 
-        while (current != current.getParent()) {
+        while (current != null) {
             nodes.add(current);
             current = current.getParent();
         }
-        nodes.add(current);
 
         for (int i = nodes.size() - 1; i > 0; i--) {
             FloatPoint point1 = new FloatPoint(nodes.get(i).getX(), nodes.get(i).getY());
@@ -213,7 +262,7 @@ public class ThetaStarStepper {
         missile.path.forEach(line -> line.MoveY(YDifference()));
 
         if (type == Level.TypeOfPath.MONSTER) {
-            level.monster.currentPath.add(path.get(0));
+            level.monster.currentPath.addAll(path);
         } else if (type == Level.TypeOfPath.MONSTERMISSILE) {
             missile.setType(Missile.Type.MONSTER);
             level.monster.missiles.add(missile);

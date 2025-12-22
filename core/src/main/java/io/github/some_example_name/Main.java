@@ -176,6 +176,10 @@ public class Main extends ApplicationAdapter {
                     endingMenu.body.AddLine("Your Time: " + (int) (GameData.getInstance().getElapsedTime() - level.getStartTime()) / 1000f + "s", 600, font);
                 }
 
+                if (input.isKeyJustPressed(Input.Keys.X)) {
+                    GameData.getInstance().setStop(true);
+                }
+
                 if (level.player.getLives() <= 0 || level.player.CheckHealth()) {
                     stage = Stage.DEADMENU;
                     GameData.getInstance().setStop(true);
@@ -198,7 +202,7 @@ public class Main extends ApplicationAdapter {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                     }
 
-                    if (level.monster.midPoint.getX() < 250) {
+                    if (level.monster.midPoint.getX() <= 250) {
                         level.MoveMonsterAlongPath();
                     }
 

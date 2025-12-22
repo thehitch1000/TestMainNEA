@@ -2,11 +2,15 @@ package io.github.some_example_name;
 
 public class NodePrioQueue {
     Node[] nodes;
-    private int size;
+    int size;
 
     public NodePrioQueue(int capacity) {
         this.nodes = new Node[capacity];
     }
+    public int getSize() {
+        return size;
+    }
+
     public void enqueue(Node node) {
         int i = size;
         while (i > 0 && nodes[i - 1].getF() > node.getF()) {
