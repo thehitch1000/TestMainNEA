@@ -2,7 +2,6 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Polygon;
 
 import java.io.BufferedWriter;
@@ -94,9 +93,6 @@ public class Level {
     public int getBottomOfLevel() {
         return (int) drill.getBottomOfLevel();
     }
-    public Level.ScreenHeight getScreenHeight() {
-        return screenHeight;
-    }
 
     public void setCurrentFileName(String fileName) {
         currentFileName = fileName;
@@ -134,6 +130,7 @@ public class Level {
                 String key = drill.getDirection() + "," + drill.getNewDirection();
                 switch (key) {
                     case "UP_RIGHT,UP_RIGHT":
+                    case "DOWN_RIGHT,DOWN_RIGHT":
                         drill.MoveXY(20);
                         break;
                     case "UP_RIGHT,RIGHT":
@@ -162,9 +159,6 @@ public class Level {
                     case "DOWN_RIGHT,RIGHT":
                         drill.MoveXY(20);
                         drill.RotateDrill(-45, drill.points[3]);
-                        break;
-                    case "DOWN_RIGHT,DOWN_RIGHT":
-                        drill.MoveXY(20);
                         break;
                     default:
                         System.out.println("Unknown change in direction: " + key);
@@ -765,10 +759,17 @@ public class Level {
         monster.CalcMidPoint();
 
         ThetaStarStepper stepper;
+        FloatPoint endPoint = FindMonsterEndPoint();
+
+        if (endPoint == null) {
+            GameData.getInstance().setStop(true);
+            return;
+        }
+
         if (!monster.currentPath.isEmpty()) {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, endPoint, this);
         } else {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, endPoint, this);
         }
 
         Gdx.app.postRunnable(() -> {
@@ -781,7 +782,7 @@ public class Level {
             }
         });
     }
-    public FloatPoint FindMonsterEndPoint(){
+    public FloatPoint FindMonsterEndPoint() {
         Node[] Column;
         int X;
         if (!monster.currentPath.isEmpty()) {
@@ -790,29 +791,32 @@ public class Level {
             X = (int) (monster.midPoint.getX() + 150);
         }
 
-        SetGridToOneColumn(X);
-        Column = grid[0];
-        CheckMonsterWalkabilityColumn(Column);
-
-        int WALKABLE_Nodes = 0;
-
-        for (Node node : Column) {
-            if (node.getState() == Node.NodeState.WALKABLE) {
-                WALKABLE_Nodes++;
-            }
-        }
-
-        System.out.println("WALKABLE NODES: " + WALKABLE_Nodes);
+        Column = FindValidColumn(X);
 
         boolean valid = false;
         do {
-            float yLevel = (float) Math.random() * GameData.getInstance().getScreenHeight() - (cellSize/2f) - currentBottomOfLevel;
+            float yLevel = (float) Math.random() * (GameData.getInstance().getScreenHeight() - (cellSize/2f) - currentBottomOfLevel);
+            if (yLevel > currentTopOfLevel || yLevel < currentBottomOfLevel) continue;
             float difference = yLevel % cellSize;
-            float nodeY = (yLevel - difference) / cellSize;
-            if (Column[(int) nodeY].getState() == Node.NodeState.WALKABLE) {
-                return new FloatPoint(Column[(int) nodeY].getX(), Column[(int) nodeY].getY());
+            int nodeY = (int) (yLevel - currentBottomOfLevel - difference) / cellSize;
+            if (Column[nodeY].getState() == Node.NodeState.WALKABLE) {
+                System.out.println("Found valid monster end point at X: " + Column[0].getX() + " Y: " + Column[nodeY].getY());
+                return new FloatPoint(Column[nodeY].getX(), Column[nodeY].getY());
             }
         } while (!valid);
+        System.out.println("Failed to find valid monster end point");
+        return null;
+    }
+    private Node[] FindValidColumn(int x) {
+        for (int step = 0; step < 10; step++) {
+            SetGridToOneColumn(x + (step * cellSize));
+            CheckMonsterWalkabilityColumn(grid[0]);
+            for (Node node : grid[0]) {
+                if (node.getState() == Node.NodeState.WALKABLE) {
+                    return grid[0];
+                }
+            }
+        }
         return null;
     }
 
@@ -857,7 +861,7 @@ public class Level {
     }
     public void SetGridToOneColumn(int x){
         grid = new Node[1][(int) ((currentTopOfLevel - currentBottomOfLevel)/ cellSize)];
-        for (int y = 0; y < grid[0].length; y++) {
+        for (int y = 0; y < grid[0].length; y++)  {
             grid[0][y] = new Node(x, (int) currentBottomOfLevel + (y * cellSize) + (cellSize / 2), Node.NodeState.WALKABLE);
         }
     }
@@ -946,9 +950,6 @@ public class Level {
             monster.MoveX((float) Math.cos(angleRad) * monster.getSpeed());
             monster.MoveY((float) Math.sin(angleRad) * monster.getSpeed());
         }
-    }
-    public boolean inBound(int X, int Y)    {
-        return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
     }
 
     public void MoveMissiles() {

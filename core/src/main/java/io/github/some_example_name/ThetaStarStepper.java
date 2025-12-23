@@ -17,7 +17,6 @@ public class ThetaStarStepper {
     ArrayList<LineSegment> path;
     Level.TypeOfPath type;
 
-
     private boolean pathFound;
     private Level level;
     private float currentX, currentY;
@@ -203,7 +202,6 @@ public class ThetaStarStepper {
                 return node;
             }
         }
-
         return null;
     }
     private Node FindClosestNode(Node node) {
@@ -219,7 +217,6 @@ public class ThetaStarStepper {
         int maxRadius = Math.max(grid.length, grid[0].length);
 
         for (int r = 1; r <= maxRadius; r++) {
-            // Scan the square ring at radius r
             for (int dx = -r; dx <= r; dx++) {
                 for (int dy = -r; dy <= r; dy++) {
 
