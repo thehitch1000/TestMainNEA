@@ -37,6 +37,14 @@ public class ThetaStarStepper {
         this.openList = new NodePrioQueue(1500);
         path = new ArrayList<>();
 
+        System.out.println("StartPoint: " + startPoint.getX() + ", " + startPoint.getY());
+        System.out.println("EndPoint: " + endPoint.getX() + ", " + endPoint.getY());
+
+        System.out.println("Start: " + start.getX() + ", " + start.getY());
+        System.out.println("End: " + end.getX() + ", " + end.getY());
+
+        System.out.println("End State: " + end.getState());
+
         pathFound = false;
 
         start.setG(0f);

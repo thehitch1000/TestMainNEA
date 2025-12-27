@@ -8,8 +8,10 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -176,10 +178,6 @@ public class Main extends ApplicationAdapter {
                     endingMenu.body.AddLine("Your Time: " + (int) (GameData.getInstance().getElapsedTime() - level.getStartTime()) / 1000f + "s", 600, font);
                 }
 
-                if (input.isKeyJustPressed(Input.Keys.X)) {
-                    GameData.getInstance().setStop(true);
-                }
-
                 if (level.player.getLives() <= 0 || level.player.CheckHealth()) {
                     stage = Stage.DEADMENU;
                     GameData.getInstance().setStop(true);
@@ -241,6 +239,15 @@ public class Main extends ApplicationAdapter {
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
                 level.monster.currentPath.forEach(line -> line.Draw(sr));
+
+                sr.setColor(Color.PURPLE);
+
+                for (Polygon polygon : level.shapes) {
+                    if (polygon == null) continue;
+                    for (int i = 0; i < polygon.getVertices().length - 1; i += 2) {
+                        sr.line(polygon.getVertices()[i], polygon.getVertices()[i + 1], polygon.getVertices()[(i+2) % polygon.getVertices().length], polygon.getVertices()[(i+3) % polygon.getVertices().length]);
+                    }
+                }
 
                 if (a == 1) {
                     level.player.PrintLines(sr);

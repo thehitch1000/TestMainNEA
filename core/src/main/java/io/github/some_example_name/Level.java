@@ -759,17 +759,12 @@ public class Level {
         monster.CalcMidPoint();
 
         ThetaStarStepper stepper;
-        FloatPoint endPoint = FindMonsterEndPoint();
 
-        if (endPoint == null) {
-            GameData.getInstance().setStop(true);
-            return;
-        }
 
         if (!monster.currentPath.isEmpty()) {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, endPoint, this);
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
         } else {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, endPoint, this);
+            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
         }
 
         Gdx.app.postRunnable(() -> {
@@ -793,7 +788,12 @@ public class Level {
 
         Column = FindValidColumn(X);
 
-        boolean valid = false;
+        if (Column == null) {
+            System.out.println("Failed to find valid column");
+            Gdx.app.exit();
+        }
+
+        int attempts = 0;
         do {
             float yLevel = (float) Math.random() * (GameData.getInstance().getScreenHeight() - (cellSize/2f) - currentBottomOfLevel);
             if (yLevel > currentTopOfLevel || yLevel < currentBottomOfLevel) continue;
@@ -803,51 +803,60 @@ public class Level {
                 System.out.println("Found valid monster end point at X: " + Column[0].getX() + " Y: " + Column[nodeY].getY());
                 return new FloatPoint(Column[nodeY].getX(), Column[nodeY].getY());
             }
-        } while (!valid);
+            attempts++;
+        } while (attempts <= 100);
         System.out.println("Failed to find valid monster end point");
         return null;
     }
     private Node[] FindValidColumn(int x) {
-        for (int step = 0; step < 10; step++) {
-            SetGridToOneColumn(x + (step * cellSize));
-            CheckMonsterWalkabilityColumn(grid[0]);
-            for (Node node : grid[0]) {
-                if (node.getState() == Node.NodeState.WALKABLE) {
-                    return grid[0];
+            // Search bidirectionally: forward and backward from x
+            for (int direction = -1; direction <= 1; direction += 2) {  // -1 for backward, 1 for forward
+                for (int step = 0; step <= 40; step++) {  // Increased range; step=0 checks starting x
+                    int columnX = x + (direction * step * cellSize);
+                    SetGridToOneColumn(columnX);
+                    CheckMonsterWalkabilityColumn(grid[0]);
+                    for (Node node : grid[0]) {
+                        if (node.getState() == Node.NodeState.WALKABLE) {
+                            return grid[0];  // Return immediately on finding a valid column
+                        }
+                    }
                 }
             }
+            System.out.println("Warning: No valid column found within extended bidirectional search range");
+            return null;
         }
-        return null;
-    }
 
     public void TransformShapes(int leftBound, int rightBound) {
         shapes.clear();
         for (Obstacle obstacle : obstacles) {
+            Polygon poly;
             if (obstacle.shape instanceof Rect) {
                 Rect rect = (Rect) obstacle.shape;
-                Polygon box = new Polygon(new float[] {
+                poly = new Polygon(new float[] {
                     rect.getX(), rect.getY(),
                     rect.getX() + rect.getWidth(), rect.getY(),
                     rect.getX() + rect.getWidth(), rect.getY() + rect.getHeight(),
                     rect.getX(), rect.getY() + rect.getHeight()
                 });
-                for (int i = 0; i < box.getVertices().length; i += 2) {
-                    if (box.getVertices()[i] < leftBound || box.getVertices()[i] > rightBound) continue;
-                    shapes.add(box);
-                    break;
-                }
             } else {
                 Tri tri = (Tri) obstacle.shape;
-                Polygon triangle = new Polygon(new float[]{
+                poly = new Polygon(new float[]{
                     tri.points[0].getX(), tri.points[0].getY(),
                     tri.points[1].getX(), tri.points[1].getY(),
                     tri.points[2].getX(), tri.points[2].getY()
                 });
-                for (int i = 0; i < triangle.getVertices().length; i += 2) {
-                    if (triangle.getVertices()[i] < leftBound || triangle.getVertices()[i] > rightBound) continue;
-                    shapes.add(triangle);
-                    break;
-                }
+            }
+
+            float minX = Float.MAX_VALUE;
+            float maxX = Float.MIN_VALUE;
+            float[] vertices = poly.getVertices();
+            for (int i = 0; i < vertices.length; i += 2) {
+                minX = Math.min(minX, vertices[i]);
+                maxX = Math.max(maxX, vertices[i]);
+            }
+
+            if (minX <= rightBound && maxX >= leftBound) {
+                shapes.add(poly);
             }
         }
     }
@@ -867,7 +876,6 @@ public class Level {
     }
 
     public void CheckMissileWalkabilityRegion(int start, int end) {
-        shapes.clear();
         TransformShapes(start, end);
         ResetGridRegion(start, end);
         for (Node[] nodes : grid) {
@@ -881,7 +889,6 @@ public class Level {
         }
     }
     public void CheckMonsterWalkabilityRegion(int start, int end) {
-        shapes.clear();
         TransformShapes(start, end);
         ResetGridRegion(start,  end);
         for (Node[] nodes : grid) {
@@ -890,7 +897,7 @@ public class Level {
     }
     public void CheckMonsterWalkabilityColumn(Node[] nodes) {
         for (Node node : nodes) {
-            if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2f, node.getY() - monster.shape.getHeight()/2f, monster.shape.getWidth(), monster.shape.getHeight()))) {
+            if (isMonsterSafeAt(new Rect(node.getX() - monster.shape.getWidth()/2f - 5, node.getY() - monster.shape.getHeight()/2f - 5, monster.shape.getWidth() + 10, monster.shape.getHeight() + 10))) {
                 node.setState(Node.NodeState.WALKABLE);
             } else {
                 node.setState(Node.NodeState.UNWALKABLE);
