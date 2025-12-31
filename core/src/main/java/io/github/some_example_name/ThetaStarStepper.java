@@ -1,10 +1,7 @@
 package io.github.some_example_name;
 
 import com.badlogic.gdx.math.Polygon;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.List;
 
 public class ThetaStarStepper {
     final int cellSize = 8;

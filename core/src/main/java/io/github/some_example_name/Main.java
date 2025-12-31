@@ -3,12 +3,10 @@ package io.github.some_example_name;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.awt.*;
@@ -86,6 +84,7 @@ public class Main extends ApplicationAdapter {
 
     List<Runnable> ending1 = new ArrayList<Runnable>() {{
        add(() -> endingMenu.Close());
+       add(() -> level.ResetLevel());
        add(() -> stage = Stage.STARTMENU);
        add(() -> startMenu.Open());
     }};
@@ -155,9 +154,6 @@ public class Main extends ApplicationAdapter {
         ScreenUtils.clear(0.2f, 0.38f, 0.66f, 1f);
         GameData.getInstance().Maintenance();
 
-        if (input.isKeyJustPressed(Input.Keys.F1)) {
-            a = (a + 1) % 2;
-        }
         if (input.isKeyJustPressed(Input.Keys.F2)) {
             Gdx.app.exit();
         }
@@ -186,9 +182,10 @@ public class Main extends ApplicationAdapter {
                     endingMenu.body.AddLine("You Lost!", 600, font);
                 }
 
-                while (level.ReadFile());
 
                 if (!GameData.getInstance().isStop()) {
+                    while (level.ReadFile());
+
                     level.CheckBackground();
 
                     level.MovePlayerY(0);
@@ -224,30 +221,11 @@ public class Main extends ApplicationAdapter {
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
                 level.player.missiles.forEach(missile -> missile.Draw(sr));
 
-                if (input.isKeyPressed(Input.Keys.P)) {
-                    for (Node[] gridRow : level.grid) {
-                        for (Node node : gridRow) {
-                            if (node != null) {
-                                node.Draw(sr);
-                            }
-                        }
-                    }
-                }
-
                 sr.end();
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
                 level.monster.currentPath.forEach(line -> line.Draw(sr));
-
-                sr.setColor(Color.PURPLE);
-
-                for (Polygon polygon : level.shapes) {
-                    if (polygon == null) continue;
-                    for (int i = 0; i < polygon.getVertices().length - 1; i += 2) {
-                        sr.line(polygon.getVertices()[i], polygon.getVertices()[i + 1], polygon.getVertices()[(i+2) % polygon.getVertices().length], polygon.getVertices()[(i+3) % polygon.getVertices().length]);
-                    }
-                }
 
                 if (a == 1) {
                     level.player.PrintLines(sr);

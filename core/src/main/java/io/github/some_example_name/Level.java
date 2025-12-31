@@ -26,7 +26,7 @@ public class Level {
     List<Obstacle> obstacles;
     List<Zone> zones;
     List<Polygon> shapes;
-    List<ThetaStarStepper> pathing;
+    FloatQueue AverageHorPositionScalar, AverageDiagPositionScalar, AverageChangeDirection;
     ScreenHeight screenHeight;
     Player player;
     Monster monster;
@@ -47,7 +47,10 @@ public class Level {
         obstacles = new ArrayList<>();
         zones = new ArrayList<>();
         shapes = new ArrayList<>();
-        pathing = new ArrayList<>();
+
+        AverageHorPositionScalar = new FloatQueue(50);
+        AverageDiagPositionScalar = new FloatQueue(50);
+        AverageChangeDirection = new FloatQueue(25);
 
         drill = new Drill();
 
@@ -70,7 +73,6 @@ public class Level {
         currentHeight = 0;
         screenHeight = ScreenHeight.NEUTRAL;
         StartTime = 0;
-        pathing.clear();
         GameData.getInstance().setStop(false);
         obstacles.clear();
         shapes.clear();
@@ -96,6 +98,52 @@ public class Level {
 
     public void setCurrentFileName(String fileName) {
         currentFileName = fileName;
+    }
+
+    public void getTrends() {
+        try {
+            File file = new File("Trends");
+
+            List<String> lines = Files.readAllLines(file.toPath());
+
+            for (String line : lines) {
+                String[] parts = line.split(":\\s+|\\s+");
+                if (parts[0].equals("AverageHorPosition")) {
+                    for (int i = 1; i < parts.length; i++) {
+                        AverageHorPositionScalar.enqueue(Float.parseFloat(parts[i]));
+                    }
+                } else if (parts[0].equals("AverageDiagPosition")) {
+                    for (int i = 1; i < parts.length; i++) {
+                        AverageDiagPositionScalar.enqueue(Float.parseFloat(parts[i]));
+                    }
+                } else if (parts[0].equals("AverageChangeDirection")) {
+                    for (int i = 1; i < parts.length; i++) {
+                        AverageChangeDirection.enqueue(Float.parseFloat(parts[i]));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void writeTrends() {
+        GameData.getInstance().EmptyFile("Trends");
+        try (FileWriter writer = new FileWriter("Trends", true)){
+            writer.write("AverageHorPosition: ");
+            for (float scalar : AverageHorPositionScalar.floats) {
+                writer.write(scalar + ", ");
+            }
+            writer.write("AverageDiagPosition: ");
+            for (float scalar : AverageDiagPositionScalar.floats) {
+                writer.write(scalar + ", ");
+            }
+            writer.write("AverageChangeDirection: ");
+            for (float scalar : AverageChangeDirection.floats) {
+                writer.write(scalar + ", ");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void CreateZigZagLevel() {
@@ -288,22 +336,20 @@ public class Level {
                     fileWriter.newLine();
                     lock.used();
                 } else {
-                    switch (parts[0]) {
-                        case "RectPath":
-                            if (Boolean.parseBoolean(parts[5])) {
-                                fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
-                                    " " + parts[3] + " " + (Float.parseFloat(parts[4]) - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
-                                fileWriter.newLine();
-                            } else {
-                                fileWriter.write("RectPath: " + Float.parseFloat(parts[1]) + " " + Float.parseFloat(parts[2]) +
-                                    " " + Float.parseFloat(parts[3]) + " " + (drill.getTopOfLevel() - Float.parseFloat(parts[2]) + 150) +
-                                    " " + Boolean.parseBoolean(parts[5]));
-                                fileWriter.newLine();
-                            }
-                            break;
-                        default:
-                            fileWriter.write(line);
+                    if (parts[0].equals("RectPath")) {
+                        if (Boolean.parseBoolean(parts[5])) {
+                            fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 150) +
+                                " " + parts[3] + " " + (Float.parseFloat(parts[4]) - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
                             fileWriter.newLine();
+                        } else {
+                            fileWriter.write("RectPath: " + Float.parseFloat(parts[1]) + " " + Float.parseFloat(parts[2]) +
+                                " " + Float.parseFloat(parts[3]) + " " + (drill.getTopOfLevel() - Float.parseFloat(parts[2]) + 150) +
+                                " " + Boolean.parseBoolean(parts[5]));
+                            fileWriter.newLine();
+                        }
+                    } else {
+                        fileWriter.write(line);
+                        fileWriter.newLine();
                     }
                 }
             }
@@ -972,5 +1018,12 @@ public class Level {
                 Gdx.app.postRunnable(() -> monster.missiles.remove(missile));
             }
         }
+    }
+
+    public void AddChangeDirectionScalar() {
+
+    }
+    public void AddAveragePositionScalar() {
+
     }
 }
