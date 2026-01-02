@@ -55,25 +55,16 @@ public class Menu {
 }
 
 class Button {
-    private String text;
+    private Text text;
     List<Runnable> actions;
     private Rect buttonShape;
-    private float xText, yText;
-    private float centreX, centreY;
 
-    public Button(String text, List<Runnable> Actions, float centreX, float centreY, BitmapFont font) {
-        this.text = text;
-        this.buttonShape = new Rect(0, 0, 0, 0);
+    public Button(String message, List<Runnable> Actions, float centreX, float centreY, BitmapFont font) {
+        this.text = new Text(message, centreX, centreY, font);
 
         actions = Actions;
 
-        this.xText = 0;
-        this.yText = 0;
-
-        this.centreX = centreX;
-        this.centreY = centreY;
-
-        FindTextPosition(font);
+        buttonShape = new Rect(text.getX() - 20, centreY - (text.getHeight() / 2f) - 10, text.getWidth() + 40, text.getHeight() + 20, new Color(0.42f, 0.42f, 0.43f, 0.1f));
     }
     public void CheckClick() {
         if (buttonShape.isPointInShape(new FloatPoint(Gdx.input.getX(), GameData.getInstance().getScreenHeight() - Gdx.input.getY()))) {
@@ -83,16 +74,6 @@ class Button {
                 }
             }
         }
-    }
-
-    public void FindTextPosition(BitmapFont font) {
-        GlyphLayout layout = new GlyphLayout();
-        layout.setText(font, text);
-
-        xText = centreX - (layout.width / 2f);
-        yText = centreY + (layout.height / 2f);
-
-        buttonShape = new Rect(xText - 20, centreY - (layout.height / 2f) - 10, layout.width + 40, layout.height + 20, new Color(0.42f, 0.42f, 0.43f, 0.1f));
     }
 
     public void DrawButton(ShapeRenderer sr) {
@@ -112,7 +93,7 @@ class Button {
     }
     public void DrawText(SpriteBatch batch, BitmapFont font) {
         batch.begin();
-        font.draw(batch, text, xText, yText);
+        font.draw(batch, text.getText(), text.getX(), text.getY());
         batch.end();
     }
     public void Draw(ShapeRenderer sr, SpriteBatch batch, BitmapFont font) {
@@ -150,6 +131,7 @@ class Body {
 class Text {
     private String text;
     private float x, y;
+    private float height, width;
 
     public Text(String text, float CentreX, float CentreY, BitmapFont font) {
         this.text = text;
@@ -159,8 +141,11 @@ class Text {
         GlyphLayout layout = new GlyphLayout();
         layout.setText(font, text);
 
-        x = centreX - (layout.width / 2f);
-        y = centreY + (layout.height / 2f);
+        height = layout.height;
+        width = layout.width;
+
+        x = centreX - (width / 2f);
+        y = centreY + (height / 2f);
     }
 
     public void Draw(SpriteBatch batch, BitmapFont font) {
@@ -174,8 +159,20 @@ class Text {
     public float getX() {
         return x;
     }
-
     public float getY() {
         return y;
+    }
+    public float getHeight() {
+        return height;
+    }
+    public float getWidth() {
+        return width;
+    }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+    public void setY(float y) {
+        this.y = y;
     }
 }

@@ -1,6 +1,6 @@
 Direction: UP_RIGHT
-Monster: 374.98065
-LevelHeight: 181.01935
-RectPath: 0.0 -233.19092 700.0 1480.9546 false
-TopOfLevel: 1172.7637
-BottomOfLevel: -158.19092
+Monster: 360.0431
+LevelHeight: 144.95691
+RectPath: 0.0 -361.57214 700.0 1336.5721 false
+TopOfLevel: 900.0
+BottomOfLevel: -286.57214

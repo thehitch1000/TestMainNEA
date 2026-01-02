@@ -827,12 +827,13 @@ public class Level {
         Node[] Column;
         int X;
         if (!monster.currentPath.isEmpty()) {
-            X = (int) (monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() + 150);
+            X = (int) (monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() + 250);
         } else {
-            X = (int) (monster.midPoint.getX() + 150);
+            X = (int) (monster.midPoint.getX() + 250);
         }
 
         Column = FindValidColumn(X);
+        System.out.println("Finding monster end point");
 
         if (Column == null) {
             System.out.println("Failed to find valid column");
@@ -845,6 +846,7 @@ public class Level {
             if (yLevel > currentTopOfLevel || yLevel < currentBottomOfLevel) continue;
             float difference = yLevel % cellSize;
             int nodeY = (int) (yLevel - currentBottomOfLevel - difference) / cellSize;
+            if (nodeY > Column.length - 1 || nodeY < 0) continue;
             if (Column[nodeY].getState() == Node.NodeState.WALKABLE) {
                 System.out.println("Found valid monster end point at X: " + Column[0].getX() + " Y: " + Column[nodeY].getY());
                 return new FloatPoint(Column[nodeY].getX(), Column[nodeY].getY());
@@ -852,7 +854,7 @@ public class Level {
             attempts++;
         } while (attempts <= 100);
         System.out.println("Failed to find valid monster end point");
-        return null;
+        return FindMonsterEndPoint();
     }
     private Node[] FindValidColumn(int x) {
             // Search bidirectionally: forward and backward from x
