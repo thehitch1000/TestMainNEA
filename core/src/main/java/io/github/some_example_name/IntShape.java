@@ -203,13 +203,13 @@ class Rect extends Shape implements Transparency, Colour{
         return (x - width < GameData.getInstance().getScreenWidth() && x + width > 0);
     }
 
-    public boolean overlaps(Polygon obstacle) {
-        FloatPoint[] obstaclePoints = new FloatPoint[obstacle.getVertices().length/2];
-        for (int i = 0; i < obstaclePoints.length; i++) {
-            obstaclePoints[i] = new FloatPoint(obstacle.getVertices()[i * 2], obstacle.getVertices()[i * 2 + 1]);
+    public boolean overlaps(Polygon barrier) {
+        FloatPoint[] barrierPoints = new FloatPoint[barrier.getVertices().length/2];
+        for (int i = 0; i < barrierPoints.length; i++) {
+            barrierPoints[i] = new FloatPoint(barrier.getVertices()[i * 2], barrier.getVertices()[i * 2 + 1]);
         }
-        if (obstaclePoints.length == 3) {
-            Tri tri = new Tri(obstaclePoints);
+        if (barrierPoints.length == 3) {
+            Tri tri = new Tri(barrierPoints);
             points = new FloatPoint[4];
             points[0] = new FloatPoint(x, y);
             points[1] = new FloatPoint(x + width, y);
@@ -231,30 +231,30 @@ class Rect extends Shape implements Transparency, Colour{
             }
             return false;
         } else {
-            Rect obstacleRect = new Rect(obstaclePoints[0].getX(), obstaclePoints[0].getY(), obstaclePoints[1].getX() - obstaclePoints[0].getX(), obstaclePoints[2].getY() - obstaclePoints[1].getY());
-            if (rectIntersect(this, obstacleRect)) {
+            Rect barrierRect = new Rect(barrierPoints[0].getX(), barrierPoints[0].getY(), barrierPoints[1].getX() - barrierPoints[0].getX(), barrierPoints[2].getY() - barrierPoints[1].getY());
+            if (rectIntersect(this, barrierRect)) {
                 return true;
             }
+            return false;
         }
-        return false;
     }
     private boolean rectIntersect(Rect a, Rect b) {
         return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
     }
-    private boolean segmentsIntersect(Vector2 A, Vector2 B, Vector2 C, Vector2 D) {
-        float o1 = orientation(A,B,C);
-        float o2 = orientation(A, B, D);
-        float o3 = orientation(C, D, A);
-        float o4 = orientation(C, D, B);
+    private boolean segmentsIntersect(Vector2 T1, Vector2 T2, Vector2 R1, Vector2 R2) {
+        float o1 = orientation(T1,T2,R1);
+        float o2 = orientation(T1, T2, R2);
+        float o3 = orientation(R1, R2, T1);
+        float o4 = orientation(R1, R2, T2);
 
         if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) {
             return true;
         }
 
-        if (o1 == 0 && onSegment(A, B, C)) return true;
-        if (o2 == 0 && onSegment(A, B, D)) return true;
-        if (o3 == 0 && onSegment(C, D, A)) return true;
-        if (o4 == 0 && onSegment(C, D, B)) return true;
+        if (o1 == 0 && onSegment(T1, T2, R1)) return true;
+        if (o2 == 0 && onSegment(T1, T2, R2)) return true;
+        if (o3 == 0 && onSegment(R1, R2, T1)) return true;
+        if (o4 == 0 && onSegment(R1, R2, T2)) return true;
 
         return false;
     }
@@ -264,7 +264,6 @@ class Rect extends Shape implements Transparency, Colour{
     private boolean onSegment(Vector2 A, Vector2 B, Vector2 C) {
         return C.x >= Math.min(A.x, B.x) && C.x <= Math.max(A.x, B.x) && C.y >= Math.min(A.y, B.y) && C.y <= Math.max(A.y, B.y);
     }
-
     public Vector2[][] getEdges() {
         Vector2[][] edges = new Vector2[4][2];
         edges[0][0] = new Vector2(x, y);
@@ -463,14 +462,12 @@ class Circle extends Shape {
     }
 }
 class polygon extends Shape implements Transparency, Colour {
-    private int numOfPoints;
     private float alpha;
     FunctionLock lock;
     ArrayList<Tri> tris;
     Color colour;
 
     public polygon(int numOfPoints, Color colour) {
-        this.numOfPoints = numOfPoints;
         this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {
             this.points[i] = new FloatPoint(0, 0);
@@ -482,7 +479,6 @@ class polygon extends Shape implements Transparency, Colour {
         this.alpha = 1;
     }
     public polygon(int numOfPoints, Color colour, float alpha) {
-        this.numOfPoints = numOfPoints;
         this.points = new FloatPoint[numOfPoints];
         for (int i = 0; i < numOfPoints; i++) {
             this.points[i] = new FloatPoint(0, 0);
@@ -509,7 +505,7 @@ class polygon extends Shape implements Transparency, Colour {
     }
 
     public void UpdateTriangles() {
-        if (!lock.getState()) {
+        if (!lock.isUsed()) {
             tris.clear();
 
             List<FloatPoint> vertices = new ArrayList<>(points.length);
@@ -520,41 +516,46 @@ class polygon extends Shape implements Transparency, Colour {
 
             CheckForCCW(vertices);
 
-            int i = 0;
+            int currentPoint = 0;
             while (vertices.size() > 3) {
-                FloatPoint pre = vertices.get((i - 1 + vertices.size()) % vertices.size());
-                FloatPoint cur = vertices.get(i);
-                FloatPoint nex = vertices.get((i + 1) % vertices.size());
+                FloatPoint pre = vertices.get((currentPoint - 1 + vertices.size()) % vertices.size());
+                FloatPoint cur = vertices.get(currentPoint);
+                FloatPoint nex = vertices.get((currentPoint + 1) % vertices.size());
 
                 FloatPoint prev = new FloatPoint(cur.getX() - pre.getX(), cur.getY() - pre.getY());
                 FloatPoint next = new FloatPoint(nex.getX() - cur.getX(), nex.getY() - cur.getY());
 
                 if (!isConvex(prev, next)) {
-                    i = (i + 1) % vertices.size();
+                    currentPoint = (currentPoint + 1) % vertices.size();
                     continue;
                 }
 
                 Tri tri = new Tri(pre, cur, nex);
 
-                if (isVerticesInTri(tri, vertices, i)) {
-                    i = (i + 1) % vertices.size();
+                if (isVerticesInTri(tri, vertices, currentPoint)) {
+                    currentPoint = (currentPoint + 1) % vertices.size();
                     continue;
                 }
 
                 tris.add(tri);
 
-                vertices.remove(i);
-                i = (i + 1) % vertices.size();
+                vertices.remove(currentPoint);
+                currentPoint = (currentPoint + 1) % vertices.size();
             }
 
             tris.add(new Tri(vertices.get(0), vertices.get(1), vertices.get(2)));
             lock.used();
         }
     }
-    private boolean isConvex(FloatPoint v1, FloatPoint v2) {
-        return (v1.getX() * v2.getY()) - (v1.getY() * v2.getX()) > 0;
+    public void CheckForCCW(List<FloatPoint> vertices) {
+        if (Area(vertices) < 0) {
+            Collections.reverse(vertices);
+        }
     }
-    private boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
+    public boolean isConvex(FloatPoint vector1, FloatPoint vector2) {
+        return (vector1.getX() * vector2.getY()) - (vector1.getY() * vector2.getX()) > 0;
+    }
+    public boolean isVerticesInTri(Tri tri, List<FloatPoint> vertices, int currentPoint) {
         for (int n = 0; n < vertices.size(); n++) {
             if (n == currentPoint) continue;
             if (n == (currentPoint - 1 + vertices.size()) % vertices.size()) continue;
@@ -563,11 +564,11 @@ class polygon extends Shape implements Transparency, Colour {
         }
         return false;
     }
-    private float Area(List<FloatPoint> pts) {
+    public float Area(List<FloatPoint> points) {
         float area = 0;
-        int j = pts.size() - 1;
-        for (int i = 0; i < pts.size(); i++) {
-            area += (pts.get(j).getX() * pts.get(i).getY()) - (pts.get(i).getX() * pts.get(j).getY());
+        int j = points.size() - 1;
+        for (int i = 0; i < points.size(); i++) {
+            area += (points.get(j).getX() * points.get(i).getY()) - (points.get(i).getX() * points.get(j).getY());
             j = i;
         }
         return area / 2;
@@ -582,18 +583,17 @@ class polygon extends Shape implements Transparency, Colour {
             tri.Draw(sr);
         }
     }
-
     public void MoveX(float X) {
         for (FloatPoint point : points) {
             point.MoveX(X);
         }
     }
+
     public void MoveY(float Y) {
         for (FloatPoint point : points) {
             point.MoveY(Y);
         }
     }
-
     public boolean isPointInShape(FloatPoint point) {
         UpdateTriangles();
         for (Tri tri : tris) {
@@ -603,6 +603,7 @@ class polygon extends Shape implements Transparency, Colour {
         }
         return false;
     }
+
     public boolean onScreen() {
         for (FloatPoint point : points) {
             if (point.getX() <= GameData.getInstance().getScreenWidth() && point.getX() >= 0) {
@@ -628,12 +629,6 @@ class polygon extends Shape implements Transparency, Colour {
             double angle2 = Math.atan2(p2.getY() - centreY, p2.getX() - centreX);
             return Double.compare(angle1, angle2);
         });
-    }
-
-    private void CheckForCCW(List<FloatPoint> vertices) {
-        if (Area(vertices) < 0) {
-            Collections.reverse(vertices);
-        }
     }
 
     public void MakePointsBigger(int amount) {

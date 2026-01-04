@@ -574,7 +574,7 @@ public class Level {
         player.CreateTrail();
         player.calcHealthVisual();
     }
-    public void CheckDisplay() {
+    public void CheckTrailPositioningDisplay() {
         for (polygon polygon : player.zigTrail) {
             if (!polygon.onScreen()) {
                 player.zigTrail.remove(polygon);

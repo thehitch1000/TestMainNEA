@@ -106,7 +106,7 @@ class FunctionLock {
         used = false;
     }
 
-    public boolean getState() {
+    public boolean isUsed() {
         return used;
     }
 }

@@ -1,16 +1,15 @@
 package io.github.some_example_name;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
-public interface IntObstacle {
+public interface IntBarrier {
     void Draw(ShapeRenderer sr);
     void MoveX(float X);
     void MoveY(float Y);
     void setX(float X);
 }
 
-abstract class Obstacle implements IntObstacle {
+abstract class Barrier implements IntBarrier {
     protected Shape shape;
 
     public void MoveX(float X) {
@@ -32,7 +31,7 @@ abstract class Obstacle implements IntObstacle {
     }
 }
 
-class RectPath extends Obstacle {
+class RectPath extends Barrier {
     private boolean bottom;
 
     public RectPath(boolean bottom) {
@@ -45,28 +44,28 @@ class RectPath extends Obstacle {
     }
 
     public void setX (float X) {
-        ((Rect)shape).setX(X);
+        shape.setX(X);
     }
     public void setY(float Y) {
-        ((Rect)shape).setY(Y);
+        shape.setY(Y);
     }
     public void setHeight(float height) {
-        ((Rect)shape).setHeight(height);
+        shape.setHeight(height);
     }
     public void setWidth(float width) {
-        ((Rect)shape).setWidth(width);
+        shape.setWidth(width);
     }
     public float getX() {
-        return ((Rect)shape).getX();
+        return shape.getX();
     }
     public float getY() {
-        return ((Rect)shape).getY();
+        return shape.getY();
     }
     public float getHeight() {
-        return ((Rect)shape).getHeight();
+        return shape.getHeight();
     }
     public float getWidth() {
-        return ((Rect)shape).getWidth();
+        return shape.getWidth();
     }
 
     public boolean isBottom() {
@@ -77,7 +76,7 @@ class RectPath extends Obstacle {
     }
 }
 
-class TriPath extends Obstacle {
+class TriPath extends Barrier {
     private boolean bottom;
     public TriPath(boolean bottom) {
         shape = new Tri(new FloatPoint(0,0), new FloatPoint(0,0), new FloatPoint(0,0));
