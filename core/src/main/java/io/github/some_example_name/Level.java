@@ -23,7 +23,7 @@ public class Level {
     }
 
     String currentFileName;
-    List<Obstacle> obstacles;
+    List<Barrier> barriers;
     List<Zone> zones;
     List<Polygon> shapes;
     FloatQueue AverageHorPositionScalar, AverageDiagPositionScalar, AverageChangeDirection;
@@ -44,7 +44,7 @@ public class Level {
         monster = new Monster();
         background = new Background(20, 0);
 
-        obstacles = new ArrayList<>();
+        barriers = new ArrayList<>();
         zones = new ArrayList<>();
         shapes = new ArrayList<>();
 
@@ -74,7 +74,7 @@ public class Level {
         screenHeight = ScreenHeight.NEUTRAL;
         StartTime = 0;
         GameData.getInstance().setStop(false);
-        obstacles.clear();
+        barriers.clear();
         shapes.clear();
         zones.clear();
     }
@@ -380,8 +380,8 @@ public class Level {
                 switch (parts[0]) {
                     case "RectPath":
                         if (x1 - xTravelled <= 1700) {
-                            Obstacle rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight, Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
-                            obstacles.add(rectPath);
+                            Barrier rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight, Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
+                            barriers.add(rectPath);
                             shapeNumber++;
                             return true;
                         } else {
@@ -391,10 +391,10 @@ public class Level {
                     case "TriPath":
                         float X3 = Float.parseFloat(parts[3]);
                         if (x1 - xTravelled <= 1700 || X3 - xTravelled <= 1700) {
-                            Obstacle TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight),
+                            Barrier TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight),
                                 new FloatPoint(X3 - xTravelled, Float.parseFloat(parts[4]) - currentHeight),
                                 new FloatPoint(Float.parseFloat(parts[5]) - xTravelled, Float.parseFloat(parts[6]) - currentHeight), Boolean.parseBoolean(parts[7]));
-                            obstacles.add(TriPath);
+                            barriers.add(TriPath);
                             shapeNumber++;
                             return true;
                         } else {
@@ -448,18 +448,18 @@ public class Level {
         return false;
     }
     public void CheckObstacleCollision() {
-        for (Obstacle obstacle : obstacles) {
-            if (obstacle instanceof RectPath) {
-                if (PlayerRectPathCollision((Rect) obstacle.shape)) {
+        for (Barrier barrier : barriers) {
+            if (barrier instanceof RectPath) {
+                if (PlayerRectPathCollision((Rect) barrier.shape)) {
                     player.LoseLife();
                     monster.setAwake(true);
-                    PlayerRespawn(obstacle);
+                    PlayerRespawn(barrier);
                 }
-            } else if (obstacle instanceof TriPath) {
-                if (PlayerTriPathCollision((Tri) obstacle.shape)) {
+            } else if (barrier instanceof TriPath) {
+                if (PlayerTriPathCollision((Tri) barrier.shape)) {
                     player.LoseLife();
                     monster.setAwake(true);
-                    PlayerRespawn(obstacle);
+                    PlayerRespawn(barrier);
                 }
             }
         }
@@ -467,7 +467,7 @@ public class Level {
 
     public void MoveWorldX() {
         float X = -4;
-        obstacles.forEach(obstacle -> obstacle.MoveX(X));
+        barriers.forEach(barrier -> barrier.MoveX(X));
         player.zigTrail.forEach(trail -> trail.MoveX(X));
         player.MoveTempLinesX(X);
         xTravelled -= X;
@@ -480,7 +480,7 @@ public class Level {
     public void MoveWorldY(float Y) {
         currentHeight -= Y;
         player.MoveTempLinesY(Y);
-        obstacles.forEach(obstacle -> obstacle.MoveY(Y));
+        barriers.forEach(barrier -> barrier.MoveY(Y));
         player.zigTrail.forEach(trail -> trail.MoveY(Y));
         zones.forEach(zone -> zone.MoveY(Y));
         MoveBackgroundY(Y / 10);
@@ -583,16 +583,16 @@ public class Level {
         }
     }
 
-    public void AddObstacle(Obstacle obstacle) {
+    public void AddObstacle(Barrier barrier) {
         try (FileWriter writer = new FileWriter(currentFileName, true)) {
-            if (obstacle instanceof RectPath) {
-                Rect rect = (Rect) obstacle.shape;
-                RectPath rectPath = (RectPath) obstacle;
+            if (barrier instanceof RectPath) {
+                Rect rect = (Rect) barrier.shape;
+                RectPath rectPath = (RectPath) barrier;
                 writer.write("RectPath: " + rect.getX() + " " + rect.getY() + " " + rect.getWidth() + " " + rect.getHeight() + " " + rectPath.isBottom());
                 writer.write("\n");
-            } else if (obstacle instanceof TriPath) {
-                Tri tri = (Tri) obstacle.shape;
-                TriPath triPath = (TriPath) obstacle;
+            } else if (barrier instanceof TriPath) {
+                Tri tri = (Tri) barrier.shape;
+                TriPath triPath = (TriPath) barrier;
                 writer.write("TriPath: " + tri.points[0].getX() + " " + tri.points[0].getY() + " " +
                     tri.points[1].getX() + " " + tri.points[1].getY() + " " +
                     tri.points[2].getX() + " " + tri.points[2].getY() + " " + triPath.isBottom());
@@ -616,17 +616,17 @@ public class Level {
         }
     }
 
-    public void PlayerRespawn(Obstacle obstacle) {
+    public void PlayerRespawn(Barrier barrier) {
         System.out.println("Respawning Player");
         GameData.getInstance().setStop(true);
-        GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(obstacle));
+        GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(barrier));
         GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
     }
-    public void ZigZagRespawning(Obstacle obstacle) {
+    public void ZigZagRespawning(Barrier barrier) {
         float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.5f) / 10f;
 
-        if (obstacle instanceof RectPath) {
-            RectPath rectPath = (RectPath) obstacle;
+        if (barrier instanceof RectPath) {
+            RectPath rectPath = (RectPath) barrier;
 
             if (!rectPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
@@ -634,7 +634,7 @@ public class Level {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(move));
             }
         } else {
-            TriPath triPath = (TriPath) obstacle;
+            TriPath triPath = (TriPath) barrier;
             if (!triPath.isBottom()) {
                 GameData.getInstance().timers.runRepeatingUntil(0, 0.1f, 1f,() -> MovePlayerY(-move));
             } else {
@@ -876,10 +876,10 @@ public class Level {
 
     public void TransformShapes(int leftBound, int rightBound) {
         shapes.clear();
-        for (Obstacle obstacle : obstacles) {
+        for (Barrier barrier : barriers) {
             Polygon poly;
-            if (obstacle.shape instanceof Rect) {
-                Rect rect = (Rect) obstacle.shape;
+            if (barrier.shape instanceof Rect) {
+                Rect rect = (Rect) barrier.shape;
                 poly = new Polygon(new float[] {
                     rect.getX(), rect.getY(),
                     rect.getX() + rect.getWidth(), rect.getY(),
@@ -887,7 +887,7 @@ public class Level {
                     rect.getX(), rect.getY() + rect.getHeight()
                 });
             } else {
-                Tri tri = (Tri) obstacle.shape;
+                Tri tri = (Tri) barrier.shape;
                 poly = new Polygon(new float[]{
                     tri.points[0].getX(), tri.points[0].getY(),
                     tri.points[1].getX(), tri.points[1].getY(),

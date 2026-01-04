@@ -11,7 +11,7 @@ public class Drill {
         UP_RIGHT, RIGHT, DOWN_RIGHT
     }
 
-    List<Obstacle> currentShapes;
+    List<Barrier> currentShapes;
     FloatPoint[] intersectionPoints, points;
     LineEquation[] lines, oldLines;
     Direction newDirection, oldDirection, direction;
