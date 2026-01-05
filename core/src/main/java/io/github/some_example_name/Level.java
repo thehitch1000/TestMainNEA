@@ -581,6 +581,14 @@ public class Level {
             }
         }
     }
+    public void CheckZonesOnScreen() {
+        for (Zone zone : zones) {
+            if (zone.isZoneLeftOfScreen()) {
+                zones.remove(zone);
+                return;
+            }
+        }
+    }
 
     public void AddBarrier(Barrier barrier) {
         try (FileWriter writer = new FileWriter(currentFileName, true)) {
@@ -813,6 +821,8 @@ public class Level {
             stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
         }
 
+        if (stepper.end == null) return;
+
         Gdx.app.postRunnable(() -> {
             try {
                 stepper.FindPath();
@@ -831,47 +841,24 @@ public class Level {
             X = (int) (monster.midPoint.getX() + 250);
         }
 
-        Column = FindValidColumn(X);
-        System.out.println("Finding monster end point");
+        CheckMonsterWalkabilityRegion(X - margin, X + margin);
 
-        if (Column == null) {
-            System.out.println("Failed to find valid column");
-            Gdx.app.exit();
-        }
 
-        int attempts = 0;
-        do {
-            float yLevel = (float) Math.random() * (GameData.getInstance().getScreenHeight() - (cellSize/2f) - currentBottomOfLevel);
-            if (yLevel > currentTopOfLevel || yLevel < currentBottomOfLevel) continue;
-            float difference = yLevel % cellSize;
-            int nodeY = (int) (yLevel - currentBottomOfLevel - difference) / cellSize;
-            if (nodeY > Column.length - 1 || nodeY < 0) continue;
-            if (Column[nodeY].getState() == Node.NodeState.WALKABLE) {
-                System.out.println("Found valid monster end point at X: " + Column[0].getX() + " Y: " + Column[nodeY].getY());
-                return new FloatPoint(Column[nodeY].getX(), Column[nodeY].getY());
-            }
-            attempts++;
-        } while (attempts <= 100);
-        System.out.println("Failed to find valid monster end point");
-        return FindMonsterEndPoint();
-    }
-    private Node[] FindValidColumn(int x) {
-            // Search bidirectionally: forward and backward from x
-            for (int direction = -1; direction <= 1; direction += 2) {  // -1 for backward, 1 for forward
-                for (int step = 0; step <= 40; step++) {  // Increased range; step=0 checks starting x
-                    int columnX = x + (direction * step * cellSize);
-                    SetGridToOneColumn(columnX);
-                    CheckMonsterWalkabilityColumn(grid[0]);
-                    for (Node node : grid[0]) {
-                        if (node.getState() == Node.NodeState.WALKABLE) {
-                            return grid[0];  // Return immediately on finding a valid column
-                        }
-                    }
+
+        ArrayList<Node> walkableNodes = new ArrayList<>();
+
+        for (Node[] column : grid) {
+            for (Node node : column) {
+                if (node.getState() == Node.NodeState.WALKABLE) {
+                    walkableNodes.add(node);
                 }
             }
-            System.out.println("Warning: No valid column found within extended bidirectional search range");
-            return null;
         }
+
+        Node node = walkableNodes.get((int) (Math.random() * walkableNodes.size()));
+
+        return new FloatPoint(node.getX(), node.getY());
+    }
 
     public void TransformShapes(int leftBound, int rightBound) {
         shapes.clear();
@@ -963,12 +950,10 @@ public class Level {
     }
     public boolean isMonsterSafeAt(Rect rect) {
         for (Zone zone : zones) {
-            if (zone.isPointInZone(rect.getX() + rect.getWidth()/2f, rect.getY() + rect.getHeight()/2f)) {
-                for (Polygon obstacle : shapes) {
-                    if (obstacle != null) {
-                        if (rect.overlaps(obstacle)) {
-                            return false;
-                        }
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(rect.getX() + rect.getWidth()/2f, rect.getY() + rect.getHeight()/2f)) {
+                for (Polygon barrier : shapes) {
+                    if (rect.overlaps(barrier)) {
+                        return false;
                     }
                 }
                 return true;
@@ -1019,6 +1004,15 @@ public class Level {
 
     }
     public void AddAveragePositionScalar() {
+        Zone currentZone = new Zone();
+        for (Zone zone : zones) {
+            if (zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY()) && zone.getType() != Zone.Type.CHANGEDIRE) {
+                currentZone = zone;
+            }
+        }
+
+        TransformShapes((int) player.midPoint.getX(), (int) player.midPoint.getX());
+
 
     }
 }

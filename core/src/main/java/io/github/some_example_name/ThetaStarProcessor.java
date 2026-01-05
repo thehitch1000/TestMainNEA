@@ -19,6 +19,12 @@ public class ThetaStarProcessor {
     private float currentX, currentY;
 
     public ThetaStarProcessor(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level) {
+        if (endPoint == null) {
+            end = null;
+            return;
+        }
+
+
         this.leftX = (int) startPoint.getX() - margin;
         this.rightX = (int) endPoint.getX() + margin;
 

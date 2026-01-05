@@ -3,13 +3,16 @@ package io.github.some_example_name;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import java.awt.*;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.badlogic.gdx.Gdx.input;
 
@@ -31,77 +34,77 @@ public class Main extends ApplicationAdapter {
     Level level;
     Stage stage;
 
-    ArrayList<Runnable> start1 = new ArrayList<Runnable>() {{
+    List<Runnable> start1 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles1"));
     }};
-    ArrayList<Runnable> start2 = new ArrayList<Runnable>() {{
+    List<Runnable> start2 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles2"));
     }};
-    ArrayList<Runnable> start3 = new ArrayList<Runnable>() {{
+    List<Runnable> start3 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles3"));
     }};
-    ArrayList<Runnable> start4 = new ArrayList<Runnable>() {{
+    List<Runnable> start4 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles4"));
     }};
-    ArrayList<Runnable> start5 = new ArrayList<Runnable>() {{
+    List<Runnable> start5 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles5"));
     }};
-    ArrayList<Runnable> start6 = new ArrayList<Runnable>() {{
+    List<Runnable> start6 = new ArrayList<Runnable>() {{
         add(() -> startMenu.Close());
         add(() -> stage = Stage.LEVELSTATUSMENU);
         add(() -> levelStatusMenu.Open());
         add(() -> level.setCurrentFileName("obstacles6"));
     }};
-    ArrayList<Runnable> start7 = new ArrayList<Runnable>() {{
+    List<Runnable> start7 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
     }};
 
-    ArrayList<Runnable> pause1 = new ArrayList<Runnable>() {{
+    List<Runnable> pause1 = new ArrayList<Runnable>() {{
         add(() -> pauseMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false)));
     }};
-    ArrayList<Runnable> pause2 = new ArrayList<Runnable>() {{
+    List<Runnable> pause2 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
     }};
 
-    ArrayList<Runnable> ending1 = new ArrayList<Runnable>() {{
+    List<Runnable> ending1 = new ArrayList<Runnable>() {{
        add(() -> endingMenu.Close());
        add(() -> level.ResetLevel());
        add(() -> stage = Stage.STARTMENU);
        add(() -> startMenu.Open());
     }};
-    ArrayList<Runnable> ending2 = new ArrayList<Runnable>() {{
+    List<Runnable> ending2 = new ArrayList<Runnable>() {{
         add(() -> level.ResetLevel());
         add(() -> endingMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> level.setUpLevel(false));
     }};
-    ArrayList<Runnable> ending3 = new ArrayList<Runnable>() {{
+    List<Runnable> ending3 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
     }};
 
-    ArrayList<Runnable> ResetLevel = new ArrayList<Runnable>() {{
+    List<Runnable> ResetLevel = new ArrayList<Runnable>() {{
         add(() -> levelStatusMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> level.setUpLevel(true));
     }};
-    ArrayList<Runnable> KeepLevel = new ArrayList<Runnable>() {{
+    List<Runnable> KeepLevel = new ArrayList<Runnable>() {{
         add(() -> levelStatusMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> level.setUpLevel(false));
@@ -239,6 +242,14 @@ public class Main extends ApplicationAdapter {
                     level.player.PrintLines(sr);
                 }
 
+//                sr.setColor(Color.PURPLE);
+//
+//                level.shapes.forEach(polygon -> {
+//                    for (int i = 0; i < polygon.getVertices().length; i += 2) {
+//                        sr.line(polygon.getVertices()[i], polygon.getVertices()[i+1], polygon.getVertices()[(i+2) % polygon.getVertices().length], polygon.getVertices()[(i+3) % polygon.getVertices().length]);
+//                    }
+//                });
+
                 sr.end();
 
                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -248,6 +259,11 @@ public class Main extends ApplicationAdapter {
 
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
+                level.zones.forEach(zone -> {
+                    if (zone.getType() != Zone.Type.CHANGEDIRE) {
+                        zone.Draw(sr);
+                    }
+                });
 
                 sr.end();
 
