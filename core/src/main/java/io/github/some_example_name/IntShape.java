@@ -395,71 +395,72 @@ class Circle extends Shape {
         return x + radius >= 0 || x - radius <= GameData.getInstance().getScreenWidth();
     }
 
-    public boolean overlaps(Polygon obstacle) {
-        if (obstacle.getVertices().length == 6) {
-            return CircleTriOverlap(obstacle);
+    public boolean overlaps(Polygon barrier) {
+        float Distance;
+        if (barrier.getVertices().length == 6) {
+            FloatPoint point = new FloatPoint(x, y);
+
+            Tri tri = new Tri(new FloatPoint(barrier.getVertices()[0], barrier.getVertices()[1]),
+                new FloatPoint(barrier.getVertices()[2], barrier.getVertices()[3]),
+                new FloatPoint(barrier.getVertices()[4], barrier.getVertices()[5]));
+
+            if (tri.isPointInShape(point)) {
+                return true;
+            }
+
+            // Circle Touching or Intersecting
+            for (int i = 0; i < tri.points.length; i++) {
+                Vector2 A = new Vector2(tri.points[i].getX(), tri.points[i].getY());
+                Vector2 B = new Vector2(tri.points[(i + 2) % tri.points.length].getX(), tri.points[(i + 2) % tri.points.length].getY());
+                Vector2 C = new Vector2(x, y);
+
+                Vector2 AB = B.cpy().sub(A);
+                Vector2 AC = C.cpy().sub(A);
+
+                float t = Clamp(0, 1, (AC.dot(AB) / AB.len2()));
+                Vector2 closest = A.cpy().add(AB.scl(t));
+                Distance = (float) Math.sqrt(closest.dst2(C));
+
+                if (Distance <= radius * radius) {
+                    return true;
+                }
+            }
+            return false;
         } else {
-            return CircleRectOverlap(obstacle);
-        }
-    }
-    public boolean CircleRectOverlap(Polygon obstacle) {
+            FloatPoint[] barrierPoints = new FloatPoint[barrier.getVertices().length/2];
+            for (int i = 0; i < barrierPoints.length; i++) {
+                barrierPoints[i] = new FloatPoint(barrier.getVertices()[i * 2], barrier.getVertices()[i * 2 + 1]);
+            }
 
-        // Center in Rect?
-        if (x >= obstacle.getVertices()[0] && x <= obstacle.getVertices()[2]) {
-            if (y >= obstacle.getVertices()[1] && y <= obstacle.getVertices()[5]) {
+            // Center in Rect?
+            if (x >= barrierPoints[0].getX() && x <= barrierPoints[1].getX()) {
+                if (y >= barrierPoints[0].getY() && y <= barrierPoints[3].getY()) {
+                    return true;
+                }
+            }
+
+            // Closest Point to Rect
+            float closestX = Clamp(barrierPoints[0].getX(), barrierPoints[1].getX(), x);
+            float closestY = Clamp(barrierPoints[0].getY(), barrierPoints[3].getY(), y);
+
+            float ChangeX = closestX - x;
+            float ChangeY = closestY - y;
+            Distance = (float) Math.sqrt(Math.pow(ChangeX, 2) + Math.pow(ChangeY, 2));
+
+            if (Distance <= radius) {
                 return true;
             }
+
+            return false;
         }
-
-        // Closest Point to Rect
-        float closestX = Clamp(obstacle.getVertices()[0], obstacle.getVertices()[2], x);
-        float closestY = Clamp(obstacle.getVertices()[1], obstacle.getVertices()[5], y);
-
-        float ChangeX = closestX - x;
-        float ChangeY = closestY - y;
-        float Distance = (float) Math.sqrt(Math.pow(ChangeX, 2) + Math.pow(ChangeY, 2));
-
-        if (Distance <= radius) {
-            return true;
-        }
-
-        return false;
     }
-    public boolean CircleTriOverlap(Polygon obstacle) {
-        FloatPoint point = new FloatPoint(x, y);
 
-        Tri tri = new Tri(new FloatPoint(obstacle.getVertices()[0], obstacle.getVertices()[1]),
-                          new FloatPoint(obstacle.getVertices()[2], obstacle.getVertices()[3]),
-                          new FloatPoint(obstacle.getVertices()[4], obstacle.getVertices()[5]));
-
-        if (tri.isPointInShape(point)) {
-            return true;
-        }
-
-        // Circle Touching or Intersecting
-        for (int i = 0; i < obstacle.getVertices().length; i += 2) {
-            int length = obstacle.getVertices().length;
-            Vector2 A = new Vector2(obstacle.getVertices()[i], obstacle.getVertices()[i + 1]);
-            Vector2 B = new Vector2(obstacle.getVertices()[(i + 2) % length], obstacle.getVertices()[(i + 3) % length]);
-            Vector2 C = new Vector2(x, y);
-
-            Vector2 AB = B.cpy().sub(A);
-            Vector2 AC = C.cpy().sub(A);
-            float t = Clamp(0, 1, (AC.dot(AB) / AB.len2()));
-            Vector2 closest = A.cpy().add(AB.scl(t));
-            float SquaredDistance = closest.dst2(C);
-
-            if (SquaredDistance <= radius * radius) {
-                return true;
-            }
-        }
-        return false;
-    }
     public float Clamp(float min, float max, float value) {
         if (value < min) value = min;
         if (value > max) value = max;
         return value;
     }
+
 }
 class polygon extends Shape implements Transparency, Colour {
     private float alpha;

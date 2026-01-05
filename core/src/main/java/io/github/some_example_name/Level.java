@@ -330,7 +330,7 @@ public class Level {
                 String line = lines.get(i);
                 String[] parts = line.split(":\\s+|\\s+");
 
-                if (!lock.getState() && parts[0].equals("RectPath")) {
+                if (!lock.isUsed() && parts[0].equals("RectPath")) {
                     fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 75) +
                         " " + parts[3] + " " + (drill.getTopOfLevel() - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
                     fileWriter.newLine();
@@ -782,7 +782,7 @@ public class Level {
             playerMissilePathPending = true;
         }
 
-        ThetaStarStepper stepper = new ThetaStarStepper (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
 
         CheckMissileWalkabilityRegion((int) startPoint.getX() - margin, (int) endPoint.getX() + margin);
 
@@ -804,13 +804,13 @@ public class Level {
 
         monster.CalcMidPoint();
 
-        ThetaStarStepper stepper;
+        ThetaStarProcessor stepper;
 
 
         if (!monster.currentPath.isEmpty()) {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
         } else {
-            stepper = new ThetaStarStepper(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
         }
 
         Gdx.app.postRunnable(() -> {

@@ -3,7 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.math.Polygon;
 import java.util.ArrayList;
 
-public class ThetaStarStepper {
+public class ThetaStarProcessor {
     final int cellSize = 8;
 
     private final int margin = 4 * cellSize;
@@ -18,7 +18,7 @@ public class ThetaStarStepper {
     private Level level;
     private float currentX, currentY;
 
-    public ThetaStarStepper(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level) {
+    public ThetaStarProcessor(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level) {
         this.leftX = (int) startPoint.getX() - margin;
         this.rightX = (int) endPoint.getX() + margin;
 

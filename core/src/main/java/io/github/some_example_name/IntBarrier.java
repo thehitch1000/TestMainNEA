@@ -11,6 +11,7 @@ public interface IntBarrier {
 
 abstract class Barrier implements IntBarrier {
     protected Shape shape;
+    protected boolean bottom;
 
     public void MoveX(float X) {
         shape.MoveX(X);
@@ -26,14 +27,18 @@ abstract class Barrier implements IntBarrier {
     public float getY() {return 0;}
     public float getWidth() {return 0;}
     public float getHeight() {return 0;}
+    public boolean isBottom() {
+        return bottom;
+    }
+    public void setBottom(boolean bottom) {
+        this.bottom = bottom;
+    }
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
     }
 }
 
 class RectPath extends Barrier {
-    private boolean bottom;
-
     public RectPath(boolean bottom) {
         shape = new Rect(0, 0);
         this.bottom = bottom;
@@ -67,30 +72,15 @@ class RectPath extends Barrier {
     public float getWidth() {
         return shape.getWidth();
     }
-
-    public boolean isBottom() {
-        return bottom;
-    }
-    public void setBottom(boolean bottom) {
-        this.bottom = bottom;
-    }
 }
 
 class TriPath extends Barrier {
-    private boolean bottom;
     public TriPath(boolean bottom) {
         shape = new Tri(new FloatPoint(0,0), new FloatPoint(0,0), new FloatPoint(0,0));
         this.bottom = bottom;
     }
     public TriPath(FloatPoint point1, FloatPoint point2, FloatPoint point3, boolean bottom) {
         shape = new Tri(point1, point2, point3);
-        this.bottom = bottom;
-    }
-
-    public boolean isBottom() {
-        return bottom;
-    }
-    public void setBottom(boolean bottom) {
         this.bottom = bottom;
     }
 }
