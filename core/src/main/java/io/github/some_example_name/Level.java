@@ -33,7 +33,7 @@ public class Level {
     Background background;
     Drill drill;
     Node[][] grid;
-    int levelDistance = 3000, cellSize = 8, margin = 4 * cellSize;
+    int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize;
     boolean monsterPathPending = false, playerMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
@@ -93,7 +93,7 @@ public class Level {
         return currentHeight;
     }
     public int getBottomOfLevel() {
-        return (int) drill.getBottomOfLevel();
+        return (int) currentBottomOfLevel;
     }
 
     public void setCurrentFileName(String fileName) {
@@ -259,19 +259,19 @@ public class Level {
     public void TransferShapes() {
         if (drill.currentShapes.size() == 2) {
             if (drill.currentShapes.get(0).getX() < drill.currentShapes.get(1).getX()) {
-                AddObstacle(drill.currentShapes.get(0));
-                AddObstacle(drill.currentShapes.get(1));
+                AddBarrier(drill.currentShapes.get(0));
+                AddBarrier(drill.currentShapes.get(1));
             } else {
-                AddObstacle(drill.currentShapes.get(1));
-                AddObstacle(drill.currentShapes.get(0));
+                AddBarrier(drill.currentShapes.get(1));
+                AddBarrier(drill.currentShapes.get(0));
             }
         } else if (drill.currentShapes.get(0).getX() > drill.currentShapes.get(3).getX()) {
             for (int i = drill.currentShapes.size() - 1; i >= 0; i--) {
-                AddObstacle(drill.currentShapes.get(i));
+                AddBarrier(drill.currentShapes.get(i));
             }
         } else {
             for (int i = 0; i < drill.currentShapes.size(); i++) {
-                AddObstacle(drill.currentShapes.get(i));
+                AddBarrier(drill.currentShapes.get(i));
             }
         }
         drill.currentShapes.clear();
@@ -331,8 +331,7 @@ public class Level {
                 String[] parts = line.split(":\\s+|\\s+");
 
                 if (!lock.isUsed() && parts[0].equals("RectPath")) {
-                    fileWriter.write("RectPath: " + parts[1] + " " + (drill.getBottomOfLevel() - 75) +
-                        " " + parts[3] + " " + (drill.getTopOfLevel() - drill.getBottomOfLevel() + 150) + " " + Boolean.parseBoolean(parts[5]));
+                    fileWriter.write(line);
                     fileWriter.newLine();
                     lock.used();
                 } else {
@@ -583,7 +582,7 @@ public class Level {
         }
     }
 
-    public void AddObstacle(Barrier barrier) {
+    public void AddBarrier(Barrier barrier) {
         try (FileWriter writer = new FileWriter(currentFileName, true)) {
             if (barrier instanceof RectPath) {
                 Rect rect = (Rect) barrier.shape;
@@ -623,7 +622,7 @@ public class Level {
         GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
     }
     public void ZigZagRespawning(Barrier barrier) {
-        float move = ((drill.points[3].getY() - drill.points[0].getY()) * 0.5f) / 10f;
+        float move = (levelHeight * 0.5f) / 10f;
 
         if (barrier instanceof RectPath) {
             RectPath rectPath = (RectPath) barrier;
@@ -659,6 +658,8 @@ public class Level {
     }
 
     public void BuildLevel() {
+        drill = new Drill();
+
         GameData.getInstance().EmptyFile(currentFileName);
 
         drill.setNewDirection(drill.directions[(int) Math.ceil(Math.random() * 3) % 3]);
@@ -690,7 +691,7 @@ public class Level {
             e.printStackTrace();
         }
 
-        AddObstacle(new RectPath(0, 0, 700, GameData.getInstance().getScreenHeight(), false));
+        AddBarrier(new RectPath(0, -400, 700, 2000, false));
 
         CreateZigZagLevel();
         AdjustShapesHeights();
@@ -782,7 +783,7 @@ public class Level {
             playerMissilePathPending = true;
         }
 
-        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+        ThetaStarProcessor stepper = new ThetaStarProcessor (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
 
         CheckMissileWalkabilityRegion((int) startPoint.getX() - margin, (int) endPoint.getX() + margin);
 
@@ -806,7 +807,6 @@ public class Level {
 
         ThetaStarProcessor stepper;
 
-
         if (!monster.currentPath.isEmpty()) {
             stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
         } else {
@@ -824,7 +824,6 @@ public class Level {
         });
     }
     public FloatPoint FindMonsterEndPoint() {
-        Node[] Column;
         int X;
         if (!monster.currentPath.isEmpty()) {
             X = (int) (monster.currentPath.get(monster.currentPath.size() - 1).endPoint.getX() + 250);
@@ -914,12 +913,6 @@ public class Level {
             for (int y = 0; y < grid[x].length; y++) {
                 grid[x][y] = new Node(start + (x * cellSize) + (cellSize / 2), (int) currentBottomOfLevel + (y * cellSize) + (cellSize / 2), Node.NodeState.WALKABLE);
             }
-        }
-    }
-    public void SetGridToOneColumn(int x){
-        grid = new Node[1][(int) ((currentTopOfLevel - currentBottomOfLevel)/ cellSize)];
-        for (int y = 0; y < grid[0].length; y++)  {
-            grid[0][y] = new Node(x, (int) currentBottomOfLevel + (y * cellSize) + (cellSize / 2), Node.NodeState.WALKABLE);
         }
     }
 

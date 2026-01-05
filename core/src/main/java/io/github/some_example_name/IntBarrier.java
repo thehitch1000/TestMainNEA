@@ -27,14 +27,14 @@ abstract class Barrier implements IntBarrier {
     public float getY() {return 0;}
     public float getWidth() {return 0;}
     public float getHeight() {return 0;}
+    public void Draw(ShapeRenderer sr) {
+        shape.Draw(sr);
+    }
     public boolean isBottom() {
         return bottom;
     }
     public void setBottom(boolean bottom) {
         this.bottom = bottom;
-    }
-    public void Draw(ShapeRenderer sr) {
-        shape.Draw(sr);
     }
 }
 

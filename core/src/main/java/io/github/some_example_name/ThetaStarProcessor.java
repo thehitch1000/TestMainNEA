@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.Polygon;
 import java.util.ArrayList;
 
 public class ThetaStarProcessor {
-    final int cellSize = 8;
+    final int cellSize = 16;
 
     private final int margin = 4 * cellSize;
     private int leftX, rightX;
@@ -34,14 +34,6 @@ public class ThetaStarProcessor {
         this.openList = new NodePrioQueue(1500);
         path = new ArrayList<>();
 
-        System.out.println("StartPoint: " + startPoint.getX() + ", " + startPoint.getY());
-        System.out.println("EndPoint: " + endPoint.getX() + ", " + endPoint.getY());
-
-        System.out.println("Start: " + start.getX() + ", " + start.getY());
-        System.out.println("End: " + end.getX() + ", " + end.getY());
-
-        System.out.println("End State: " + end.getState());
-
         pathFound = false;
 
         start.setG(0f);
@@ -56,7 +48,6 @@ public class ThetaStarProcessor {
         if (LineOfSight(type, start, end)) {
             ConstructSimplePath();
             pathFound = true;
-            System.out.println("Direct Line of Sight!");
         } else {
             while (!pathFound) {
                 if (openList.isEmpty()) {
@@ -65,15 +56,11 @@ public class ThetaStarProcessor {
                 } else {
                     Node current = openList.dequeue();
                     if (current == end) {
-                        System.out.println("Path Found!");
                         pathFound = true;
                         ConstructComplexPath();
                         return;
                     }
-                    if (pathFound) {
-                        System.out.println("Left this way");
-                        return;
-                    }
+                    if (pathFound) return;
                     for (Node neighbour : getNeighbours(current)) {
                         ProcessNeighbour(current, neighbour, end);
                     }

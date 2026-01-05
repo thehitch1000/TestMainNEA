@@ -25,6 +25,7 @@ public class Zone {
         polygon = new polygon(4,colour);
         polygon.setAlpha(0.5f);
     }
+    public Zone() {}
 
     public Type getType() {
         return type;
@@ -50,5 +51,14 @@ public class Zone {
 
     public boolean isPointInZone(float x, float y) {
         return polygon.isPointInShape(new FloatPoint(x,y));
+    }
+
+    public boolean isZoneLeftOfScreen() {
+        for (FloatPoint point : polygon.points) {
+            if (point.getX() >= 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }

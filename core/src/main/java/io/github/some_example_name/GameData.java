@@ -9,22 +9,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GameData {
-    private int ScreenWidth, ScreenHeight;
+    private int ScreenWidth, ScreenHeight, frameNumber;
     private boolean Stop;
     private float BackgroundSpeed, elapsedTime;
     FunctionTimer timers;
     List<FunctionLock> locks;
+    ArrayList<FunctionFrameTimer> frameTimers = new ArrayList<>();
 
     private static GameData instance = null;
 
     public static GameData getInstance() {
         if (instance == null) {
-            instance = new GameData(0.25f, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+            instance = new GameData(0.25f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         }
         return instance;
     }
 
-    public GameData (float BackgroundSpeed,
+    public GameData(float BackgroundSpeed,
                     int ScreenWidth, int ScreenHeight) {
         this.Stop = false;
         this.elapsedTime = 0;
@@ -38,6 +39,7 @@ public class GameData {
 
     public void Maintenance() {
         elapsedTime += Gdx.graphics.getDeltaTime() * 1000;
+        frameNumber++;
         resetLocks();
     }
 
@@ -69,6 +71,10 @@ public class GameData {
         return ScreenHeight;
     }
 
+    public int getFrameNumber() {
+        return frameNumber++;
+    }
+
     public void EmptyFile(String fileName) {
         try (FileWriter writer = new FileWriter(fileName, false)) {
             writer.write("");
@@ -89,6 +95,14 @@ public class GameData {
 
     public void resetLocks() {
         locks.forEach(lock -> lock.reset());
+    }
+
+    public void CheckFrameTimers() {
+        for (FunctionFrameTimer timer : frameTimers) {
+            if (timer.getFrameNumber() == frameNumber) {
+                timer.function.run();
+            }
+        }
     }
 }
 
@@ -160,7 +174,7 @@ class FunctionTimer {
         return task;
     }
 
-    public Timer.Task runRepeatingUntil(float seconds, float interval, float ending, Runnable runnable) {
+    public void runRepeatingUntil(float seconds, float interval, float ending, Runnable runnable) {
         Timer.Task task = new Timer.Task() {
             float elapsed = 0;
             @Override
@@ -176,7 +190,27 @@ class FunctionTimer {
 
         Timer.schedule(task, seconds, interval);
         ActiveTasks.add(task);
-
-        return task;
     }
 }
+
+class FunctionFrameTimer {
+    private int frameNumber;
+    private boolean used = false;
+    Runnable function;
+
+    public FunctionFrameTimer() {
+        this.frameNumber = Integer.MAX_VALUE;
+    }
+
+    public int getFrameNumber() {
+        return frameNumber;
+    }
+
+    public void runFunctionAfterFrames(int frameNumber, Runnable function) {
+        this.function = function;
+        this.frameNumber = frameNumber;
+    }
+}
+
+
+

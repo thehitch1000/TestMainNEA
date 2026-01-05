@@ -192,7 +192,7 @@ public class Main extends ApplicationAdapter {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                     }
 
-                    if (level.monster.midPoint.getX() <= 250) {
+                    if (level.monster.midPoint.getX() <= 300) {
                         level.MoveMonsterAlongPath();
                     }
 
@@ -202,6 +202,8 @@ public class Main extends ApplicationAdapter {
                     level.player.UpdatePoints();
 
                     level.CheckTrailPositioningDisplay();
+
+                    level.CheckZonesOnScreen();
 
                     level.CheckObstacleCollision();
                 }
@@ -213,6 +215,19 @@ public class Main extends ApplicationAdapter {
                 level.barriers.forEach(obstacle -> obstacle.Draw(sr));
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
                 level.player.missiles.forEach(missile -> missile.Draw(sr));
+
+                if (input.isKeyPressed(Input.Keys.P)) {
+                    for (Node[] nodes : level.grid) {
+                        for (Node node : nodes) {
+                            if (node.getState() == Node.NodeState.WALKABLE) {
+                                sr.setColor(new com.badlogic.gdx.graphics.Color(0, 1, 0, 1f));
+                            } else {
+                                sr.setColor(new Color(1, 0, 0, 1f));
+                            }
+                            node.Draw(sr);
+                        }
+                    }
+                }
 
                 sr.end();
 

@@ -16,7 +16,7 @@ import static com.badlogic.gdx.Gdx.input;
 
 public class Menu {
     private boolean open;
-    ArrayList<Button> buttons;
+    List<Button> buttons;
     Body body;
 
     public Menu() {
@@ -56,10 +56,10 @@ public class Menu {
 
 class Button {
     private Text text;
-    ArrayList<Runnable> actions;
+    List<Runnable> actions;
     private Rect buttonShape;
 
-    public Button(String message, ArrayList<Runnable> Actions, float centreX, float centreY, BitmapFont font) {
+    public Button(String message, List<Runnable> Actions, float centreX, float centreY, BitmapFont font) {
         this.text = new Text(message, centreX, centreY, font);
 
         actions = Actions;
@@ -103,7 +103,7 @@ class Button {
 }
 
 class Body {
-    List<Text> lines;
+    ArrayList<Text> lines;
     private float CentreX;
 
     public Body(float CentreX) {
