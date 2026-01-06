@@ -23,6 +23,9 @@ public class LineEquation {
             direction = LineDirection.DIAGONAL;
         }
     }
+    public LineEquation(float Grad, FloatPoint point) {
+        this(Grad, point.getY() - (Grad * point.getX()), LineDirection.DIAGONAL);
+    }
 
     public float getGradient() {
         return Gradient;

@@ -78,6 +78,7 @@ public class Main extends ApplicationAdapter {
         add(() -> pauseMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> level.UnpauseLevel());
+        add(() -> GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false)));
     }};
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
@@ -168,9 +169,10 @@ public class Main extends ApplicationAdapter {
                 if (level.CheckLevelEnd()) {
                     stage = Stage.ENDING;
                     GameData.getInstance().setStop(true);
+                    level.AddToTotalLevelTime();
                     endingMenu.Open();
                     endingMenu.body.ClearLines();
-                    endingMenu.body.AddLine("Your Time: " + (int) (GameData.getInstance().getElapsedTime() - level.getStartTime()) / 1000f + "s", 600, font);
+                    endingMenu.body.AddLine("Your Time: " + (int) level.getTotalLevelTime() / 1000f + "s", 600, font);
                 }
 
                 if (level.player.getLives() <= 0 || level.player.CheckHealth()) {
@@ -240,8 +242,6 @@ public class Main extends ApplicationAdapter {
 //                });
 
                 sr.end();
-
-//                System.out.println("Zone Count: " + level.zones.size());
 
                 Gdx.gl.glEnable(GL20.GL_BLEND);
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);

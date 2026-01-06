@@ -255,14 +255,13 @@ class Rect extends Shape implements Transparency, Colour{
                     }
                 }
             }
-            return false;
         } else {
             Rect barrierRect = new Rect(barrierPoints[0].getX(), barrierPoints[0].getY(), barrierPoints[1].getX() - barrierPoints[0].getX(), barrierPoints[2].getY() - barrierPoints[1].getY());
             if (rectIntersect(this, barrierRect)) {
                 return true;
             }
-            return false;
         }
+        return false;
     }
     private boolean rectIntersect(Rect a, Rect b) {
         return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
@@ -451,7 +450,6 @@ class Circle extends Shape {
                     return true;
                 }
             }
-            return false;
         } else {
             FloatPoint[] barrierPoints = new FloatPoint[barrier.getVertices().length/2];
             for (int i = 0; i < barrierPoints.length; i++) {
@@ -476,9 +474,8 @@ class Circle extends Shape {
             if (Distance <= radius) {
                 return true;
             }
-
-            return false;
         }
+        return false;
     }
 
     public float Clamp(float min, float max, float value) {
@@ -664,21 +661,9 @@ class polygon extends Shape implements Transparency, Colour {
 class Quad extends Shape implements Transparency, Colour {
     private float alpha;
     Color colour;
-    Tri[] tris;
+    List<Tri> tris;
     FunctionLock lock;
 
-    public Quad(FloatPoint point1, FloatPoint point2, FloatPoint point3, FloatPoint point4) {
-        points = new FloatPoint[4];
-        points[0] = point1;
-        points[1] = point2;
-        points[2] = point3;
-        points[3] = point4;
-        alpha = 0.5f;
-
-        tris = new Tri[2];
-        tris[0] = new Tri(points[0], points[1], points[2]);
-        tris[1] = new Tri(points[2], points[3], points[0]);
-    }
     public Quad(Color colour) {
         points = new FloatPoint[4];
         for (int i = 0; i < 4; i++) {
@@ -687,9 +672,10 @@ class Quad extends Shape implements Transparency, Colour {
         alpha = 0.5f;
         this.colour = colour;
 
-        tris = new Tri[2];
-        tris[0] = new Tri(points[0], points[1], points[2]);
-        tris[1] = new Tri(points[2], points[3], points[0]);
+        tris = new ArrayList<Tri>(){{
+            new Tri(points[0], points[1], points[2]);
+            new Tri(points[2], points[3], points[0]);
+        }};
     }
 
     public void setAlpha(float Alpha) {
@@ -707,23 +693,26 @@ class Quad extends Shape implements Transparency, Colour {
     }
 
     public void Draw(ShapeRenderer sr) {
+        updateTriangles();
         sr.setColor(colour.r, colour.g, colour.b, alpha);
-        for (Tri tri : tris) {
-            tri.Draw(sr);
-        }
+        tris.forEach(tri -> tri.Draw(sr));
     }
 
     public void updateTriangles() {
         if (lock.isUsed()) return;
-        tris[0] = new Tri(points[0], points[1], points[2]);
-        tris[1] = new Tri(points[2], points[3], points[0]);
+        tris.clear();
+        tris.add(new Tri(points[0], points[1], points[2]));
+        tris.add(new Tri(points[2], points[3], points[0]));
+        lock.used();
     }
 
     public boolean isPointInShape(FloatPoint point) {
-        return tris[0].isPointInShape(point) || tris[1].isPointInShape(point);
+        updateTriangles();
+        return tris.get(0).isPointInShape(point) || tris.get(1).isPointInShape(point);
     }
 
     public boolean onScreen() {
+        updateTriangles();
         return points[0].getX() <= GameData.getInstance().getScreenWidth() && points[0].getX() >= 0;
     }
 }
