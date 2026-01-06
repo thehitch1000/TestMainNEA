@@ -110,7 +110,6 @@ public class ThetaStarProcessor {
         FloatPoint startPoint = new FloatPoint(startNode.getX(), startNode.getY());
         FloatPoint endPoint = new FloatPoint(endNode.getX(), endNode.getY());
         LineSegment segment = new LineSegment(startPoint, endPoint);
-        segment.setSegment();
         Shape shape;
         int speed = 4;
         if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {

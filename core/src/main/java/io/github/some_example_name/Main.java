@@ -77,7 +77,7 @@ public class Main extends ApplicationAdapter {
     List<Runnable> pause1 = new ArrayList<Runnable>() {{
         add(() -> pauseMenu.Close());
         add(() -> stage = Stage.PLAYING);
-        add(() -> GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false)));
+        add(() -> level.UnpauseLevel());
     }};
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
         add(() -> Gdx.app.exit());
@@ -160,6 +160,7 @@ public class Main extends ApplicationAdapter {
             case PLAYING:
                 if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                     stage = Stage.PAUSED;
+                    level.AddToTotalLevelTime();
                     GameData.getInstance().setStop(true);
                     pauseMenu.Open();
                 }
@@ -180,7 +181,6 @@ public class Main extends ApplicationAdapter {
                     endingMenu.body.AddLine("You Lost!", 600, font);
                 }
 
-
                 if (!GameData.getInstance().isStop()) {
                     while (level.ReadFile());
 
@@ -191,6 +191,7 @@ public class Main extends ApplicationAdapter {
 
                     level.MoveMissiles();
 
+
                     if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                     }
@@ -198,6 +199,7 @@ public class Main extends ApplicationAdapter {
                     if (level.monster.midPoint.getX() <= 300) {
                         level.MoveMonsterAlongPath();
                     }
+
 
                     level.player.CalcMidPoints();
                     level.monster.CalcMidPoint();
@@ -219,19 +221,6 @@ public class Main extends ApplicationAdapter {
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
                 level.player.missiles.forEach(missile -> missile.Draw(sr));
 
-                if (input.isKeyPressed(Input.Keys.P)) {
-                    for (Node[] nodes : level.grid) {
-                        for (Node node : nodes) {
-                            if (node.getState() == Node.NodeState.WALKABLE) {
-                                sr.setColor(new com.badlogic.gdx.graphics.Color(0, 1, 0, 1f));
-                            } else {
-                                sr.setColor(new Color(1, 0, 0, 1f));
-                            }
-                            node.Draw(sr);
-                        }
-                    }
-                }
-
                 sr.end();
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
@@ -252,6 +241,8 @@ public class Main extends ApplicationAdapter {
 
                 sr.end();
 
+//                System.out.println("Zone Count: " + level.zones.size());
+
                 Gdx.gl.glEnable(GL20.GL_BLEND);
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
@@ -259,15 +250,11 @@ public class Main extends ApplicationAdapter {
 
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
-                level.zones.forEach(zone -> {
-                    if (zone.getType() != Zone.Type.CHANGEDIRE) {
-                        zone.Draw(sr);
-                    }
-                });
 
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
+
                 break;
 
             case STARTMENU:

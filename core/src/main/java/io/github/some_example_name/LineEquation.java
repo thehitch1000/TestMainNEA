@@ -5,7 +5,7 @@ public class LineEquation {
     private LineDirection direction;
 
     public enum LineDirection {
-        HORIZONTAL, DIAGONAL
+        HORIZONTAL, DIAGONAL, VERTICAL
     }
 
     public LineEquation(float Gradient, float YIntercept, LineDirection direction) {
@@ -17,6 +17,8 @@ public class LineEquation {
         CalcLine(point1, point2);
         if (point1.getY() == point2.getY()) {
             direction = LineDirection.HORIZONTAL;
+        } else if (point1.getX() == point2.getX()) {
+            direction = LineDirection.VERTICAL;
         } else {
             direction = LineDirection.DIAGONAL;
         }

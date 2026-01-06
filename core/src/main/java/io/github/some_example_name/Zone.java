@@ -9,7 +9,7 @@ public class Zone {
     public enum Type {
         UPDIAG, RIGHT, DOWNDIAG, CHANGEDIRE
     }
-    polygon polygon;
+    Quad quad;
     Type type;
 
 
@@ -22,8 +22,8 @@ public class Zone {
             case DOWNDIAG: colour = Color.BLUE; break;
             default: colour = Color.YELLOW;
         }
-        polygon = new polygon(4,colour);
-        polygon.setAlpha(0.5f);
+        quad = new Quad(colour);
+        quad.setAlpha(0.5f);
     }
     public Zone() {}
 
@@ -35,26 +35,26 @@ public class Zone {
     }
 
     public boolean onScreen() {
-        return polygon.onScreen();
+        return quad.onScreen();
     }
 
     public void Draw(ShapeRenderer sr) {
-        polygon.Draw(sr);
+        quad.Draw(sr);
     }
 
     public void MoveX(float x) {
-        polygon.MoveX(x);
+        quad.MoveX(x);
     }
     public void MoveY(float y) {
-        polygon.MoveY(y);
+        quad.MoveY(y);
     }
 
     public boolean isPointInZone(float x, float y) {
-        return polygon.isPointInShape(new FloatPoint(x,y));
+        return quad.isPointInShape(new FloatPoint(x,y));
     }
 
     public boolean isZoneLeftOfScreen() {
-        for (FloatPoint point : polygon.points) {
+        for (FloatPoint point : quad.points) {
             if (point.getX() >= 0) {
                 return false;
             }

@@ -3,6 +3,7 @@ package io.github.some_example_name;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Vector2;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,10 +34,11 @@ public class Level {
     Background background;
     Drill drill;
     Node[][] grid;
-    int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize;
+
+    final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize;
     boolean monsterPathPending = false, playerMissilePathPending = false;
 
-    private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight;
+    private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight, totalLevelTime;
     private int shapeNumber;
 
     public Level() {
@@ -71,12 +73,20 @@ public class Level {
         monster = new Monster();
         shapeNumber = 0;
         currentHeight = 0;
+        totalLevelTime = 0;
         screenHeight = ScreenHeight.NEUTRAL;
         StartTime = 0;
         GameData.getInstance().setStop(false);
         barriers.clear();
         shapes.clear();
         zones.clear();
+    }
+    public void UnpauseLevel() {
+        StartTime = GameData.getInstance().getElapsedTime();
+    }
+    public void AddToTotalLevelTime() {
+        totalLevelTime += GameData.getInstance().getElapsedTime() - StartTime;
+        GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false));
     }
 
     public boolean CheckLevelEnd() {
@@ -291,26 +301,26 @@ public class Level {
         switch (drill.getDirection()) {
             case UP_RIGHT:
             case DOWN_RIGHT:
-                zone.polygon.points[0].setWholePoint(drill.currentShapes.get(2).shape.points[0]);
-                zone.polygon.points[1].setWholePoint(drill.currentShapes.get(2).shape.points[2]);
-                zone.polygon.points[2].setWholePoint(drill.currentShapes.get(1).shape.points[2]);
-                zone.polygon.points[3].setWholePoint(drill.currentShapes.get(1).shape.points[0]);
+                zone.quad.points[0].setWholePoint(drill.currentShapes.get(2).shape.points[0]);
+                zone.quad.points[1].setWholePoint(drill.currentShapes.get(2).shape.points[2]);
+                zone.quad.points[2].setWholePoint(drill.currentShapes.get(1).shape.points[2]);
+                zone.quad.points[3].setWholePoint(drill.currentShapes.get(1).shape.points[0]);
                 break;
             case RIGHT:
-                zone.polygon.points[0].setPoint(drill.currentShapes.get(1).getX(), drill.currentShapes.get(1).getHeight());
-                zone.polygon.points[1].setPoint(drill.currentShapes.get(1).getX() + drill.currentShapes.get(1).getWidth(), drill.currentShapes.get(1).getHeight());
-                zone.polygon.points[2].setPoint(drill.currentShapes.get(0).getX() + drill.currentShapes.get(0).getWidth(), drill.currentShapes.get(0).getY());
-                zone.polygon.points[3].setPoint(drill.currentShapes.get(0).getX(), drill.currentShapes.get(0).getY());
+                zone.quad.points[0].setPoint(drill.currentShapes.get(1).getX(), drill.currentShapes.get(1).getHeight());
+                zone.quad.points[1].setPoint(drill.currentShapes.get(1).getX() + drill.currentShapes.get(1).getWidth(), drill.currentShapes.get(1).getHeight());
+                zone.quad.points[2].setPoint(drill.currentShapes.get(0).getX() + drill.currentShapes.get(0).getWidth(), drill.currentShapes.get(0).getY());
+                zone.quad.points[3].setPoint(drill.currentShapes.get(0).getX(), drill.currentShapes.get(0).getY());
         }
         AddZone(zone);
     }
     public void CreateCrossOverZone() {
         Zone zone = new Zone(Zone.Type.CHANGEDIRE);
 
-        zone.polygon.points[0].setPoint(drill.intersectionPoints[0].getX(), drill.intersectionPoints[0].getY());
-        zone.polygon.points[1].setPoint(drill.intersectionPoints[1].getX(), drill.intersectionPoints[1].getY());
-        zone.polygon.points[2].setPoint(drill.intersectionPoints[2].getX(), drill.intersectionPoints[2].getY());
-        zone.polygon.points[3].setPoint(drill.intersectionPoints[3].getX(), drill.intersectionPoints[3].getY());
+        zone.quad.points[0].setPoint(drill.intersectionPoints[0].getX(), drill.intersectionPoints[0].getY());
+        zone.quad.points[1].setPoint(drill.intersectionPoints[1].getX(), drill.intersectionPoints[1].getY());
+        zone.quad.points[2].setPoint(drill.intersectionPoints[2].getX(), drill.intersectionPoints[2].getY());
+        zone.quad.points[3].setPoint(drill.intersectionPoints[3].getX(), drill.intersectionPoints[3].getY());
 
         AddZone(zone);
     }
@@ -406,10 +416,10 @@ public class Level {
                         float x4 = Float.parseFloat(parts[7]);
                         if (x1 - xTravelled <= 1700 || x2 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x4 - xTravelled <= 1700) {
                             Zone zone = new Zone(Zone.Type.valueOf(parts[9]));
-                            zone.polygon.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
-                            zone.polygon.points[1].setPoint(x2 - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
-                            zone.polygon.points[2].setPoint(x3 - xTravelled, Float.parseFloat(parts[6]) - currentHeight);
-                            zone.polygon.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
+                            zone.quad.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
+                            zone.quad.points[1].setPoint(x2 - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
+                            zone.quad.points[2].setPoint(x3 - xTravelled, Float.parseFloat(parts[6]) - currentHeight);
+                            zone.quad.points[3].setPoint(x4 - xTravelled, Float.parseFloat(parts[8]) - currentHeight);
                             zones.add(zone);
                             shapeNumber++;
                             return true;
@@ -584,6 +594,7 @@ public class Level {
     public void CheckZonesOnScreen() {
         for (Zone zone : zones) {
             if (zone.isZoneLeftOfScreen()) {
+                System.out.println("Zone removed");
                 zones.remove(zone);
                 return;
             }
@@ -610,12 +621,12 @@ public class Level {
         }
     }
     public void AddZone(Zone zone) {
-        zone.polygon.sortPoints();
+        zone.quad.sortPoints();
         try (FileWriter writer = new FileWriter (currentFileName, true)) {
-            writer.write("Zone: " + zone.polygon.points[0].getX() + " " + zone.polygon.points[0].getY() + " " +
-                zone.polygon.points[1].getX() + " " + zone.polygon.points[1].getY() + " " +
-                zone.polygon.points[2].getX() + " " + zone.polygon.points[2].getY() + " " +
-                zone.polygon.points[3].getX() + " " + zone.polygon.points[3].getY() + " " +
+            writer.write("Zone: " + zone.quad.points[0].getX() + " " + zone.quad.points[0].getY() + " " +
+                zone.quad.points[1].getX() + " " + zone.quad.points[1].getY() + " " +
+                zone.quad.points[2].getX() + " " + zone.quad.points[2].getY() + " " +
+                zone.quad.points[3].getX() + " " + zone.quad.points[3].getY() + " " +
                 Zone.Type.valueOf(zone.type.toString()));
                 writer.write("\n");
         } catch (IOException e) {
@@ -1001,18 +1012,66 @@ public class Level {
     }
 
     public void AddChangeDirectionScalar() {
+         Zone oldZone, newZone, currentZone = new Zone();
+
+        for (Zone zone : zones) {
+            if (zone.getType() == Zone.Type.CHANGEDIRE && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+                currentZone = zone;
+            }
+        }
+
+        oldZone = zones.get(zones.indexOf(currentZone) - 1);
+        newZone = zones.get(zones.indexOf(currentZone) + 1);
+
 
     }
     public void AddAveragePositionScalar() {
         Zone currentZone = new Zone();
         for (Zone zone : zones) {
-            if (zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY()) && zone.getType() != Zone.Type.CHANGEDIRE) {
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
                 currentZone = zone;
             }
         }
 
         TransformShapes((int) player.midPoint.getX(), (int) player.midPoint.getX());
 
+        ArrayList<LineSegment> shapeLines = new ArrayList<>();
 
+        for (Polygon shape : shapes) {
+            for (int i = 0; i < shape.getVertices().length; i += 2) {
+                shapeLines.add(new LineSegment(shape.getVertices()[i], shape.getVertices()[i+1], shape.getVertices()[(i+2) % shape.getVertices().length], shape.getVertices()[(i+3) % shape.getVertices().length]));
+            }
+        }
+
+        ArrayList<FloatPoint> intersections = new ArrayList<>();
+
+        for (LineSegment line : shapeLines) {
+            if (line.getDirection() == LineSegment.Direction.VERTICAL && line.startPoint.getX() != player.midPoint.getX()) continue;
+
+            if (Clamp(line.startPoint.getX(), line.endPoint.getX(), player.midPoint.getX()) == player.midPoint.getX()) {
+                intersections.add(new FloatPoint(player.midPoint.getX(), line.FindY(player.midPoint.getX())));
+            }
+        }
+
+        float bottomEdgeY = 0, topEdgeY = Float.MAX_VALUE;
+        for (FloatPoint point : intersections) {
+            if (point.getY() > bottomEdgeY && point.getY() < player.midPoint.getY()) {
+                bottomEdgeY = point.getY();
+            } else if (point.getY() < topEdgeY && point.getY() > player.midPoint.getY()) {
+                topEdgeY = point.getY();
+            }
+        }
+
+        float currentLevelHeight = topEdgeY - bottomEdgeY;
+        float averagePositionScalar = (player.midPoint.getY() - bottomEdgeY) / currentLevelHeight;
+
+        if (currentZone.getType() == Zone.Type.RIGHT) {
+            AverageHorPositionScalar.enqueue(averagePositionScalar);
+        } else if (currentZone.getType() == Zone.Type.UPDIAG || currentZone.getType() == Zone.Type.DOWNDIAG) {
+            AverageDiagPositionScalar.enqueue(averagePositionScalar);
+        }
+    }
+    private float Clamp(float start, float end, float value) {
+        return Math.max(start, Math.min(end, value));
     }
 }

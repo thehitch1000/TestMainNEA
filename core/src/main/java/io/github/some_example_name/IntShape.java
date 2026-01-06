@@ -25,8 +25,16 @@ abstract class Shape implements IntShape {
 
     public void Draw(ShapeRenderer sr) {}
     public void setShape(float x, float y) {}
-    public void MoveX(float X) {}
-    public void MoveY(float Y) {}
+    public void MoveX(float X) {
+        for (int i = 0; i < points.length; i++) {
+            points[i].setX(points[i].getX() + X);
+        }
+    }
+    public void MoveY(float Y) {
+        for (int i = 0; i < points.length; i++) {
+            points[i].setY(points[i].getY() + Y);
+        }
+    }
     public boolean isPointInShape(FloatPoint point) {
         return false;
     }
@@ -87,6 +95,24 @@ abstract class Shape implements IntShape {
     }
     private float Radians(float angle) {
         return (float) (angle * (Math.PI / 180));
+    }
+
+    public void sortPoints() {
+        float XTotal = 0, YTotal = 0;
+
+        for (FloatPoint p : points) {
+            XTotal += p.getX();
+            YTotal += p.getY();
+        }
+
+        final float centreX = XTotal / points.length;
+        final float centreY = YTotal / points.length;
+
+        Arrays.sort(points, (p1, p2) -> {
+            double angle1 = Math.atan2(p1.getY() - centreY, p1.getX() - centreX);
+            double angle2 = Math.atan2(p2.getY() - centreY, p2.getX() - centreX);
+            return Double.compare(angle1, angle2);
+        });
     }
 }
 
@@ -614,23 +640,7 @@ class polygon extends Shape implements Transparency, Colour {
         return false;
     }
 
-    public void sortPoints() {
-        float XTotal = 0, YTotal = 0;
 
-        for (FloatPoint p : points) {
-            XTotal += p.getX();
-            YTotal += p.getY();
-        }
-
-        final float centreX = XTotal / points.length;
-        final float centreY = YTotal / points.length;
-
-        Arrays.sort(points, (p1, p2) -> {
-            double angle1 = Math.atan2(p1.getY() - centreY, p1.getX() - centreX);
-            double angle2 = Math.atan2(p2.getY() - centreY, p2.getX() - centreX);
-            return Double.compare(angle1, angle2);
-        });
-    }
 
     public void MakePointsBigger(int amount) {
         FloatPoint[] tempPoints = new FloatPoint[points.length + amount];
@@ -649,6 +659,72 @@ class polygon extends Shape implements Transparency, Colour {
         }
 
         points = tempPoints;
+    }
+}
+class Quad extends Shape implements Transparency, Colour {
+    private float alpha;
+    Color colour;
+    Tri[] tris;
+    FunctionLock lock;
+
+    public Quad(FloatPoint point1, FloatPoint point2, FloatPoint point3, FloatPoint point4) {
+        points = new FloatPoint[4];
+        points[0] = point1;
+        points[1] = point2;
+        points[2] = point3;
+        points[3] = point4;
+        alpha = 0.5f;
+
+        tris = new Tri[2];
+        tris[0] = new Tri(points[0], points[1], points[2]);
+        tris[1] = new Tri(points[2], points[3], points[0]);
+    }
+    public Quad(Color colour) {
+        points = new FloatPoint[4];
+        for (int i = 0; i < 4; i++) {
+            points[i] = new FloatPoint(0, 0);
+        }
+        alpha = 0.5f;
+        this.colour = colour;
+
+        tris = new Tri[2];
+        tris[0] = new Tri(points[0], points[1], points[2]);
+        tris[1] = new Tri(points[2], points[3], points[0]);
+    }
+
+    public void setAlpha(float Alpha) {
+        alpha = Alpha;
+    }
+    public float getAlpha() {
+        return alpha;
+    }
+
+    public void setColour(Color colour) {
+        this.colour = colour;
+    }
+    public Color getColour() {
+        return colour;
+    }
+
+    public void Draw(ShapeRenderer sr) {
+        sr.setColor(colour.r, colour.g, colour.b, alpha);
+        for (Tri tri : tris) {
+            tri.Draw(sr);
+        }
+    }
+
+    public void updateTriangles() {
+        if (lock.isUsed()) return;
+        tris[0] = new Tri(points[0], points[1], points[2]);
+        tris[1] = new Tri(points[2], points[3], points[0]);
+    }
+
+    public boolean isPointInShape(FloatPoint point) {
+        return tris[0].isPointInShape(point) || tris[1].isPointInShape(point);
+    }
+
+    public boolean onScreen() {
+        return points[0].getX() <= GameData.getInstance().getScreenWidth() && points[0].getX() >= 0;
     }
 }
 
