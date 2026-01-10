@@ -676,6 +676,8 @@ class Quad extends Shape implements Transparency, Colour {
             new Tri(points[0], points[1], points[2]);
             new Tri(points[2], points[3], points[0]);
         }};
+
+        lock = new FunctionLock();
     }
 
     public void setAlpha(float Alpha) {
@@ -696,6 +698,14 @@ class Quad extends Shape implements Transparency, Colour {
         updateTriangles();
         sr.setColor(colour.r, colour.g, colour.b, alpha);
         tris.forEach(tri -> tri.Draw(sr));
+        sr.setColor(1,0,0,1);
+        sr.circle(points[0].getX(), points[0].getY(), 5);
+        sr.setColor(0,1,0,1);
+        sr.circle(points[1].getX(), points[1].getY(), 5);
+        sr.setColor(0,0,1,1);
+        sr.circle(points[2].getX(), points[2].getY(), 5);
+        sr.setColor(1,0,1,1);
+        sr.circle(points[3].getX(), points[3].getY(), 5);
     }
 
     public void updateTriangles() {

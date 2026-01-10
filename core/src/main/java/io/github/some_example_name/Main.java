@@ -71,7 +71,7 @@ public class Main extends ApplicationAdapter {
         add(() -> level.setCurrentFileName("obstacles6"));
     }};
     List<Runnable> start7 = new ArrayList<Runnable>() {{
-        add(() -> Gdx.app.exit());
+        add(() -> level.CloseProgram());
     }};
 
     List<Runnable> pause1 = new ArrayList<Runnable>() {{
@@ -81,7 +81,7 @@ public class Main extends ApplicationAdapter {
         add(() -> GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false)));
     }};
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
-        add(() -> Gdx.app.exit());
+        add(() -> level.CloseProgram());
     }};
 
     List<Runnable> ending1 = new ArrayList<Runnable>() {{
@@ -97,7 +97,7 @@ public class Main extends ApplicationAdapter {
         add(() -> level.setUpLevel(false));
     }};
     List<Runnable> ending3 = new ArrayList<Runnable>() {{
-        add(() -> Gdx.app.exit());
+        add(() -> level.CloseProgram());
     }};
 
     List<Runnable> ResetLevel = new ArrayList<Runnable>() {{
@@ -126,6 +126,8 @@ public class Main extends ApplicationAdapter {
 
         level = new Level();
         stage = Stage.STARTMENU;
+
+        level.OpenProgram();
 
         startMenu.AddButton(new Button("Level 1", start1, 375, 600, font));
         startMenu.AddButton(new Button("Level 2", start2, 750, 600, font));
@@ -161,15 +163,13 @@ public class Main extends ApplicationAdapter {
             case PLAYING:
                 if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                     stage = Stage.PAUSED;
-                    level.AddToTotalLevelTime();
-                    GameData.getInstance().setStop(true);
+                    level.PauseLevel();
                     pauseMenu.Open();
                 }
 
                 if (level.CheckLevelEnd()) {
                     stage = Stage.ENDING;
-                    GameData.getInstance().setStop(true);
-                    level.AddToTotalLevelTime();
+                    level.PauseLevel();
                     endingMenu.Open();
                     endingMenu.body.ClearLines();
                     endingMenu.body.AddLine("Your Time: " + (int) level.getTotalLevelTime() / 1000f + "s", 600, font);
@@ -177,10 +177,14 @@ public class Main extends ApplicationAdapter {
 
                 if (level.player.getLives() <= 0 || level.player.CheckHealth()) {
                     stage = Stage.DEADMENU;
-                    GameData.getInstance().setStop(true);
+                    level.PauseLevel();
                     endingMenu.Open();
                     endingMenu.body.ClearLines();
                     endingMenu.body.AddLine("You Lost!", 600, font);
+                }
+
+                if (input.isKeyJustPressed(Input.Keys.P)) {
+                    GameData.getInstance().setStop(!GameData.getInstance().isStop());
                 }
 
                 if (!GameData.getInstance().isStop()) {
@@ -193,7 +197,6 @@ public class Main extends ApplicationAdapter {
 
                     level.MoveMissiles();
 
-
                     if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
                     }
@@ -201,7 +204,6 @@ public class Main extends ApplicationAdapter {
                     if (level.monster.midPoint.getX() <= 300) {
                         level.MoveMonsterAlongPath();
                     }
-
 
                     level.player.CalcMidPoints();
                     level.monster.CalcMidPoint();
@@ -233,14 +235,6 @@ public class Main extends ApplicationAdapter {
                     level.player.PrintLines(sr);
                 }
 
-//                sr.setColor(Color.PURPLE);
-//
-//                level.shapes.forEach(polygon -> {
-//                    for (int i = 0; i < polygon.getVertices().length; i += 2) {
-//                        sr.line(polygon.getVertices()[i], polygon.getVertices()[i+1], polygon.getVertices()[(i+2) % polygon.getVertices().length], polygon.getVertices()[(i+3) % polygon.getVertices().length]);
-//                    }
-//                });
-
                 sr.end();
 
                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -250,6 +244,12 @@ public class Main extends ApplicationAdapter {
 
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
+                level.zones.forEach(zone -> {
+                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
+                        zone.Draw(sr);
+                    }
+                });
+                level.zones.get(level.zones.size() - 1).Draw(sr);
 
                 sr.end();
 

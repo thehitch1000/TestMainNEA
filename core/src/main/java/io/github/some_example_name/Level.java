@@ -26,7 +26,7 @@ public class Level {
     List<Barrier> barriers;
     List<Zone> zones;
     List<Polygon> shapes;
-    FloatQueue AverageHorPositionScalar, AverageDiagPositionScalar, AverageChangeDirection;
+    FloatCircularQueue AverageHorPositionScalar, AverageDiagPositionScalar, AverageChangeDirection;
     ScreenHeight screenHeight;
     Player player;
     Monster monster;
@@ -49,9 +49,9 @@ public class Level {
         zones = new ArrayList<>();
         shapes = new ArrayList<>();
 
-        AverageHorPositionScalar = new FloatQueue(50);
-        AverageDiagPositionScalar = new FloatQueue(50);
-        AverageChangeDirection = new FloatQueue(25);
+        AverageHorPositionScalar = new FloatCircularQueue(300);
+        AverageDiagPositionScalar = new FloatCircularQueue(300);
+        AverageChangeDirection = new FloatCircularQueue(25);
 
         drill = new Drill();
 
@@ -80,11 +80,25 @@ public class Level {
         shapes.clear();
         zones.clear();
     }
+    public void PauseLevel() {
+        AddToTotalLevelTime();
+        GameData.getInstance().setStop(true);
+        GameData.getInstance().clearFrameTimers();
+    }
     public void UnpauseLevel() {
         StartTime = GameData.getInstance().getElapsedTime();
+        GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false));
+        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 5, () -> AddAveragePositionScalar());
     }
     public void AddToTotalLevelTime() {
         totalLevelTime += GameData.getInstance().getElapsedTime() - StartTime;
+    }
+    public void CloseProgram() {
+        writeTrends();
+        Gdx.app.exit();
+    }
+    public void OpenProgram() {
+        getTrends();
     }
 
     public boolean CheckLevelEnd() {
@@ -114,6 +128,10 @@ public class Level {
 
             List<String> lines = Files.readAllLines(file.toPath());
 
+            if (lines.isEmpty()) {
+                return;
+            }
+
             for (String line : lines) {
                 String[] parts = line.split(":\\s+|\\s+");
                 switch (parts[0]) {
@@ -140,18 +158,26 @@ public class Level {
     }
     public void writeTrends() {
         GameData.getInstance().EmptyFile("Trends");
-        try (FileWriter writer = new FileWriter("Trends", true)){
-            writer.write("AverageHorPosition: ");
-            for (float scalar : AverageHorPositionScalar.floats) {
-                writer.write(scalar + ", ");
+        try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter("Trends", true))){
+            fileWriter.write("AverageHorPosition: ");
+            if (!AverageHorPositionScalar.isEmpty()) {
+                 for (int i = 0; i < AverageHorPositionScalar.floats.length; i++) {
+                     fileWriter.write(AverageHorPositionScalar.floats[i] + " ");
+                 }
             }
-            writer.write("AverageDiagPosition: ");
-            for (float scalar : AverageDiagPositionScalar.floats) {
-                writer.write(scalar + ", ");
+            fileWriter.newLine();
+            fileWriter.write("AverageDiagPosition: ");
+            if (!AverageDiagPositionScalar.isEmpty()) {
+                for (int i = 0; i < AverageDiagPositionScalar.floats.length; i++) {
+                    fileWriter.write(AverageDiagPositionScalar.floats[i] + " ");
+                }
             }
-            writer.write("AverageChangeDirection: ");
-            for (float scalar : AverageChangeDirection.floats) {
-                writer.write(scalar + ", ");
+            fileWriter.newLine();
+            fileWriter.write("AverageChangeDirection: ");
+            if (!AverageChangeDirection.isEmpty()) {
+                for (int i = 0; i < AverageChangeDirection.floats.length; i++) {
+                    fileWriter.write(AverageChangeDirection.floats[i] + " ");
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -164,8 +190,8 @@ public class Level {
                 drill.setFinished(true);
                 drill.FinishPath();
                 drill.EndShapes();
-                CreateZone();
                 CreateCrossOverZone();
+                CreateZone();
                 TransferShapes();
                 drill.StartShapes();
                 drill.setDirection(Drill.Direction.RIGHT);
@@ -222,7 +248,7 @@ public class Level {
                         break;
                     default:
                         System.out.println("Unknown change in direction: " + key);
-                        Gdx.app.exit();
+                        CloseProgram();
                 }
                 if (!continued) {
                     // Find and store intersection points
@@ -476,7 +502,7 @@ public class Level {
     }
 
     public void MoveWorldX() {
-        float X = -4;
+        float X = -240 * Gdx.app.getGraphics().getDeltaTime();
         barriers.forEach(barrier -> barrier.MoveX(X));
         player.zigTrail.forEach(trail -> trail.MoveX(X));
         player.MoveTempLinesX(X);
@@ -500,7 +526,7 @@ public class Level {
         MoveAllPathsY(Y);
     }
     public void MovePlayerY(float Y) {
-        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -4f : 4f;
+        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -(240 * Gdx.app.getGraphics().getDeltaTime()) : 240 * Gdx.app.getGraphics().getDeltaTime();
         FloatPoint tempMidPoint = new FloatPoint(player.midPoint.getX(), player.midPoint.getY() + Y);
 
         float PlayerMove = 0, WorldMove = 0;
@@ -566,23 +592,27 @@ public class Level {
 
     public void CheckChangePlayerDirection() {
         if (input.isKeyJustPressed(Input.Keys.SPACE)) {
-            ChangeDirection();
+            player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
+            player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
+            player.CalcMidPoints();
+//            for (Zone zone : zones) {
+//                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+//                    AddChangeDirectionScalar(zone);
+//                    zone.used();
+//                    break;
+//                }
+//            }
+            if (player.getDirection() == Player.Direction.DOWN) {
+                player.Rotate(90, player.midPoint);
+                player.setDirection(Player.Direction.UP);
+            } else {
+                player.Rotate(-90, player.midPoint);
+                player.setDirection(Player.Direction.DOWN);
+            }
+            player.CalcMidPoints();
+            player.CreateTrail();
+            player.calcHealthVisual();
         }
-    }
-    public void ChangeDirection() {
-        player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
-        player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
-        player.CalcMidPoints();
-        if (player.getDirection() == Player.Direction.DOWN) {
-            player.Rotate(90, player.midPoint);
-            player.setDirection(Player.Direction.UP);
-        } else {
-            player.Rotate(-90, player.midPoint);
-            player.setDirection(Player.Direction.DOWN);
-        }
-        player.CalcMidPoints();
-        player.CreateTrail();
-        player.calcHealthVisual();
     }
     public void CheckTrailPositioningDisplay() {
         for (polygon polygon : player.zigTrail) {
@@ -595,7 +625,6 @@ public class Level {
     public void CheckZonesOnScreen() {
         for (Zone zone : zones) {
             if (zone.isZoneLeftOfScreen()) {
-                System.out.println("Zone removed");
                 zones.remove(zone);
                 return;
             }
@@ -637,8 +666,7 @@ public class Level {
 
     public void PlayerRespawn(Barrier barrier) {
         System.out.println("Respawning Player");
-        GameData.getInstance().setStop(true);
-        AddToTotalLevelTime();
+        PauseLevel();
         GameData.getInstance().timers.runAfter(0, () -> ZigZagRespawning(barrier));
         GameData.getInstance().timers.runAfter(1f, () -> ZigZagEndRespawning());
     }
@@ -727,9 +755,7 @@ public class Level {
     }
 
     public void setUpLevel(boolean newLevel) {
-        if (newLevel) {
-            BuildLevel();
-        }
+        if (newLevel) BuildLevel();
 
         Drill.Direction drillDirection = null;
         float starting0 = 0;
@@ -752,7 +778,6 @@ public class Level {
 
             parts = lines.get(lines.size() - 1).split(":\\s+|\\s+");
             currentBottomOfLevel = Float.parseFloat(parts[1]);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -769,7 +794,7 @@ public class Level {
 
         monster.setPosition(750, starting0 + (0.5f * levelHeight));
         monster.CalcMidPoint();
-        monster.setAwake(true);
+        monster.setAwake(false);
 
         player.CalcMidPoints();
         player.setUpPoints();
@@ -786,8 +811,6 @@ public class Level {
 
         background = new Background(currentTopOfLevel - currentBottomOfLevel, currentBottomOfLevel);
 
-        StartTime = GameData.getInstance().getElapsedTime();
-
         grid = new Node[GameData.getInstance().getScreenWidth() / cellSize][(int) (currentTopOfLevel - currentBottomOfLevel) / cellSize];
 
         while (background.columns.size() < 20) {
@@ -795,6 +818,8 @@ public class Level {
         }
 
         while (ReadFile());
+
+        UnpauseLevel();
     }
 
     public void CreatePlayerMissile(FloatPoint startPoint, FloatPoint endPoint) {
@@ -1014,18 +1039,14 @@ public class Level {
         }
     }
 
-    public void AddChangeDirectionScalar() {
-        Zone oldZone, newZone, currentZone = new Zone();
-
-        for (Zone zone : zones) {
-            if (zone.getType() == Zone.Type.CHANGEDIRE && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
-                currentZone = zone;
-                break;
-            }
-        }
+    public void AddChangeDirectionScalar(Zone currentZone) {
+        Zone oldZone, newZone;
 
         oldZone = zones.get(zones.indexOf(currentZone) - 1);
         newZone = zones.get(zones.indexOf(currentZone) + 1);
+
+        System.out.println("OldZone Type: " + oldZone.getType().toString());
+        System.out.println("NewZone Type: " + newZone.getType().toString());
 
         int leftPointIndex = 0;
 
@@ -1035,29 +1056,38 @@ public class Level {
             }
         }
 
+        System.out.println("leftPointIndex: " + leftPointIndex);
+
         LineEquation entryLine, prePlayerLine;
         LineSegment zoneSizeLine;
 
         if (newZone.getType() == Zone.Type.RIGHT) {
             if (oldZone.getType() == Zone.Type.UPDIAG) {
-                entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex - 1) % currentZone.quad.points.length]);
+                entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
                 zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
             } else {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex - 1) % currentZone.quad.points.length]);
+                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
             }
         } else {
             if (newZone.getType() == Zone.Type.UPDIAG) {
-                entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex - 1) % currentZone.quad.points.length]);
+                entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
                 zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
             } else {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex - 1) % currentZone.quad.points.length]);
+                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
             }
         }
         prePlayerLine = new LineEquation((-1/entryLine.getGradient()), player.midPoint);
 
-        AverageChangeDirection.enqueue(distance(intersection(prePlayerLine, entryLine), player.midPoint) / zoneSizeLine.Distance());
+        float distanceFromEntry = distance(intersection(prePlayerLine, entryLine), player.midPoint);
+        float potDistance = zoneSizeLine.Distance();
+
+        float scalar = distanceFromEntry / potDistance;
+
+        System.out.println("Scalar Added: " + scalar);
+
+        AverageChangeDirection.enqueue(scalar);
     }
     public void AddAveragePositionScalar() {
         Zone currentZone = new Zone();
@@ -1099,11 +1129,15 @@ public class Level {
         float currentLevelHeight = topEdgeY - bottomEdgeY;
         float averagePositionScalar = (player.midPoint.getY() - bottomEdgeY) / currentLevelHeight;
 
+        System.out.println("Position Scalar: " + averagePositionScalar);
+
         if (currentZone.getType() == Zone.Type.RIGHT) {
             AverageHorPositionScalar.enqueue(averagePositionScalar);
         } else if (currentZone.getType() == Zone.Type.UPDIAG || currentZone.getType() == Zone.Type.DOWNDIAG) {
             AverageDiagPositionScalar.enqueue(averagePositionScalar);
         }
+
+        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 4, () -> AddAveragePositionScalar());
     }
     private float Clamp(float start, float end, float value) {
         return Math.max(start, Math.min(end, value));

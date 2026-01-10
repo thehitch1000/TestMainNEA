@@ -11,6 +11,7 @@ public class Zone {
     }
     Quad quad;
     Type type;
+    private boolean used;
 
 
     public Zone (Type type) {
@@ -24,6 +25,8 @@ public class Zone {
         }
         quad = new Quad(colour);
         quad.setAlpha(0.5f);
+
+        used = false;
     }
     public Zone() {}
 
@@ -32,6 +35,13 @@ public class Zone {
     }
     public void setType(Type type) {
         this.type = type;
+    }
+
+    public boolean isUsed() {
+        return used;
+    }
+    public void used() {
+        used = true;
     }
 
     public boolean onScreen() {

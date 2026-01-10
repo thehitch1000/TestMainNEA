@@ -40,6 +40,7 @@ public class GameData {
     public void Maintenance() {
         elapsedTime += Gdx.graphics.getDeltaTime() * 1000;
         frameNumber++;
+        CheckFrameTimers();
         resetLocks();
     }
 
@@ -99,10 +100,19 @@ public class GameData {
 
     public void CheckFrameTimers() {
         for (FunctionFrameTimer timer : frameTimers) {
-            if (timer.getFrameNumber() == frameNumber) {
+            if (timer.getFrameNumber() >= frameNumber) {
                 timer.function.run();
+                frameTimers.remove(timer);
+                return;
             }
         }
+    }
+    public void clearFrameTimers() {
+        frameTimers.clear();
+    }
+    public void runFunctionAfterFrames(int frameNumber, Runnable function) {
+        FunctionFrameTimer timer = new FunctionFrameTimer(function, frameNumber);
+        frameTimers.add(timer);
     }
 }
 
@@ -195,22 +205,14 @@ class FunctionTimer {
 
 class FunctionFrameTimer {
     private int frameNumber;
-    private boolean used = false;
     Runnable function;
 
-    public FunctionFrameTimer() {
-        this.frameNumber = Integer.MAX_VALUE;
+    public FunctionFrameTimer(Runnable function, int frameNumber) {
+        this.frameNumber = frameNumber;
+        this.function = function;
     }
 
     public int getFrameNumber() {
         return frameNumber;
     }
-
-    public void runFunctionAfterFrames(int frameNumber, Runnable function) {
-        this.function = function;
-        this.frameNumber = frameNumber;
-    }
 }
-
-
-
