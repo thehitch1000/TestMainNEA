@@ -6,7 +6,14 @@ public class FloatCircularQueue  {
 
     public FloatCircularQueue(int capacity) {
         floats = new Float[capacity];
-        frontPointer = rearPointer = 0;
+        frontPointer = rearPointer = 1;
+    }
+
+    public int getFrontPointer() {
+        return frontPointer;
+    }
+    public int getRearPointer() {
+        return rearPointer;
     }
 
     public void enqueue(float f) {
@@ -29,5 +36,15 @@ public class FloatCircularQueue  {
     }
     public boolean isEmpty() {
         return rearPointer == frontPointer;
+    }
+
+    public float FindMean() {
+        float sum = 0;
+        int size = (rearPointer - frontPointer + floats.length) % floats.length;
+
+        for (int k = 0; k < size; k++) {
+            sum += floats[(frontPointer + k) % floats.length];
+        }
+        return sum / (rearPointer - frontPointer);
     }
 }

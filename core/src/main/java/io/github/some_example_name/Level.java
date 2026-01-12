@@ -88,7 +88,7 @@ public class Level {
     public void UnpauseLevel() {
         StartTime = GameData.getInstance().getElapsedTime();
         GameData.getInstance().timers.runAfter(0.1f, () -> GameData.getInstance().setStop(false));
-        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 5, () -> AddAveragePositionScalar());
+        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 2, () -> AddAveragePositionScalar());
     }
     public void AddToTotalLevelTime() {
         totalLevelTime += GameData.getInstance().getElapsedTime() - StartTime;
@@ -139,17 +139,17 @@ public class Level {
                 String[] parts = line.split(":\\s+|\\s+");
                 switch (parts[0]) {
                     case "AverageHorPosition":
-                        for (int i = 1; i < parts.length; i++) {
+                        for (int i = 1; i < parts.length - 1; i++) {
                             AverageHorPositionScalar.enqueue(Float.parseFloat(parts[i]));
                         }
                         break;
                     case "AverageDiagPosition":
-                        for (int i = 1; i < parts.length; i++) {
+                        for (int i = 1; i < parts.length - 1; i++) {
                             AverageDiagPositionScalar.enqueue(Float.parseFloat(parts[i]));
                         }
                         break;
                     case "AverageChangeDirection":
-                        for (int i = 1; i < parts.length; i++) {
+                        for (int i = 1; i < parts.length - 1; i++) {
                             AverageChangeDirection.enqueue(Float.parseFloat(parts[i]));
                         }
                         break;
@@ -598,13 +598,13 @@ public class Level {
             player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
             player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
             player.CalcMidPoints();
-//            for (Zone zone : zones) {
-//                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
-//                    AddChangeDirectionScalar(zone);
-//                    zone.used();
-//                    break;
-//                }
-//            }
+            for (Zone zone : zones) {
+                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+                    AddChangeDirectionScalar(zone);
+                    zone.used();
+                    break;
+                }
+            }
             if (player.getDirection() == Player.Direction.DOWN) {
                 player.Rotate(90, player.midPoint);
                 player.setDirection(Player.Direction.UP);
@@ -1061,34 +1061,45 @@ public class Level {
 
         System.out.println("leftPointIndex: " + leftPointIndex);
 
-        LineEquation entryLine, prePlayerLine;
+        LineEquation entryLine, playerLine;
         LineSegment zoneSizeLine;
 
         if (newZone.getType() == Zone.Type.RIGHT) {
             if (oldZone.getType() == Zone.Type.UPDIAG) {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
             } else {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
             }
         } else {
             if (newZone.getType() == Zone.Type.UPDIAG) {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
             } else {
                 entryLine = new LineEquation(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 1) % currentZone.quad.points.length]);
-                zoneSizeLine = new LineSegment(currentZone.quad.points[leftPointIndex], currentZone.quad.points[(leftPointIndex + 3) % currentZone.quad.points.length]);
             }
         }
-        prePlayerLine = new LineEquation((-1/entryLine.getGradient()), player.midPoint);
 
-        float distanceFromEntry = distance(intersection(prePlayerLine, entryLine), player.midPoint);
-        float potDistance = zoneSizeLine.Distance();
+        playerLine = new LineEquation((-1/entryLine.getGradient()), player.midPoint);
+
+        ArrayList<FloatPoint> intersections = new ArrayList<>();
+
+        for (int i = 0; i < currentZone.quad.points.length; i++) {
+            FloatPoint intersection = intersection(playerLine, new LineEquation(currentZone.quad.points[i], currentZone.quad.points[(i + 1) % currentZone.quad.points.length]));
+
+            if (Clamp(currentZone.quad.points[i].getX(), currentZone.quad.points[(i + 1) % currentZone.quad.points.length].getX(), intersection.getX()) == intersection.getX()) {
+                intersections.add(intersection);
+            }
+        }
+
+        float potDistance = distance(intersections.get(0), intersections.get(1));
+        float distanceFromEntry = distance(player.midPoint, intersection(playerLine, entryLine));
 
         float scalar = distanceFromEntry / potDistance;
 
+        System.out.println("Distance From Entry: " + distanceFromEntry);
+        System.out.println("PotDistance: " + potDistance);
+
         System.out.println("Scalar Added: " + scalar);
+        System.out.println();
 
         AverageChangeDirection.enqueue(scalar);
     }
@@ -1132,15 +1143,14 @@ public class Level {
         float currentLevelHeight = topEdgeY - bottomEdgeY;
         float averagePositionScalar = (player.midPoint.getY() - bottomEdgeY) / currentLevelHeight;
 
-        System.out.println("Position Scalar: " + averagePositionScalar);
-
         if (currentZone.getType() == Zone.Type.RIGHT) {
+            if (AverageHorPositionScalar.floats[AverageHorPositionScalar.getFrontPointer() - 1 % AverageHorPositionScalar.floats.length] == averagePositionScalar) return;
             AverageHorPositionScalar.enqueue(averagePositionScalar);
         } else if (currentZone.getType() == Zone.Type.UPDIAG || currentZone.getType() == Zone.Type.DOWNDIAG) {
             AverageDiagPositionScalar.enqueue(averagePositionScalar);
         }
 
-        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 4, () -> AddAveragePositionScalar());
+        GameData.getInstance().runFunctionAfterFrames(GameData.getInstance().getFrameNumber() + Gdx.app.getGraphics().getFramesPerSecond() / 2, () -> AddAveragePositionScalar());
     }
     private float Clamp(float start, float end, float value) {
         return Math.max(start, Math.min(end, value));
@@ -1160,8 +1170,6 @@ public class Level {
 
         Ghost scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
 
-        float meanOfChangeScalar = AverageChangeDirection.FindMean();
-
-        scoutGhost.FindEndPoint();
+        scoutGhost.FindEndPoint(AverageChangeDirection.FindMean());
     }
 }
