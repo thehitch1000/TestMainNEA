@@ -19,7 +19,7 @@ public class Level {
         TOP, BOTTOM, NEUTRAL, FIXED
     }
     public enum TypeOfPath {
-        MONSTER, PLAYERMISSILE, MONSTERMISSILE
+        MONSTER, PLAYERMISSILE, MONSTERMISSILE, GHOSTTRACKER
     }
 
     String currentFileName;
@@ -34,7 +34,7 @@ public class Level {
     Drill drill;
     Node[][] grid;
 
-    final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize;
+    final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 360, worldSpeed = 240;
     boolean monsterPathPending = false, playerMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight, totalLevelTime;
@@ -116,6 +116,9 @@ public class Level {
     }
     public float getTotalLevelTime() {
         return totalLevelTime;
+    }
+    public float getLevelHeight() {
+        return levelHeight;
     }
 
     public void setCurrentFileName(String fileName) {
@@ -502,7 +505,7 @@ public class Level {
     }
 
     public void MoveWorldX() {
-        float X = -240 * Gdx.app.getGraphics().getDeltaTime();
+        float X = -worldSpeed * Gdx.app.getGraphics().getDeltaTime();
         barriers.forEach(barrier -> barrier.MoveX(X));
         player.zigTrail.forEach(trail -> trail.MoveX(X));
         player.MoveTempLinesX(X);
@@ -526,7 +529,7 @@ public class Level {
         MoveAllPathsY(Y);
     }
     public void MovePlayerY(float Y) {
-        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -(240 * Gdx.app.getGraphics().getDeltaTime()) : 240 * Gdx.app.getGraphics().getDeltaTime();
+        if (Y == 0) Y = (player.getDirection() == Player.Direction.DOWN) ? -(worldSpeed * Gdx.app.getGraphics().getDeltaTime()) : worldSpeed * Gdx.app.getGraphics().getDeltaTime();
         FloatPoint tempMidPoint = new FloatPoint(player.midPoint.getX(), player.midPoint.getY() + Y);
 
         float PlayerMove = 0, WorldMove = 0;
@@ -1150,5 +1153,15 @@ public class Level {
     }
     private float distance (FloatPoint point1, FloatPoint point2) {
         return (float) Math.sqrt(Math.pow(point1.getX() - point2.getX(), 2) + Math.pow(point1.getY() - point2.getY(), 2));
+    }
+
+    public void CreateMonsterMissile() {
+        CheckMonsterWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
+
+        Ghost scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
+
+        float meanOfChangeScalar = AverageChangeDirection.FindMean();
+
+        scoutGhost.FindEndPoint();
     }
 }

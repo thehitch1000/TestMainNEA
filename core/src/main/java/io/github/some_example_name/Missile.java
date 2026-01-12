@@ -1,5 +1,6 @@
 package io.github.some_example_name;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
@@ -84,7 +85,7 @@ public class Missile {
 
     public void MoveAlongPath() {
         if (path.isEmpty()) {
-
+            Explode();
             return;
         }
 
@@ -100,8 +101,8 @@ public class Missile {
             shape.MoveY(path.get(0).endPoint.getY() - shape.getY());
             path.remove(0);
         } else {
-            shape.MoveX((float) Math.cos(angleRad) * speed);
-            shape.MoveY((float) Math.sin(angleRad) * speed);
+            shape.MoveX((float) Math.cos(angleRad) * speed * Gdx.app.getGraphics().getDeltaTime());
+            shape.MoveY((float) Math.sin(angleRad) * speed * Gdx.app.getGraphics().getDeltaTime());
         }
     }
 

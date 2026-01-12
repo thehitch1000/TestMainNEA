@@ -24,7 +24,6 @@ public class ThetaStarProcessor {
             return;
         }
 
-
         this.leftX = (int) startPoint.getX() - margin;
         this.rightX = (int) endPoint.getX() + margin;
 
@@ -52,7 +51,7 @@ public class ThetaStarProcessor {
 
     public void FindPath() {
         if (LineOfSight(type, start, end)) {
-            ConstructSimplePath();
+            ConstructPath(false);
             pathFound = true;
         } else {
             while (!pathFound) {
@@ -63,7 +62,7 @@ public class ThetaStarProcessor {
                     Node current = openList.dequeue();
                     if (current == end) {
                         pathFound = true;
-                        ConstructComplexPath();
+                        ConstructPath(true);
                         return;
                     }
                     if (pathFound) return;
@@ -184,8 +183,10 @@ public class ThetaStarProcessor {
     }
 
     private Node FindClosestNodeToStart(Node node) {
-        level.ResetGridRegion(leftX, rightX);
-        level.CheckMonsterWalkabilityRegion(leftX, rightX);
+        if (type != Level.TypeOfPath.GHOSTTRACKER) {
+            level.ResetGridRegion(leftX, rightX);
+            level.CheckMonsterWalkabilityRegion(leftX, rightX);
+        }
 
         this.grid = level.grid;
 
@@ -235,36 +236,6 @@ public class ThetaStarProcessor {
         return null;
     }
 
-    public void ConstructComplexPath() {
-        ArrayList<Node> nodes = new ArrayList<>();
-        Node current = end;
-
-        while (current != null) {
-            nodes.add(current);
-            current = current.getParent();
-        }
-
-        for (int i = nodes.size() - 1; i > 0; i--) {
-            FloatPoint point1 = new FloatPoint(nodes.get(i).getX(), nodes.get(i).getY());
-            FloatPoint point2 = new FloatPoint(nodes.get(i - 1).getX(), nodes.get(i - 1).getY());
-            path.add(new LineSegment(point1, point2));
-        }
-
-        Missile missile = new Missile(new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference()), new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference()), 6, level);
-        missile.setPath(path);
-        missile.path.forEach(line -> line.MoveX(XDifference()));
-        missile.path.forEach(line -> line.MoveY(YDifference()));
-
-        if (type == Level.TypeOfPath.MONSTER) {
-            level.monster.currentPath.addAll(path);
-        } else if (type == Level.TypeOfPath.MONSTERMISSILE) {
-            missile.setType(Missile.Type.MONSTER);
-            level.monster.missiles.add(missile);
-        } else if (type == Level.TypeOfPath.PLAYERMISSILE) {
-            missile.setType(Missile.Type.PLAYER);
-            level.player.missiles.add(missile);
-        }
-    }
     private float XDifference() {
         return level.getXTravelled() - currentX;
     }
@@ -272,12 +243,29 @@ public class ThetaStarProcessor {
         return level.getCurrentHeight() - currentY;
     }
 
-    public void ConstructSimplePath() {
-        FloatPoint point1 = new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference());
-        FloatPoint point2 = new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference());
-        path.add(new LineSegment(point1, point2));
+    public void ConstructPath(boolean complex) {
+        if (complex) {
+            ArrayList<Node> nodes = new ArrayList<>();
+            Node current = end;
 
-        Missile missile = new Missile(new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference()), new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference()), 6, level);
+            while (current != null) {
+                nodes.add(current);
+                current = current.getParent();
+            }
+
+            for (int i = nodes.size() - 1; i > 0; i--) {
+                FloatPoint point1 = new FloatPoint(nodes.get(i).getX(), nodes.get(i).getY());
+                FloatPoint point2 = new FloatPoint(nodes.get(i - 1).getX(), nodes.get(i - 1).getY());
+                path.add(new LineSegment(point1, point2));
+            }
+        } else {
+            FloatPoint point1 = new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference());
+            FloatPoint point2 = new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference());
+            path.add(new LineSegment(point1, point2));
+        }
+        if (type == Level.TypeOfPath.GHOSTTRACKER) return;
+
+        Missile missile = new Missile(new FloatPoint(start.getX() - XDifference(), start.getY() - YDifference()), new FloatPoint(end.getX() - XDifference(), end.getY() - YDifference()), 360, level);
         missile.setPath(path);
         missile.path.forEach(line -> line.MoveX(XDifference()));
         missile.path.forEach(line -> line.MoveY(YDifference()));

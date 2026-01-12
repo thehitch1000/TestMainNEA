@@ -637,8 +637,6 @@ class polygon extends Shape implements Transparency, Colour {
         return false;
     }
 
-
-
     public void MakePointsBigger(int amount) {
         FloatPoint[] tempPoints = new FloatPoint[points.length + amount];
 
