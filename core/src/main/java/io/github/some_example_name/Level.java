@@ -35,7 +35,7 @@ public class Level {
     Node[][] grid;
 
     final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 360, worldSpeed = 240;
-    boolean monsterPathPending = false, playerMissilePathPending = false;
+    boolean monsterPathPending = false, playerMissilePathPending = false, monsterMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight, totalLevelTime;
     private int shapeNumber;
@@ -835,8 +835,6 @@ public class Level {
 
         ThetaStarProcessor stepper = new ThetaStarProcessor (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
 
-        CheckMissileWalkabilityRegion((int) startPoint.getX() - margin, (int) endPoint.getX() + margin);
-
         Gdx.app.postRunnable(() -> {
             try {
                 stepper.FindPath();
@@ -1165,11 +1163,32 @@ public class Level {
         return (float) Math.sqrt(Math.pow(point1.getX() - point2.getX(), 2) + Math.pow(point1.getY() - point2.getY(), 2));
     }
 
+    public void setAllZoneGhosted() {
+
+    }
+
     public void CreateMonsterMissile() {
+        synchronized (this) {
+            if (monsterMissilePathPending) return;
+            monsterMissilePathPending = true;
+        }
+
+        monster.CalcMidPoint();
+
         CheckMonsterWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
 
         Ghost scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
 
-        scoutGhost.FindEndPoint(AverageChangeDirection.FindMean());
+        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.MONSTERMISSILE, monster.midPoint, scoutGhost.FindEndPoint(AverageChangeDirection.FindMean()), this);
+
+        Gdx.app.postRunnable(() -> {
+            try {
+                stepper.FindPath();
+            } finally {
+                synchronized (this) {
+                    monsterMissilePathPending = false;
+                }
+            }
+        });
     }
 }

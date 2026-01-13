@@ -12,6 +12,7 @@ public class Zone {
     Quad quad;
     Type type;
     private boolean used;
+    private boolean ghosted;
 
 
     public Zone (Type type) {
@@ -27,6 +28,7 @@ public class Zone {
         quad.setAlpha(0.5f);
 
         used = false;
+        ghosted = false;
     }
     public Zone() {}
 
@@ -42,6 +44,13 @@ public class Zone {
     }
     public void used() {
         used = true;
+    }
+
+    public boolean isGhosted() {
+        return ghosted;
+    }
+    public void ghosted() {
+        ghosted = true;
     }
 
     public boolean onScreen() {
