@@ -601,13 +601,13 @@ public class Level {
             player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
             player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
             player.CalcMidPoints();
-            for (Zone zone : zones) {
-                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
-                    AddChangeDirectionScalar(zone);
-                    zone.used();
-                    break;
-                }
-            }
+//            for (Zone zone : zones) {
+//                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+//                    AddChangeDirectionScalar(zone);
+//                    zone.used();
+//                    break;
+//                }
+//            }
             if (player.getDirection() == Player.Direction.DOWN) {
                 player.Rotate(90, player.midPoint);
                 player.setDirection(Player.Direction.UP);

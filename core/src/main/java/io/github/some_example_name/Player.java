@@ -321,7 +321,6 @@ public class Player {
         lives--;
     }
 
-
     public void calcHealthVisual() {
         FindMaxMinPoints();
 
@@ -336,17 +335,33 @@ public class Player {
         }
 
         List<FloatPoint> intersectionPoints = new ArrayList<>();
+        List<FloatPoint> roundedIntersectionPoints = new ArrayList<>();
 
         for (int i = 0; i < playerPointsLines.size(); i++) {
             FloatPoint intersection = lineIntersection(healthLine, playerPointsLines.get(i));
-            intersectionPoints.add(intersection);
+
+            FloatPoint roundedIntersection = new FloatPoint(round(intersection.getX(), 1), round(intersection.getY(), 1));
+            if (!contains(roundedIntersection, roundedIntersectionPoints)) {
+                roundedIntersectionPoints.add(roundedIntersection);
+                intersectionPoints.add(intersection);
+            }
         }
 
         for (FloatPoint p : shape.points) {
             if (p.getY() < healthLine.getYIntercept()) {
-                if (!intersectionPoints.contains(p)) intersectionPoints.add(p);
+
+                FloatPoint roundedIntersection = new FloatPoint(round(p.getX(), 1), round(p.getY(), 1));
+                if (!contains(roundedIntersection, roundedIntersectionPoints)) {
+                    roundedIntersectionPoints.add(roundedIntersection);
+                    intersectionPoints.add(p);
+                }
             }
         }
+
+        System.out.println();
+
+        System.out.println("Intersection Points: " + intersectionPoints.size());
+        System.out.println("YIntercept: " + healthLine.getYIntercept());
 
         if (intersectionPoints.size() > healthShape.points.length) {
             healthShape.MakePointsBigger(intersectionPoints.size() - healthShape.points.length);
@@ -360,6 +375,14 @@ public class Player {
         }
 
         healthShape.sortPoints();
+
+        PrintHealthPoints();
+        System.out.println();
+        System.out.println();
+    }
+    private float round(float value, int places) {
+        float scale = (float) Math.pow(10, places);
+        return Math.round(value * scale) / scale;
     }
     private boolean isPointOnPlayer(FloatPoint point, int lineIndex) {
         FloatPoint p1 = shape.points[lineIndex];
@@ -384,6 +407,14 @@ public class Player {
                 minY = p.getY();
             }
         }
+    }
+    public boolean contains(FloatPoint point, List<FloatPoint> points) {
+        for (FloatPoint p : points) {
+            if (isEqual(p, point)) {
+                return true;
+            }
+        }
+        return false;
     }
     private boolean isEqual(FloatPoint p1, FloatPoint p2) {
         return p1.getX() == p2.getX() || p1.getY() == p2.getY();

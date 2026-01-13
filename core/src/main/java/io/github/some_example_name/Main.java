@@ -247,11 +247,11 @@ public class Main extends ApplicationAdapter {
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
 
-//                level.zones.forEach(zone -> {
-//                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
-//                        zone.Draw(sr);
-//                    }
-//                });
+                level.zones.forEach(zone -> {
+                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
+                        zone.Draw(sr);
+                    }
+                });
 
                 sr.end();
 
