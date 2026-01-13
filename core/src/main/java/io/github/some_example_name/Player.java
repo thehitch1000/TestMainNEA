@@ -258,6 +258,14 @@ public class Player {
     public void Draw(ShapeRenderer sr) {
         shape.Draw(sr);
         healthShape.Draw(sr);
+        sr.setColor(1,0,0,1);
+        sr.circle(healthShape.points[0].getX(), healthShape.points[0].getY(), 5);
+        sr.setColor(0,1,0,1);
+        sr.circle(healthShape.points[1].getX(), healthShape.points[1].getY(), 5);
+        sr.setColor(0,0,1,1);
+        sr.circle(healthShape.points[2].getX(), healthShape.points[2].getY(), 5);
+        sr.setColor(1,0,1,1);
+        sr.circle(healthShape.points[3].getX(), healthShape.points[3].getY(), 5);
     }
 
     public void Rotate(float angle, FloatPoint pivot) {
@@ -339,7 +347,6 @@ public class Player {
                 if (!intersectionPoints.contains(p)) intersectionPoints.add(p);
             }
         }
-
 
         if (intersectionPoints.size() > healthShape.points.length) {
             healthShape.MakePointsBigger(intersectionPoints.size() - healthShape.points.length);

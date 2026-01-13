@@ -185,6 +185,8 @@ public class Main extends ApplicationAdapter {
 
                 if (input.isKeyJustPressed(Input.Keys.P)) {
                     GameData.getInstance().setStop(!GameData.getInstance().isStop());
+                    level.player.PrintPoints();
+                    level.player.PrintHealthPoints();
                 }
 
                 if (!GameData.getInstance().isStop()) {
@@ -244,12 +246,12 @@ public class Main extends ApplicationAdapter {
 
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
-                level.zones.forEach(zone -> {
-                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
-                        zone.Draw(sr);
-                    }
-                });
-                level.zones.get(level.zones.size() - 1).Draw(sr);
+
+//                level.zones.forEach(zone -> {
+//                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
+//                        zone.Draw(sr);
+//                    }
+//                });
 
                 sr.end();
 

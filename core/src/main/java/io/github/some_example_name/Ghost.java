@@ -40,7 +40,7 @@ public class Ghost {
             for (int i = 0; i < steps; i++) {
                 boolean inCorner = false;
                 for (Zone zone : level.zones) {
-                    if (zone.getType() == Zone.Type.CHANGEDIRE && zone.isPointInZone(center.getX(), center.getY())) {
+                    if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isGhosted() && zone.isPointInZone(center.getX(), center.getY())) {
                         inCorner = true;
 
                         LineEquation playerProjection;
@@ -65,25 +65,18 @@ public class Ghost {
                         Zone oldZone = level.zones.get(level.zones.indexOf(zone) - 1);
 
                         LineEquation entryLine;
-                        int leftPointIndex = 0;
-
-                        for (int j = 0; j < zone.quad.points.length; j++) {
-                            if (zone.quad.points[j].getX() <= zone.quad.points[leftPointIndex].getX()) {
-                                leftPointIndex = j;
-                            }
-                        }
 
                         if (newZone.getType() == Zone.Type.RIGHT) {
                             if (oldZone.getType() == Zone.Type.UPDIAG) {
-                                entryLine = new LineEquation(zone.quad.points[leftPointIndex], zone.quad.points[(leftPointIndex + 3) % zone.quad.points.length]);
+                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 3) % zone.quad.points.length]);
                             } else {
-                                entryLine = new LineEquation(zone.quad.points[leftPointIndex], zone.quad.points[(leftPointIndex + 1) % zone.quad.points.length]);
+                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 1) % zone.quad.points.length]);
                             }
                         } else {
                             if (newZone.getType() == Zone.Type.UPDIAG) {
-                                entryLine = new LineEquation(zone.quad.points[leftPointIndex], zone.quad.points[(leftPointIndex + 3) % zone.quad.points.length]);
+                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 3) % zone.quad.points.length]);
                             } else {
-                                entryLine = new LineEquation(zone.quad.points[leftPointIndex], zone.quad.points[(leftPointIndex + 1) % zone.quad.points.length]);
+                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 1) % zone.quad.points.length]);
                             }
                         }
 
@@ -91,6 +84,7 @@ public class Ghost {
                             if (entryLine.isPointOnLine(intersection)) {
                                 if (distance(intersection, center) / distance(intersections.get(0), intersections.get(1)) >= directionChangeScalar) {
                                     ChangeDirection();
+                                    zone.ghosted();
                                 }
                                 break;
                             }
@@ -147,6 +141,8 @@ public class Ghost {
                 }
 
                 MoveX(level.worldSpeed * Gdx.app.getGraphics().getDeltaTime());
+
+                System.out.println("X: " + center.getX() + " | Y: " + center.getY());
             }
         }
 
@@ -189,6 +185,8 @@ public class Ghost {
             }
         }
 
+        level.setAllZoneNGhosted();
+
         return finalPoint;
     }
 
@@ -205,6 +203,8 @@ public class Ghost {
 
         float MonsterToGhostTime = MonsterToGhostDistance / level.missileSpeed;
         float PlayerToGhostTime = PlayerToGhostDistance / level.worldSpeed;
+
+        System.out.println("Monster to ghost time: " + MonsterToGhostTime + " | Player to ghost time: " + PlayerToGhostTime);
 
         if (MonsterToGhostTime > PlayerToGhostTime + delta) return false;
         return MonsterToGhostTime <= PlayerToGhostTime + delta;

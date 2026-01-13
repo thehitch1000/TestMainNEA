@@ -183,9 +183,10 @@ public class ThetaStarProcessor {
     }
 
     private Node FindClosestNodeToStart(Node node) {
-        if (type != Level.TypeOfPath.GHOSTTRACKER) {
-            level.ResetGridRegion(leftX, rightX);
+        if (type == Level.TypeOfPath.MONSTER) {
             level.CheckMonsterWalkabilityRegion(leftX, rightX);
+        } else {
+            level.CheckMissileWalkabilityRegion(leftX, rightX);
         }
 
         this.grid = level.grid;

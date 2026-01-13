@@ -11,8 +11,8 @@ public class Zone {
     }
     Quad quad;
     Type type;
-    private boolean used;
-    private boolean ghosted;
+    private boolean used, ghosted;
+    private int leftPointIndex;
 
 
     public Zone (Type type) {
@@ -29,6 +29,8 @@ public class Zone {
 
         used = false;
         ghosted = false;
+
+        leftPointIndex = 0;
     }
     public Zone() {}
 
@@ -37,6 +39,10 @@ public class Zone {
     }
     public void setType(Type type) {
         this.type = type;
+    }
+
+    public int getLeftPointIndex() {
+        return leftPointIndex;
     }
 
     public boolean isUsed() {
@@ -51,6 +57,10 @@ public class Zone {
     }
     public void ghosted() {
         ghosted = true;
+    }
+
+    public void Reset() {
+        ghosted = false;
     }
 
     public boolean onScreen() {
@@ -79,5 +89,13 @@ public class Zone {
             }
         }
         return true;
+    }
+
+    public void FindLeftPointIndex() {
+        for (int j = 0; j < quad.points.length; j++) {
+            if (quad.points[j].getX() <= quad.points[leftPointIndex].getX()) {
+                leftPointIndex = j;
+            }
+        }
     }
 }
