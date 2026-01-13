@@ -185,6 +185,7 @@ public class Main extends ApplicationAdapter {
 
                 if (input.isKeyJustPressed(Input.Keys.P)) {
                     GameData.getInstance().setStop(!GameData.getInstance().isStop());
+                    level.player.PrintHealthPoints();
                 }
 
                 if (!GameData.getInstance().isStop()) {

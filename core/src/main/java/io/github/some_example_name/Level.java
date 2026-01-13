@@ -165,6 +165,7 @@ public class Level {
             fileWriter.write("AverageHorPosition: ");
             if (!AverageHorPositionScalar.isEmpty()) {
                  for (int i = 0; i < AverageHorPositionScalar.floats.length; i++) {
+                     if (AverageHorPositionScalar.floats[i] == null) continue;
                      fileWriter.write(AverageHorPositionScalar.floats[i] + " ");
                  }
             }
@@ -172,6 +173,7 @@ public class Level {
             fileWriter.write("AverageDiagPosition: ");
             if (!AverageDiagPositionScalar.isEmpty()) {
                 for (int i = 0; i < AverageDiagPositionScalar.floats.length; i++) {
+                    if (AverageHorPositionScalar.floats[i] == null) continue;
                     fileWriter.write(AverageDiagPositionScalar.floats[i] + " ");
                 }
             }
@@ -179,6 +181,7 @@ public class Level {
             fileWriter.write("AverageChangeDirection: ");
             if (!AverageChangeDirection.isEmpty()) {
                 for (int i = 0; i < AverageChangeDirection.floats.length; i++) {
+                    if (AverageChangeDirection.floats[i] == null) continue;
                     fileWriter.write(AverageChangeDirection.floats[i] + " ");
                 }
             }
@@ -598,13 +601,13 @@ public class Level {
             player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
             player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
             player.CalcMidPoints();
-            for (Zone zone : zones) {
-                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
-                    AddChangeDirectionScalar(zone);
-                    zone.used();
-                    break;
-                }
-            }
+//            for (Zone zone : zones) {
+//                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+//                    AddChangeDirectionScalar(zone);
+//                    zone.used();
+//                    break;
+//                }
+//            }
             if (player.getDirection() == Player.Direction.DOWN) {
                 player.Rotate(90, player.midPoint);
                 player.setDirection(Player.Direction.UP);
@@ -1142,7 +1145,7 @@ public class Level {
         float averagePositionScalar = (player.midPoint.getY() - bottomEdgeY) / currentLevelHeight;
 
         if (currentZone.getType() == Zone.Type.RIGHT) {
-            if (AverageHorPositionScalar.floats[AverageHorPositionScalar.getFrontPointer() - 1 % AverageHorPositionScalar.floats.length] == averagePositionScalar) return;
+            if (AverageHorPositionScalar.floats[Math.floorMod(AverageHorPositionScalar.getFrontPointer() - 1, AverageHorPositionScalar.floats.length)] == averagePositionScalar) return;
             AverageHorPositionScalar.enqueue(averagePositionScalar);
         } else if (currentZone.getType() == Zone.Type.UPDIAG || currentZone.getType() == Zone.Type.DOWNDIAG) {
             AverageDiagPositionScalar.enqueue(averagePositionScalar);

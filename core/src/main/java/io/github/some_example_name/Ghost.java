@@ -189,6 +189,8 @@ public class Ghost {
             }
         }
 
+        level.setAllZoneGhosted();
+
         return finalPoint;
     }
 

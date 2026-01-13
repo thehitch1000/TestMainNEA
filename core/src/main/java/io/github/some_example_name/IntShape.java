@@ -100,9 +100,9 @@ abstract class Shape implements IntShape {
     public void sortPoints() {
         float XTotal = 0, YTotal = 0;
 
-        for (FloatPoint p : points) {
-            XTotal += p.getX();
-            YTotal += p.getY();
+        for (FloatPoint point : points) {
+            XTotal += point.getX();
+            YTotal += point.getY();
         }
 
         final float centreX = XTotal / points.length;

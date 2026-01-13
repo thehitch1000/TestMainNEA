@@ -83,6 +83,6 @@ public class LineEquation {
     }
 
     public boolean isPointOnLine(FloatPoint point) {
-        return (point.getY() - (Gradient * point.getX())) == YIntercept;
+        return (Gradient * point.getX()) + YIntercept == point.getY();
     }
 }
