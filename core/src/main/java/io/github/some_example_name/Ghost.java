@@ -69,7 +69,10 @@ public class Ghost {
                             for (int j = 0; j < zone.quad.points.length; j++) {
                                 FloatPoint intersection = intersection(currentMoveLine, new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) % zone.quad.points.length]));
 
-                                if (Clamp(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX(), intersection.getX()) == intersection.getX()) {
+                                float min = Math.min(zone.quad.points[i].getX(), zone.quad.points[(i + 1) % zone.quad.points.length].getX());
+                                float max = Math.max(zone.quad.points[i].getX(), zone.quad.points[(i + 1) % zone.quad.points.length].getX());
+
+                                if (Clamp(min, max, intersection.getX()) == intersection.getX()) {
                                     intersections.add(intersection);
                                 }
                             }
