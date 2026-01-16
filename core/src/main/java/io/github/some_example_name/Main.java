@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.math.Polygon;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -83,20 +84,26 @@ public class Main extends ApplicationAdapter {
     List<Runnable> pause2 = new ArrayList<Runnable>() {{
         add(() -> level.CloseProgram());
     }};
+    List<Runnable> pause3 = new ArrayList<Runnable>() {{
+        add(() -> pauseMenu.Close());
+        add(() -> level.ResetLevel());
+        add(() -> stage = Stage.STARTMENU);
+        add(() -> startMenu.Open());
+    }};
 
-    List<Runnable> ending1 = new ArrayList<Runnable>() {{
+    List<Runnable> ReturnToHome = new ArrayList<Runnable>() {{
        add(() -> endingMenu.Close());
        add(() -> level.ResetLevel());
        add(() -> stage = Stage.STARTMENU);
        add(() -> startMenu.Open());
     }};
-    List<Runnable> ending2 = new ArrayList<Runnable>() {{
+    List<Runnable> Restart = new ArrayList<Runnable>() {{
         add(() -> level.ResetLevel());
         add(() -> endingMenu.Close());
         add(() -> stage = Stage.PLAYING);
         add(() -> level.setUpLevel(false));
     }};
-    List<Runnable> ending3 = new ArrayList<Runnable>() {{
+    List<Runnable> Leave = new ArrayList<Runnable>() {{
         add(() -> level.CloseProgram());
     }};
 
@@ -138,13 +145,14 @@ public class Main extends ApplicationAdapter {
         startMenu.AddButton(new Button("Leave", start7, 750, 200, font));
         startMenu.Open();
 
-        pauseMenu.AddButton(new Button("Resume", pause1, 750, 500, font));
-        pauseMenu.AddButton(new Button("Leave", pause2, 750, 300, font));
+        pauseMenu.AddButton(new Button("Resume", pause1, 750, 600, font));
+        pauseMenu.AddButton(new Button("Return To Home", pause3, 750, 400, font));
+        pauseMenu.AddButton(new Button("Leave", pause2, 750, 200, font));
         pauseMenu.Close();
 
-        endingMenu.AddButton(new Button("Return To Home", ending1, 375, 250, font));
-        endingMenu.AddButton(new Button("Restart", ending2, 750, 250, font));
-        endingMenu.AddButton(new Button("Leave", ending3, 1125, 250, font));
+        endingMenu.AddButton(new Button("Return To Home", ReturnToHome, 375, 250, font));
+        endingMenu.AddButton(new Button("Restart", Restart, 750, 250, font));
+        endingMenu.AddButton(new Button("Leave", Leave, 1125, 250, font));
         endingMenu.AddBody(new Body(750));
         endingMenu.Close();
 
@@ -185,8 +193,7 @@ public class Main extends ApplicationAdapter {
 
                 if (input.isKeyJustPressed(Input.Keys.P)) {
                     GameData.getInstance().setStop(!GameData.getInstance().isStop());
-                    level.player.PrintPoints();
-                    level.player.PrintHealthPoints();
+                    level.CreateMonsterMissile();
                 }
 
                 if (!GameData.getInstance().isStop()) {
@@ -227,6 +234,14 @@ public class Main extends ApplicationAdapter {
                 level.player.zigTrail.forEach(trail -> trail.Draw(sr));
                 level.player.missiles.forEach(missile -> missile.Draw(sr));
 
+                if (input.isKeyPressed(Input.Keys.N)) {
+                    for (Node[] node : level.grid) {
+                        for (Node n : node) {
+                            n.Draw(sr);
+                        }
+                    }
+                }
+
                 sr.end();
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
@@ -235,6 +250,16 @@ public class Main extends ApplicationAdapter {
 
                 if (a == 1) {
                     level.player.PrintLines(sr);
+                }
+
+                sr.setColor(Color.PURPLE);
+
+                if (input.isKeyPressed(Input.Keys.L)) {
+                    for (Polygon polygon : level.shapes) {
+                        for (int i = 0; i < polygon.getVertices().length; i += 2) {
+                            sr.line(polygon.getVertices()[i], polygon.getVertices()[i + 1], polygon.getVertices()[Math.floorMod(i + 2, polygon.getVertices().length)], polygon.getVertices()[Math.floorMod(i + 3, polygon.getVertices().length)]);
+                        }
+                    }
                 }
 
                 sr.end();
@@ -248,7 +273,7 @@ public class Main extends ApplicationAdapter {
                 level.monster.Draw(sr);
 
                 level.zones.forEach(zone -> {
-                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
+                    if (zone.getType() != Zone.Type.CHANGEDIRE) {
                         zone.Draw(sr);
                     }
                 });

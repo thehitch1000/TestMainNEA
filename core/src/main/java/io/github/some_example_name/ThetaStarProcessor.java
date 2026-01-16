@@ -9,6 +9,7 @@ public class ThetaStarProcessor {
     private final int margin = 4 * cellSize;
     private int leftX, rightX;
     private NodePrioQueue openList;
+    private boolean newGrid = true;
     Node[][] grid;
     Node start, end;
     ArrayList<LineSegment> path;
@@ -18,11 +19,13 @@ public class ThetaStarProcessor {
     private Level level;
     private float currentX, currentY;
 
-    public ThetaStarProcessor(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level) {
+    public ThetaStarProcessor(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level, boolean newGrid) {
         if (endPoint == null) {
             end = null;
             return;
         }
+
+        this.newGrid = newGrid;
 
         this.leftX = (int) startPoint.getX() - margin;
         this.rightX = (int) endPoint.getX() + margin;
@@ -49,144 +52,13 @@ public class ThetaStarProcessor {
         openList.enqueue(start);
     }
 
-    public void FindPath() {
-        if (LineOfSight(type, start, end)) {
-            ConstructPath(false);
-            pathFound = true;
-        } else {
-            while (!pathFound) {
-                if (openList.isEmpty()) {
-                    System.out.println("No Path Found");
-                    return;
-                } else {
-                    Node current = openList.dequeue();
-                    if (current == end) {
-                        pathFound = true;
-                        ConstructPath(true);
-                        return;
-                    }
-                    if (pathFound) return;
-                    for (Node neighbour : getNeighbours(current)) {
-                        ProcessNeighbour(current, neighbour, end);
-                    }
-                }
-            }
-        }
-    }
-
-    public boolean isMissileSafeAt(Circle missile) {
-        for (Zone zone : level.zones) {
-            if (zone.isPointInZone(missile.getX(), missile.getY())) {
-                for (Polygon obstacle : level.shapes) {
-                    if (obstacle != null) {
-                        if (missile.overlaps(obstacle)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-    public boolean isMonsterSafeAt(Rect rect) {
-        for (Zone zone : level.zones) {
-            if (zone.isPointInZone(rect.getX() + rect.getWidth()/2f, rect.getY() + rect.getHeight()/2f)) {
-                for (Polygon obstacle : level.shapes) {
-                    if (obstacle != null) {
-                        if (rect.overlaps(obstacle)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean LineOfSight(Level.TypeOfPath type, Node startNode, Node endNode) {
-        FloatPoint startPoint = new FloatPoint(startNode.getX(), startNode.getY());
-        FloatPoint endPoint = new FloatPoint(endNode.getX(), endNode.getY());
-        LineSegment segment = new LineSegment(startPoint, endPoint);
-        Shape shape;
-        int speed = 4;
-        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
-            shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
-        } else {
-            shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
-        }
-        while (true) {
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
-            if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
-
-            if (((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !isMissileSafeAt((Circle) shape))) return false;
-            if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;
-
-            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
-            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
-        }
-        return true;
-    }
-    public ArrayList<Node> getNeighbours(Node currentNode) {
-        ArrayList<Node> neighbours = new ArrayList<>();
-        int X = NodeFindXCoordinates(currentNode);
-        int Y = NodeFindYCoordinates(currentNode);
-        for (int x = -1; x < 2; x++) {
-            for (int y = -1; y < 2; y++) {
-                if (x == 0 && y == 0) continue;
-                if (!inBound(X + x, Y + y)) continue;
-                if (grid[X + x][Y + y].getState() == Node.NodeState.UNWALKABLE) continue;
-                neighbours.add(grid[X + x][Y + y]);
-            }
-        }
-        return neighbours;
-    }
-    private boolean inBound(int X, int Y)    {
-        return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
-    }
-    public int NodeFindXCoordinates(Node node) {
-        int index = (node.getX() - leftX - (cellSize / 2)) / cellSize;
-        if (index < 0) index = 0;
-        if (index >= grid.length) index = grid.length - 1;
-        return index;
-    }
-    public int NodeFindYCoordinates(Node node) {
-        int index = (node.getY() - level.getBottomOfLevel() - (cellSize / 2)) / cellSize;
-        if (index < 0) index = 0;
-        if (index >= grid[0].length) index = grid[0].length - 1;
-        return index;
-    }
-    public void ProcessNeighbour(Node current, Node neighbour, Node endNode) {
-        Node parent = current.getParent();
-        float tempG;
-        Node tempParent;
-
-        if (parent != null && distance(parent, neighbour) > (cellSize * 1.5f) && LineOfSight(type, parent, neighbour)) {
-            tempG = parent.getG() + distance(parent, neighbour);
-            tempParent = parent;
-        } else {
-            tempG = current.getG() + distance(current, neighbour);
-            tempParent = current;
-        }
-
-        if (tempG < neighbour.getG()) {
-            neighbour.setG(tempG);
-            neighbour.setH(distance(neighbour, endNode));
-            neighbour.setF(neighbour.getG() + neighbour.getH());
-            neighbour.setParent(tempParent);
-            openList.enqueue(neighbour);
-        }
-    }
-    public float distance(Node a, Node b) {
-        return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
-    }
-
     private Node FindClosestNodeToStart(Node node) {
-        if (type == Level.TypeOfPath.MONSTER) {
-            level.CheckMonsterWalkabilityRegion(leftX, rightX);
-        } else {
-            level.CheckMissileWalkabilityRegion(leftX, rightX);
+        if (newGrid) {
+            if (type == Level.TypeOfPath.MONSTER) {
+                level.CheckMonsterWalkabilityRegion(leftX, rightX);
+            } else {
+                level.CheckMissileWalkabilityRegion(leftX, rightX);
+            }
         }
 
         this.grid = level.grid;
@@ -235,6 +107,141 @@ public class ThetaStarProcessor {
         }
 
         return null;
+    }
+
+    public void FindPath() {
+        System.out.println("Starting PathFinding");
+        if (LineOfSight(type, start, end)) {
+            System.out.println("Simple Path");
+            ConstructPath(false);
+            pathFound = true;
+        } else {
+            System.out.println("Complex Path");
+            while (!pathFound) {
+                if (openList.isEmpty()) {
+                    System.out.println("No Path Found");
+                    return;
+                } else {
+                    Node current = openList.dequeue();
+                    if (current == end) {
+                        pathFound = true;
+                        ConstructPath(true);
+                        return;
+                    }
+                    if (pathFound) return;
+                    for (Node neighbour : getNeighbours(current)) {
+                        ProcessNeighbour(current, neighbour, end);
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean isMissileSafeAt(Circle missile) {
+        for (Zone zone : level.zones) {
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(missile.getX(), missile.getY())) {
+                for (Polygon obstacle : level.shapes) {
+                    if (missile.overlaps(obstacle)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean isMonsterSafeAt(Rect rect) {
+        for (Zone zone : level.zones) {
+            if (zone.isPointInZone(rect.getX() + rect.getWidth()/2f, rect.getY() + rect.getHeight()/2f)) {
+                for (Polygon obstacle : level.shapes) {
+                    if (obstacle != null) {
+                        if (rect.overlaps(obstacle)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean LineOfSight(Level.TypeOfPath type, Node startNode, Node endNode) {
+        FloatPoint startPoint = new FloatPoint(startNode.getX(), startNode.getY());
+        FloatPoint endPoint = new FloatPoint(endNode.getX(), endNode.getY());
+        LineSegment segment = new LineSegment(startPoint, endPoint);
+        Shape shape;
+        int speed = 5;
+        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) {
+            shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
+        } else {
+            shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
+        }
+        while (true) {
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
+            if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
+
+            if (((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !isMissileSafeAt((Circle) shape))) return false;
+            if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;
+
+            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
+            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
+        }
+        return true;
+    }
+    public ArrayList<Node> getNeighbours(Node currentNode) {
+        ArrayList<Node> neighbours = new ArrayList<>();
+        int X = NodeFindXCoordinates(currentNode);
+        int Y = NodeFindYCoordinates(currentNode);
+        for (int x = -1; x < 2; x++) {
+            for (int y = -1; y < 2; y++) {
+                if (x == 0 && y == 0) continue;
+                if (!inBound(X + x, Y + y)) continue;
+                if (grid[X + x][Y + y].getState() == Node.NodeState.UNWALKABLE) continue;
+                neighbours.add(grid[X + x][Y + y]);
+            }
+        }
+        return neighbours;
+    }
+    private boolean inBound(int X, int Y)    {
+        return X >= 0 && X < grid.length && Y >= 0 && Y < grid[0].length;
+    }
+    public int NodeFindXCoordinates(Node node) {
+        int index = (node.getX() - leftX - (cellSize / 2)) / cellSize;
+        if (index < 0) index = 0;
+        if (index >= grid.length) index = grid.length - 1;
+        return index;
+    }
+    public int NodeFindYCoordinates(Node node) {
+        int index = (node.getY() - level.getBottomOfLevel() - (cellSize / 2)) / cellSize;
+        if (index < 0) index = 0;
+        if (index >= grid[0].length) index = grid[0].length - 1;
+        return index;
+    }
+    public void ProcessNeighbour(Node current, Node neighbour, Node endNode) {
+        Node parent = current.getParent();
+        float tempG;
+        Node tempParent;
+
+        if (parent != null && distance(parent, neighbour) > (cellSize * 2.5f) && LineOfSight(type, parent, neighbour)) {
+            tempG = parent.getG() + distance(parent, neighbour);
+            tempParent = parent;
+        } else {
+            tempG = current.getG() + distance(current, neighbour);
+            tempParent = current;
+        }
+
+        if (tempG < neighbour.getG()) {
+            neighbour.setG(tempG);
+            neighbour.setH(distance(neighbour, endNode));
+            neighbour.setF(neighbour.getG() + neighbour.getH());
+            neighbour.setParent(tempParent);
+            openList.enqueue(neighbour);
+        }
+    }
+
+    public float distance(Node a, Node b) {
+        return (float) Math.sqrt(Math.pow(b.getX() - a.getX(), 2) + Math.pow(b.getY() - a.getY(), 2));
     }
 
     private float XDifference() {

@@ -192,17 +192,18 @@ public class Level {
 
     public void CreateZigZagLevel() {
         while (!drill.isFinished()) {
-            if (drill.points[0].getX() + xTravelled >= levelDistance && drill.points[3].getX() + xTravelled >= levelDistance) {
+            if (drill.points[0].getX() >= levelDistance && drill.points[3].getX() >= levelDistance) {
                 drill.setFinished(true);
                 drill.FinishPath();
                 drill.EndShapes();
-                CreateZone();
+                if (drill.getDirection() != Drill.Direction.RIGHT) CreateZone();
                 TransferShapes();
                 drill.StartShapes();
+                drill.setOldDirection(drill.getDirection());
                 drill.setDirection(Drill.Direction.RIGHT);
                 drill.currentShapes.get(0).setWidth(levelDistance + 900 - drill.currentShapes.get(0).getX() - xTravelled);
                 drill.currentShapes.get(1).setWidth(levelDistance + 900 - drill.currentShapes.get(1).getX() - xTravelled);
-                CreateCrossOverZone();
+                if (drill.getOldDirection() != Drill.Direction.RIGHT) CreateCrossOverZone();
                 CreateZone();
                 TransferShapes();
             } else {
@@ -601,13 +602,13 @@ public class Level {
             player.tempLines[0].setLine(player.lines[0].getGradient(), player.lines[0].getYIntercept());
             player.tempLines[1].setLine(player.lines[1].getGradient(), player.lines[1].getYIntercept());
             player.CalcMidPoints();
-//            for (Zone zone : zones) {
-//                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
-//                    AddChangeDirectionScalar(zone);
-//                    zone.used();
-//                    break;
-//                }
-//            }
+            for (Zone zone : zones) {
+                if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isUsed() && zone.isPointInZone(player.midPoint.getX(), player.midPoint.getY())) {
+                    AddChangeDirectionScalar(zone);
+                    zone.used();
+                    break;
+                }
+            }
             if (player.getDirection() == Player.Direction.DOWN) {
                 player.Rotate(90, player.midPoint);
                 player.setDirection(Player.Direction.UP);
@@ -800,7 +801,7 @@ public class Level {
 
         monster.setPosition(750, starting0 + (0.5f * levelHeight));
         monster.CalcMidPoint();
-        monster.setAwake(false);
+        monster.setAwake(true);
 
         player.CalcMidPoints();
         player.setUpPoints();
@@ -836,7 +837,7 @@ public class Level {
             playerMissilePathPending = true;
         }
 
-        ThetaStarProcessor stepper = new ThetaStarProcessor (TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this);
+        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.PLAYERMISSILE, startPoint, endPoint, this, true);
 
         Gdx.app.postRunnable(() -> {
             try {
@@ -848,6 +849,7 @@ public class Level {
             }
         });
     }
+
     public void FindNewMonsterPath() {
         synchronized (this) {
             if (monsterPathPending) return;
@@ -859,9 +861,9 @@ public class Level {
         ThetaStarProcessor stepper;
 
         if (!monster.currentPath.isEmpty()) {
-            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.currentPath.get(monster.currentPath.size() - 1).endPoint, FindMonsterEndPoint(), this, true);
         } else {
-            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this);
+            stepper = new ThetaStarProcessor(TypeOfPath.MONSTER, monster.midPoint, FindMonsterEndPoint(), this, true);
         }
 
         if (stepper.end == null) return;
@@ -886,8 +888,6 @@ public class Level {
 
         CheckMonsterWalkabilityRegion(X - margin, X + margin);
 
-
-
         ArrayList<Node> walkableNodes = new ArrayList<>();
 
         for (Node[] column : grid) {
@@ -910,12 +910,13 @@ public class Level {
         }
 
         monster.CalcMidPoint();
+        player.CalcMidPoints();
 
         CheckMissileWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
 
-        Ghost scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
+        Ghost scoutGhost = new Ghost(this.player.midPoint, player.getDirection(), this);
 
-        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.MONSTERMISSILE, monster.midPoint, scoutGhost.FindEndPoint(AverageChangeDirection.FindMean()), this);
+        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.MONSTERMISSILE, monster.midPoint, scoutGhost.FindEndPoint(AverageChangeDirection.FindMean()), this, false);
 
         Gdx.app.postRunnable(() -> {
             try {
@@ -986,7 +987,7 @@ public class Level {
     }
     public void CheckMonsterWalkabilityRegion(int start, int end) {
         TransformShapes(start, end);
-        ResetGridRegion(start,  end);
+        ResetGridRegion(start, end);
         for (Node[] nodes : grid) {
             CheckMonsterWalkabilityColumn(nodes);
         }
@@ -1003,12 +1004,10 @@ public class Level {
 
     public boolean isMissileSafeAt(Circle missile) {
         for (Zone zone : zones) {
-            if (zone.isPointInZone(missile.getX(), missile.getY())) {
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(missile.getX(), missile.getY())) {
                 for (Polygon obstacle : shapes) {
-                    if (obstacle != null) {
-                        if (missile.overlaps(obstacle)) {
-                            return false;
-                        }
+                    if (missile.overlaps(obstacle)) {
+                        return false;
                     }
                 }
                 return true;
@@ -1069,30 +1068,16 @@ public class Level {
     }
 
     public void AddChangeDirectionScalar(Zone currentZone) {
-        Zone oldZone, newZone;
+        Zone oldZone;
 
         oldZone = zones.get(zones.indexOf(currentZone) - 1);
-        newZone = zones.get(zones.indexOf(currentZone) + 1);
-
-        System.out.println("OldZone Type: " + oldZone.getType().toString());
-        System.out.println("NewZone Type: " + newZone.getType().toString());
 
         LineEquation entryLine, playerLine;
 
-        System.out.println("LeftPointIndex: " + currentZone.getLeftPointIndex());
-
-        if (newZone.getType() == Zone.Type.RIGHT) {
-            if (oldZone.getType() == Zone.Type.UPDIAG) {
-                entryLine = new LineEquation(currentZone.quad.points[currentZone.getLeftPointIndex()], currentZone.quad.points[(currentZone.getLeftPointIndex() + 3) % currentZone.quad.points.length]);
-            } else {
-                entryLine = new LineEquation(currentZone.quad.points[currentZone.getLeftPointIndex()], currentZone.quad.points[(currentZone.getLeftPointIndex() + 1) % currentZone.quad.points.length]);
-            }
+        if (oldZone.getType() == Zone.Type.DOWNDIAG) {
+            entryLine = new LineEquation(currentZone.quad.points[Math.floorMod(currentZone.getLeftPointIndex() - 1, currentZone.quad.points.length)], currentZone.quad.points[currentZone.getLeftPointIndex()]);
         } else {
-            if (newZone.getType() == Zone.Type.UPDIAG) {
-                entryLine = new LineEquation(currentZone.quad.points[currentZone.getLeftPointIndex()], currentZone.quad.points[(currentZone.getLeftPointIndex() + 3) % currentZone.quad.points.length]);
-            } else {
-                entryLine = new LineEquation(currentZone.quad.points[currentZone.getLeftPointIndex()], currentZone.quad.points[(currentZone.getLeftPointIndex() + 1) % currentZone.quad.points.length]);
-            }
+            entryLine = new LineEquation(currentZone.quad.points[currentZone.getLeftPointIndex()], currentZone.quad.points[Math.floorMod(currentZone.getLeftPointIndex() + 1, currentZone.quad.points.length)]);
         }
 
         if (player.getDirection() == Player.Direction.UP) {
@@ -1100,8 +1085,6 @@ public class Level {
         } else {
             playerLine = new LineEquation(-1, player.midPoint);
         }
-
-        System.out.println("Player Midpoint: " + player.midPoint.getX() + ", " + player.midPoint.getY());
 
         ArrayList<FloatPoint> intersections = new ArrayList<>();
 
@@ -1114,27 +1097,14 @@ public class Level {
             float max = Math.max(currentZone.quad.points[i].getX(), currentZone.quad.points[(i + 1) % currentZone.quad.points.length].getX());
 
             if (Clamp(min, max, intersection.getX()) == intersection.getX()) {
-                System.out.println("Intersection: " + intersection.getX() + ", " + intersection.getY());
                 intersections.add(intersection);
             }
         }
 
-        System.out.println("PlayerLine Gradient: " + playerLine.getGradient() + " | Y-Intercept: " + playerLine.getYIntercept());
-        System.out.println("EntryLine Gradient : " + entryLine.getGradient() + " | Y-Intercept: " + entryLine.getYIntercept());
-
-
         float distanceFromEntry = distance(player.midPoint, intersection(playerLine, entryLine));
         float potDistance = distance(intersections.get(0), intersections.get(1));
 
-
-        System.out.println("Distance From Entry: " + distanceFromEntry);
-        System.out.println("PotDistance: " + potDistance);
-
         float scalar = distanceFromEntry / potDistance;
-
-        System.out.println("Scalar Added: " + scalar);
-        System.out.println("---------------------");
-
 
         AverageChangeDirection.enqueue(scalar);
     }

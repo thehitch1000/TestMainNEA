@@ -13,14 +13,22 @@ public class Ghost {
     ArrayList<Polygon> barrierLines;
     public Player.Direction[] directions = Player.Direction.values();
 
-
     public Ghost(FloatPoint startingPoint, Player.Direction direction, Level level) {
-        this.center = startingPoint;
+        this.center = new FloatPoint(startingPoint.getX(), startingPoint.getY());
         this.direction = direction;
         this.level = level;
+
+        barrierLines = new ArrayList<>();
+
+        if (direction == Player.Direction.DOWN) {
+            currentMoveLine = new LineEquation(-1, center);
+        } else {
+            currentMoveLine = new LineEquation(1, center);
+        }
     }
 
     public void ChangeDirection() {
+        System.out.println("Changing direction");
         direction = directions[(direction.ordinal() + 1) % directions.length];
         currentMoveLine.setGradient(-1/ currentMoveLine.getGradient());
         currentMoveLine.CalcYIntercept(center);
@@ -34,62 +42,49 @@ public class Ghost {
     }
 
     public FloatPoint FindEndPoint(float directionChangeScalar) {
+        System.out.println("Starting simulation...");
         while (!DoTimesMatch()) {
-            int steps = 4;
+            int steps = 5;
+
+            System.out.println("Cycle Started");
 
             for (int i = 0; i < steps; i++) {
                 boolean inCorner = false;
                 for (Zone zone : level.zones) {
-                    if (zone.getType() == Zone.Type.CHANGEDIRE && !zone.isGhosted() && zone.isPointInZone(center.getX(), center.getY())) {
+                    if (zone.getType() == Zone.Type.CHANGEDIRE && zone.isPointInZone(center.getX(), center.getY())) {
                         inCorner = true;
 
-                        LineEquation playerProjection;
+                        if (!zone.isGhosted()) {
+                            ArrayList<FloatPoint> intersections = new ArrayList<>();
 
-                        if (direction == Player.Direction.DOWN) {
-                            playerProjection = new LineEquation(-1, center);
-                        } else {
-                            playerProjection = new LineEquation(1, center);
-                        }
+                            Zone oldZone = level.zones.get(level.zones.indexOf(zone) - 1);
+                            LineEquation entryLine;
 
-                        ArrayList<FloatPoint> intersections = new ArrayList<>();
-
-                        for (int j = 0; j < zone.quad.points.length; j++) {
-                            FloatPoint intersection = intersection(playerProjection, new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) % zone.quad.points.length]));
-
-                            if (Clamp(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX(), intersection.getX()) == intersection.getX()) {
-                                intersections.add(intersection);
-                            }
-                        }
-
-                        Zone newZone = level.zones.get(level.zones.indexOf(zone) + 1);
-                        Zone oldZone = level.zones.get(level.zones.indexOf(zone) - 1);
-
-                        LineEquation entryLine;
-
-                        if (newZone.getType() == Zone.Type.RIGHT) {
-                            if (oldZone.getType() == Zone.Type.UPDIAG) {
-                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 3) % zone.quad.points.length]);
+                            if (oldZone.getType() == Zone.Type.DOWNDIAG) {
+                                entryLine = new LineEquation(zone.quad.points[Math.floorMod(zone.getLeftPointIndex() - 1, zone.quad.points.length)], zone.quad.points[zone.getLeftPointIndex()]);
                             } else {
-                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 1) % zone.quad.points.length]);
+                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[Math.floorMod(zone.getLeftPointIndex() + 1, zone.quad.points.length)]);
                             }
-                        } else {
-                            if (newZone.getType() == Zone.Type.UPDIAG) {
-                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 3) % zone.quad.points.length]);
-                            } else {
-                                entryLine = new LineEquation(zone.quad.points[zone.getLeftPointIndex()], zone.quad.points[(zone.getLeftPointIndex() + 1) % zone.quad.points.length]);
-                            }
-                        }
 
-                        for (FloatPoint intersection : intersections) {
-                            if (entryLine.isPointOnLine(intersection)) {
-                                if (distance(intersection, center) / distance(intersections.get(0), intersections.get(1)) >= directionChangeScalar) {
-                                    ChangeDirection();
-                                    zone.ghosted();
+                            for (int j = 0; j < zone.quad.points.length; j++) {
+                                FloatPoint intersection = intersection(currentMoveLine, new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) % zone.quad.points.length]));
+
+                                if (Clamp(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX(), intersection.getX()) == intersection.getX()) {
+                                    intersections.add(intersection);
                                 }
-                                break;
                             }
+
+                            for (FloatPoint intersection : intersections) {
+                                if (entryLine.isPointOnLine(intersection)) {
+                                    if (distance(intersection, center) / distance(intersections.get(0), intersections.get(1)) >= directionChangeScalar) {
+                                        ChangeDirection();
+                                        zone.ghosted();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
                 if (!inCorner) {
@@ -142,9 +137,14 @@ public class Ghost {
 
                 MoveX(level.worldSpeed * Gdx.app.getGraphics().getDeltaTime());
 
-                System.out.println("X: " + center.getX() + " | Y: " + center.getY());
+                System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
+
+                System.out.println("Cycle Finished");
+                System.out.println();
             }
         }
+
+        System.out.println("Simulation finished");
 
         FloatPoint finalPoint = new FloatPoint(center.getX(), 0);
 
@@ -187,13 +187,16 @@ public class Ghost {
 
         level.setAllZoneNGhosted();
 
+        System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
+
         return finalPoint;
     }
 
     public boolean DoTimesMatch() {
         final float delta = 0.01f;
         float MonsterToGhostDistance = 0, PlayerToGhostDistance;
-        ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.GHOSTTRACKER, level.monster.midPoint, center, level);
+        ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.GHOSTTRACKER, level.monster.midPoint, center, level, false);
+
         stepper.FindPath();
 
         PlayerToGhostDistance = center.getX() - level.player.midPoint.getX();
@@ -201,10 +204,14 @@ public class Ghost {
             MonsterToGhostDistance =+ line.Distance();
         }
 
+        System.out.println("Monster to ghost distance: " + MonsterToGhostDistance + " | " + "Player to ghost distance: " + PlayerToGhostDistance);
+
         float MonsterToGhostTime = MonsterToGhostDistance / level.missileSpeed;
         float PlayerToGhostTime = PlayerToGhostDistance / level.worldSpeed;
 
         System.out.println("Monster to ghost time: " + MonsterToGhostTime + " | Player to ghost time: " + PlayerToGhostTime);
+
+        System.out.println("Time Difference: " + (MonsterToGhostTime - PlayerToGhostTime));
 
         if (MonsterToGhostTime > PlayerToGhostTime + delta) return false;
         return MonsterToGhostTime <= PlayerToGhostTime + delta;

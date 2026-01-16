@@ -358,11 +358,6 @@ public class Player {
             }
         }
 
-        System.out.println();
-
-        System.out.println("Intersection Points: " + intersectionPoints.size());
-        System.out.println("YIntercept: " + healthLine.getYIntercept());
-
         if (intersectionPoints.size() > healthShape.points.length) {
             healthShape.MakePointsBigger(intersectionPoints.size() - healthShape.points.length);
         } else if (intersectionPoints.size() < healthShape.points.length) {
@@ -375,10 +370,6 @@ public class Player {
         }
 
         healthShape.sortPoints();
-
-        PrintHealthPoints();
-        System.out.println();
-        System.out.println();
     }
     private float round(float value, int places) {
         float scale = (float) Math.pow(10, places);

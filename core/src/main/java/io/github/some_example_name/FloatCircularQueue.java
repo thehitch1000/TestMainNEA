@@ -6,6 +6,9 @@ public class FloatCircularQueue  {
 
     public FloatCircularQueue(int capacity) {
         floats = new Float[capacity];
+        for (int i = 0; i < floats.length; i++) {
+            floats[i] = 0f;
+        }
         frontPointer = rearPointer = 1;
     }
 

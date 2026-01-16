@@ -14,7 +14,7 @@ public class Missile {
 
     FloatPoint startPoint, endPoint;
     Color colour;
-    Shape shape;
+    Circle shape;
     ArrayList<LineSegment> path;
     Type type;
     Level level;

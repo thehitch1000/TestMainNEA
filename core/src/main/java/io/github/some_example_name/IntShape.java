@@ -436,7 +436,7 @@ class Circle extends Shape {
             // Circle Touching or Intersecting
             for (int i = 0; i < tri.points.length; i++) {
                 Vector2 A = new Vector2(tri.points[i].getX(), tri.points[i].getY());
-                Vector2 B = new Vector2(tri.points[(i + 2) % tri.points.length].getX(), tri.points[(i + 2) % tri.points.length].getY());
+                Vector2 B = new Vector2(tri.points[(i + 1) % tri.points.length].getX(), tri.points[(i + 1) % tri.points.length].getY());
                 Vector2 C = new Vector2(x, y);
 
                 Vector2 AB = B.cpy().sub(A);
@@ -446,7 +446,7 @@ class Circle extends Shape {
                 Vector2 closest = A.cpy().add(AB.scl(t));
                 Distance = (float) Math.sqrt(closest.dst2(C));
 
-                if (Distance <= radius * radius) {
+                if (Distance <= radius) {
                     return true;
                 }
             }

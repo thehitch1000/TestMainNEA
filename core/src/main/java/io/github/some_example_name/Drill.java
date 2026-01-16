@@ -209,9 +209,9 @@ public class Drill {
     }
 
     public void CalcDirection() {
-        if (timesInARow >= 8) {
+        if (timesInARow >= 10) {
             int chance = (int) Math.ceil(Math.random() * 102);
-            if (chance <= 81) {
+            if (chance <= 96) {
                 newDirection = direction;
             } else {
                 timesInARow = 0;
@@ -227,16 +227,20 @@ public class Drill {
         if (newDirection == Direction.UP_RIGHT) {
             if (points[3].getY() > GameData.getInstance().getScreenHeight() - 100) {
                 newDirection = directions[1 + ((int) Math.ceil(Math.random() * 100) % 2)];
+                timesInARow = 0;
             }
         } else if (newDirection == Direction.RIGHT) {
             if (points[2].getY() > GameData.getInstance().getScreenHeight() - 100) {
                 newDirection = directions[1 + ((int) Math.ceil(Math.random() * 100) % 2)];
+                timesInARow = 0;
             } else if (points[0].getY() < 50) {
                 newDirection = directions[((int) Math.ceil(Math.random() * 100) % 2)];
+                timesInARow = 0;
             }
         } else {
             if (points[1].getY() < 100) {
                 newDirection = directions[((int) Math.ceil(Math.random() * 100) % 2)];
+                timesInARow = 0;
             }
         }
     }
