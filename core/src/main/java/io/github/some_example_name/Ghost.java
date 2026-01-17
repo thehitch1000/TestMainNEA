@@ -43,6 +43,8 @@ public class Ghost {
 
     public FloatPoint FindEndPoint(float directionChangeScalar) {
         System.out.println("Starting simulation...");
+
+        System.out.println("Scalar: " + directionChangeScalar);
         while (!DoTimesMatch()) {
             int steps = 5;
 
@@ -69,8 +71,8 @@ public class Ghost {
                             for (int j = 0; j < zone.quad.points.length; j++) {
                                 FloatPoint intersection = intersection(currentMoveLine, new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) % zone.quad.points.length]));
 
-                                float min = Math.min(zone.quad.points[i].getX(), zone.quad.points[(i + 1) % zone.quad.points.length].getX());
-                                float max = Math.max(zone.quad.points[i].getX(), zone.quad.points[(i + 1) % zone.quad.points.length].getX());
+                                float min = Math.min(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX());
+                                float max = Math.max(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX());
 
                                 if (Clamp(min, max, intersection.getX()) == intersection.getX()) {
                                     intersections.add(intersection);
@@ -123,7 +125,7 @@ public class Ghost {
                                     }
                                 }
 
-                                if (center.getY() > bottomEdgeY + (0.8f * level.getLevelHeight()) || center.getY() < topEdgeY - (0.8f * level.getLevelHeight())) {
+                                if ((center.getY() > bottomEdgeY + (0.8f * level.getLevelHeight()) && direction == Player.Direction.UP) || (center.getY() < topEdgeY - (0.8f * level.getLevelHeight()) && direction == Player.Direction.DOWN)) {
                                     ChangeDirection();
                                 }
                             }
@@ -149,8 +151,6 @@ public class Ghost {
 
         System.out.println("Simulation finished");
 
-        FloatPoint finalPoint = new FloatPoint(center.getX(), 0);
-
         ArrayList<LineSegment> shapeLines = new ArrayList<>();
 
         TransformShapeInLine(center.getX());
@@ -173,24 +173,35 @@ public class Ghost {
 
         float bottomEdgeY = 0, topEdgeY = Float.MAX_VALUE;
         for (FloatPoint point : intersections) {
-            if (point.getY() > bottomEdgeY && point.getY() < finalPoint.getY()) {
+            if (point.getY() > bottomEdgeY && point.getY() < center.getY()) {
                 bottomEdgeY = point.getY();
-            } else if (point.getY() < topEdgeY && point.getY() > finalPoint.getY()) {
+            } else if (point.getY() < topEdgeY && point.getY() > center.getY()) {
                 topEdgeY = point.getY();
             }
         }
 
+        System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
+        System.out.println("Player MidPoint X: " + level.player.midPoint.getX() + " | Player MidPoint Y: " + level.player.midPoint.getY());
+
+        FloatPoint finalPoint = new FloatPoint(0,0);
+
         for (Zone zone : level.zones) {
             if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint.setY(bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * level.getLevelHeight()));
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * level.getLevelHeight()));
+                System.out.println("Y: " + finalPoint.getY());
+                break;
             } else if ((zone.getType() == Zone.Type.UPDIAG || zone.getType() == Zone.Type.DOWNDIAG) && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint.setY(bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * level.getLevelHeight()));
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * level.getLevelHeight()));
+                System.out.println("Y: " + finalPoint.getY());
+                break;
             }
         }
 
         level.setAllZoneNGhosted();
 
         System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
+
+        level.setFinalPoint(center);
 
         return finalPoint;
     }
@@ -204,7 +215,8 @@ public class Ghost {
 
         PlayerToGhostDistance = center.getX() - level.player.midPoint.getX();
         for (LineSegment line : stepper.path) {
-            MonsterToGhostDistance =+ line.Distance();
+            System.out.println("Distance: " + line.Distance());
+           MonsterToGhostDistance += line.Distance();
         }
 
         System.out.println("Monster to ghost distance: " + MonsterToGhostDistance + " | " + "Player to ghost distance: " + PlayerToGhostDistance);

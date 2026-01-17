@@ -272,6 +272,8 @@ public class Main extends ApplicationAdapter {
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
 
+
+
                 level.zones.forEach(zone -> {
                     if (zone.getType() != Zone.Type.CHANGEDIRE) {
                         zone.Draw(sr);
@@ -281,6 +283,12 @@ public class Main extends ApplicationAdapter {
                 sr.end();
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
+
+                sr.begin(ShapeRenderer.ShapeType.Filled);
+
+                sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 10);
+
+                sr.end();
 
                 break;
 

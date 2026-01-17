@@ -43,11 +43,17 @@ public class FloatCircularQueue  {
 
     public float FindMean() {
         float sum = 0;
-        int size = (rearPointer - frontPointer + floats.length) % floats.length;
+        int numOfTerms = 0;
 
-        for (int k = 0; k < size; k++) {
-            sum += floats[(frontPointer + k) % floats.length];
+        for (int k = 0; k < floats.length - 1; k++) {
+            if (floats[k] == null || floats[k] == 0) continue;
+            sum += floats[k];
+            numOfTerms++;
         }
-        return sum / (rearPointer - frontPointer);
+
+        System.out.println("Sum of Scalars: " + sum);
+        System.out.println("Size of queue" + numOfTerms);
+
+        return sum / numOfTerms;
     }
 }

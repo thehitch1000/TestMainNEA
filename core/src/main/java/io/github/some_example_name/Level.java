@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Polygon;
 
+import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -33,6 +34,7 @@ public class Level {
     Background background;
     Drill drill;
     Node[][] grid;
+    FloatPoint finalPoint = new FloatPoint(0, 0);
 
     final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 360, worldSpeed = 240;
     boolean monsterPathPending = false, playerMissilePathPending = false, monsterMissilePathPending = false;
@@ -123,6 +125,9 @@ public class Level {
 
     public void setCurrentFileName(String fileName) {
         currentFileName = fileName;
+    }
+    public void setFinalPoint(FloatPoint point) {
+        finalPoint = point;
     }
 
     public void getTrends() {
@@ -912,21 +917,21 @@ public class Level {
         monster.CalcMidPoint();
         player.CalcMidPoints();
 
-        CheckMissileWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
+        CheckGhostWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
 
         Ghost scoutGhost = new Ghost(this.player.midPoint, player.getDirection(), this);
 
-        ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.MONSTERMISSILE, monster.midPoint, scoutGhost.FindEndPoint(AverageChangeDirection.FindMean()), this, false);
+        scoutGhost.FindEndPoint(AverageChangeDirection.FindMean());
 
-        Gdx.app.postRunnable(() -> {
-            try {
-                stepper.FindPath();
-            } finally {
-                synchronized (this) {
-                    monsterMissilePathPending = false;
-                }
-            }
-        });
+//        Gdx.app.postRunnable(() -> {
+//            try {
+//                stepper.FindPath();
+//            } finally {
+//                synchronized (this) {
+//                    monsterMissilePathPending = false;
+//                }
+//            }
+//        });
     }
 
     public void TransformShapes(int leftBound, int rightBound) {
@@ -1001,6 +1006,18 @@ public class Level {
             }
         }
     }
+    public void CheckGhostWalkabilityRegion(int start, int end) {
+        TransformShapes(start, end);
+        ResetGridRegion(start, end);
+        for (Node[] nodes : grid) {
+            for (Node node : nodes) {
+                if (isPointSafeAt(new FloatPoint(node.getX(), node.getY()))) {
+
+                }
+            }
+        }
+    }
+
 
     public boolean isMissileSafeAt(Circle missile) {
         for (Zone zone : zones) {
@@ -1023,6 +1040,14 @@ public class Level {
                         return false;
                     }
                 }
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean isPointSafeAt(FloatPoint point) {
+        for (Zone zone : zones) {
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(point.getX(), point.getY())) {
                 return true;
             }
         }

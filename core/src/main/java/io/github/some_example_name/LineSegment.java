@@ -62,7 +62,12 @@ public class LineSegment {
     }
 
     public float Distance() {
-        return (float) Math.sqrt(Math.pow(endPoint.getX() - startPoint.getX(), 2) + Math.pow(endPoint.getY() - startPoint.getY(), 2));
+        float minX = Math.min(startPoint.getX(), endPoint.getX());
+        float maxX = Math.max(startPoint.getX(), endPoint.getX());
+        float minY = Math.min(startPoint.getY(), endPoint.getY());
+        float maxY = Math.max(startPoint.getY(), endPoint.getY());
+
+        return (float) Math.sqrt(Math.pow(maxX - minX, 2) + Math.pow(maxY - minY, 2));
     }
 
     public void Draw(ShapeRenderer sr) {
