@@ -35,6 +35,7 @@ public class Level {
     Drill drill;
     Node[][] grid;
     FloatPoint finalPoint = new FloatPoint(0, 0);
+    Ghost scoutGhost = new Ghost(new FloatPoint(0,0), Player.Direction.UP, this);
 
     final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 360, worldSpeed = 240;
     boolean monsterPathPending = false, playerMissilePathPending = false, monsterMissilePathPending = false;
@@ -919,9 +920,9 @@ public class Level {
 
         CheckGhostWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
 
-        Ghost scoutGhost = new Ghost(this.player.midPoint, player.getDirection(), this);
+        scoutGhost = new Ghost(this.player.midPoint, player.getDirection(), this);
 
-        scoutGhost.FindEndPoint(AverageChangeDirection.FindMean());
+        scoutGhost.StartSim(AverageChangeDirection.FindMean());
 
 //        Gdx.app.postRunnable(() -> {
 //            try {
@@ -1012,12 +1013,13 @@ public class Level {
         for (Node[] nodes : grid) {
             for (Node node : nodes) {
                 if (isPointSafeAt(new FloatPoint(node.getX(), node.getY()))) {
-
+                    node.setState(Node.NodeState.WALKABLE);
+                } else {
+                    node.setState(Node.NodeState.UNWALKABLE);
                 }
             }
         }
     }
-
 
     public boolean isMissileSafeAt(Circle missile) {
         for (Zone zone : zones) {

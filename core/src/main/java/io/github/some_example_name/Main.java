@@ -246,12 +246,6 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
 
-                level.monster.currentPath.forEach(line -> line.Draw(sr));
-
-                if (a == 1) {
-                    level.player.PrintLines(sr);
-                }
-
                 sr.setColor(Color.PURPLE);
 
                 if (input.isKeyPressed(Input.Keys.L)) {
@@ -262,6 +256,9 @@ public class Main extends ApplicationAdapter {
                     }
                 }
 
+                sr.setColor(Color.WHITE);
+                if (level.scoutGhost.getDirectionChangeScalar() != 0) sr.line(0, level.scoutGhost.currentMoveLine.FindY(0), GameData.getInstance().getScreenWidth(), level.scoutGhost.currentMoveLine.FindY(GameData.getInstance().getScreenWidth()));
+
                 sr.end();
 
                 Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -271,8 +268,6 @@ public class Main extends ApplicationAdapter {
 
                 level.player.Draw(sr);
                 level.monster.Draw(sr);
-
-
 
                 level.zones.forEach(zone -> {
                     if (zone.getType() != Zone.Type.CHANGEDIRE) {
@@ -286,7 +281,7 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 10);
+                sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 5);
 
                 sr.end();
 

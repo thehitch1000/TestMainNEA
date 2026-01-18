@@ -90,8 +90,6 @@ public class ThetaStarProcessor {
         for (int r = 1; r <= maxRadius; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dy = -r; dy <= r; dy++) {
-
-                    // Only check the perimeter of the square
                     if (Math.abs(dx) != r && Math.abs(dy) != r) continue;
 
                     int x = startX + dx;
@@ -105,7 +103,6 @@ public class ThetaStarProcessor {
                 }
             }
         }
-
         return null;
     }
 
@@ -154,12 +151,18 @@ public class ThetaStarProcessor {
         for (Zone zone : level.zones) {
             if (zone.isPointInZone(rect.getX() + rect.getWidth()/2f, rect.getY() + rect.getHeight()/2f)) {
                 for (Polygon obstacle : level.shapes) {
-                    if (obstacle != null) {
-                        if (rect.overlaps(obstacle)) {
-                            return false;
-                        }
+                    if (rect.overlaps(obstacle)) {
+                        return false;
                     }
                 }
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean isPointSafeAt(FloatPoint point) {
+        for (Zone zone : level.zones) {
+            if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(point.getX(), point.getY())) {
                 return true;
             }
         }
@@ -170,22 +173,32 @@ public class ThetaStarProcessor {
         FloatPoint startPoint = new FloatPoint(startNode.getX(), startNode.getY());
         FloatPoint endPoint = new FloatPoint(endNode.getX(), endNode.getY());
         LineSegment segment = new LineSegment(startPoint, endPoint);
-        Shape shape;
+        Shape shape = null;
+        FloatPoint ghostPoint = null;
         int speed = 5;
-        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) {
+        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
             shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
-        } else {
+        } if (type == Level.TypeOfPath.GHOSTTRACKER) {
+            ghostPoint = new FloatPoint(startPoint.getX(), startPoint.getY());
+        } else  {
             shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
         }
         while (true) {
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE ) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
             if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
+            if (type == Level.TypeOfPath.GHOSTTRACKER && !segment.isPointInSegment(ghostPoint.getX(), ghostPoint.getY())) break;
 
-            if (((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !isMissileSafeAt((Circle) shape))) return false;
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !isMissileSafeAt((Circle) shape)) return false;
             if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;
+            if (type == Level.TypeOfPath.GHOSTTRACKER && !isPointSafeAt(ghostPoint)) return false;
 
-            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
-            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
+            if (type != Level.TypeOfPath.GHOSTTRACKER) {
+                shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
+                shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
+            } else {
+                ghostPoint.MoveX(speed * (float) Math.cos(segment.getAngle()));
+                ghostPoint.MoveY(speed * (float) Math.sin(segment.getAngle()));
+            }
         }
         return true;
     }
