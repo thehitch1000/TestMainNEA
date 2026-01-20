@@ -228,11 +228,11 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                level.background.Draw(sr);
-
-                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
-                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
-                level.player.missiles.forEach(missile -> missile.Draw(sr));
+//                level.background.Draw(sr);
+//
+//                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
+//                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
+//                level.player.missiles.forEach(missile -> missile.Draw(sr));
 
                 if (input.isKeyPressed(Input.Keys.N)) {
                     for (Node[] node : level.grid) {
@@ -270,7 +270,7 @@ public class Main extends ApplicationAdapter {
                 level.monster.Draw(sr);
 
                 level.zones.forEach(zone -> {
-                    if (zone.getType() != Zone.Type.CHANGEDIRE) {
+                    if (zone.getType() == Zone.Type.CHANGEDIRE) {
                         zone.Draw(sr);
                     }
                 });
@@ -281,7 +281,13 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 5);
+                if (level.finalPoint.getX() != 0) {
+                    sr.setColor(Color.RED);
+                    sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 5);
+                } else {
+                    sr.setColor(Color.GREEN);
+                    sr.circle(level.scoutGhost.center.getX(), level.scoutGhost.center.getY(), 5);
+                }
 
                 sr.end();
 

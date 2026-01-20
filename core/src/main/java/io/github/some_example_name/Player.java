@@ -8,7 +8,7 @@ import java.util.List;
 
 public class Player {
     public enum Direction {
-        UP, DOWN, NULL
+        UP, DOWN
     }
 
     private int lives, startingHealth;
@@ -17,6 +17,7 @@ public class Player {
     List<polygon> zigTrail;
     FloatPoint[] upPoints, downPoints, lineMidPoints;
     LineEquation[] lines, tempLines;
+    Direction[] directions = Direction.values();
 
     Direction direction;
     FloatPoint midPoint;
@@ -30,7 +31,7 @@ public class Player {
         this.minY = 0;
         this.maxY = 0;
 
-        this.direction = Direction.NULL;
+        this.direction = Direction.UP;
 
         missiles = new ArrayList<>();
         zigTrail = new ArrayList<>();
@@ -240,9 +241,7 @@ public class Player {
     public void MoveY(float Y) {
         shape.MoveY(Y);
         healthShape.MoveY(Y);
-        if (direction != Direction.NULL) {
-            EndLine.MoveY(Y);
-        }
+        EndLine.MoveY(Y);
     }
     public void MoveTempLinesX(float x) {
         for (LineEquation line : tempLines) {

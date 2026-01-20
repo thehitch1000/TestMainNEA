@@ -87,4 +87,12 @@ public class Node {
 
         }
     }
+
+    public void Reset() {
+        g = Float.POSITIVE_INFINITY;
+        h = 0;
+        f = 0;
+
+        parent = null;
+    }
 }

@@ -15,16 +15,11 @@ public class ThetaStarProcessor {
     ArrayList<LineSegment> path;
     Level.TypeOfPath type;
 
-    private boolean pathFound;
+    private boolean pathFound, cancelled;
     private Level level;
     private float currentX, currentY;
 
     public ThetaStarProcessor(Level.TypeOfPath type, FloatPoint startPoint, FloatPoint endPoint, Level level, boolean newGrid) {
-        if (endPoint == null) {
-            end = null;
-            return;
-        }
-
         this.newGrid = newGrid;
 
         this.leftX = (int) startPoint.getX() - margin;
@@ -39,6 +34,11 @@ public class ThetaStarProcessor {
         this.start = FindClosestNodeToStart(new Node ((int) startPoint.getX(), (int) startPoint.getY(), Node.NodeState.WALKABLE));
         this.end = FindClosestNode(new Node ((int) endPoint.getX(), (int) endPoint.getY(), Node.NodeState.WALKABLE));
 
+        if (!isEndpointValid()) {
+            cancelled = true;
+            return;
+        }
+
         this.openList = new NodePrioQueue(1500);
         path = new ArrayList<>();
 
@@ -50,6 +50,12 @@ public class ThetaStarProcessor {
         start.setParent(null);
 
         openList.enqueue(start);
+    }
+    private boolean isEndpointValid() {
+        return isPointSafeAt(new FloatPoint(end.getX(), end.getY()));
+    }
+    public boolean isCancelled() {
+        return cancelled;
     }
 
     private Node FindClosestNodeToStart(Node node) {

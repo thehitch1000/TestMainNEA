@@ -37,7 +37,7 @@ public class Level {
     FloatPoint finalPoint = new FloatPoint(0, 0);
     Ghost scoutGhost = new Ghost(new FloatPoint(0,0), Player.Direction.UP, this);
 
-    final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 360, worldSpeed = 240;
+    final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 540, worldSpeed = 240;
     boolean monsterPathPending = false, playerMissilePathPending = false, monsterMissilePathPending = false;
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight, totalLevelTime;
@@ -920,7 +920,7 @@ public class Level {
 
         CheckGhostWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
 
-        scoutGhost = new Ghost(this.player.midPoint, player.getDirection(), this);
+        scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
 
         scoutGhost.StartSim(AverageChangeDirection.FindMean());
 
@@ -1195,6 +1195,13 @@ public class Level {
     }
     private float distance (FloatPoint point1, FloatPoint point2) {
         return (float) Math.sqrt(Math.pow(point1.getX() - point2.getX(), 2) + Math.pow(point1.getY() - point2.getY(), 2));
+    }
+    public void ResetGridNodes() {
+        for (Node[] nodes : grid) {
+            for (Node node : nodes) {
+                node.Reset();
+            }
+        }
     }
 
     public void setAllZoneNGhosted() {

@@ -40,7 +40,7 @@ public class Ghost {
     public void ChangeDirection() {
         System.out.println("Changing direction");
         direction = directions[(direction.ordinal() + 1) % directions.length];
-        currentMoveLine.setGradient(-1/ currentMoveLine.getGradient());
+        currentMoveLine.setGradient(-1 * currentMoveLine.getGradient());
         currentMoveLine.CalcYIntercept(center);
     }
 
@@ -58,72 +58,28 @@ public class Ghost {
 
         this.directionChangeScalar = directionChangeScalar;
 
-        GameData.getInstance().timers.runAfter(0.1f, () -> Step());
+        GameData.getInstance().timers.runAfter(1f, () -> Step());
     }
-
-    public void FinishSim() {
-        ArrayList<LineSegment> shapeLines = new ArrayList<>();
-
-        TransformShapeInLine(center.getX());
-
-        for (Polygon shape : barrierLines) {
-            for (int j = 0; j < shape.getVertices().length; j += 2) {
-                shapeLines.add(new LineSegment(shape.getVertices()[j], shape.getVertices()[j+1], shape.getVertices()[(j+2) % shape.getVertices().length], shape.getVertices()[(j+3) % shape.getVertices().length]));
-            }
-        }
-
-        ArrayList<FloatPoint> intersections = new ArrayList<>();
-
-        for (LineSegment line : shapeLines) {
-            if (line.getDirection() == LineSegment.Direction.VERTICAL && line.startPoint.getX() != level.player.midPoint.getX()) continue;
-
-            if (Clamp(line.startPoint.getX(), line.endPoint.getX(), level.player.midPoint.getX()) == level.player.midPoint.getX()) {
-                intersections.add(new FloatPoint(level.player.midPoint.getX(), line.FindY(level.player.midPoint.getX())));
-            }
-        }
-
-        float bottomEdgeY = 0, topEdgeY = Float.MAX_VALUE;
-        for (FloatPoint point : intersections) {
-            if (point.getY() > bottomEdgeY && point.getY() < center.getY()) {
-                bottomEdgeY = point.getY();
-            } else if (point.getY() < topEdgeY && point.getY() > center.getY()) {
-                topEdgeY = point.getY();
-            }
-        }
-
-        System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
-        System.out.println("Player MidPoint X: " + level.player.midPoint.getX() + " | Player MidPoint Y: " + level.player.midPoint.getY());
-
-        FloatPoint finalPoint = new FloatPoint(0,0);
-
-        for (Zone zone : level.zones) {
-            if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * level.getLevelHeight()));
-                System.out.println("Y: " + finalPoint.getY());
-                break;
-            } else if ((zone.getType() == Zone.Type.UPDIAG || zone.getType() == Zone.Type.DOWNDIAG) && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * level.getLevelHeight()));
-                System.out.println("Y: " + finalPoint.getY());
-                break;
-            }
-        }
-
-        level.setAllZoneNGhosted();
-
-        System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
-    }
-
     public void Step() {
-        boolean inCorner = false;
+        boolean inCorner = false, inGhostedCorner = false;
         for (Zone zone : level.zones) {
             if (zone.getType() == Zone.Type.CHANGEDIRE && zone.isPointInZone(center.getX(), center.getY())) {
-                inCorner = true;
-
                 if (!zone.isGhosted()) {
+                    inCorner = true;
                     ArrayList<FloatPoint> intersections = new ArrayList<>();
 
                     Zone oldZone = level.zones.get(level.zones.indexOf(zone) - 1);
+                    Zone newZone = level.zones.get(level.zones.indexOf(zone) + 1);
                     LineEquation entryLine;
+
+                    if (newZone.getType() == Zone.Type.UPDIAG && direction == Player.Direction.UP) {
+                        zone.ghosted();
+                        break;
+                    }
+                    if (newZone.getType() == Zone.Type.DOWNDIAG && direction == Player.Direction.DOWN) {
+                        zone.ghosted();
+                        break;
+                    }
 
                     if (oldZone.getType() == Zone.Type.DOWNDIAG) {
                         entryLine = new LineEquation(zone.quad.points[Math.floorMod(zone.getLeftPointIndex() - 1, zone.quad.points.length)], zone.quad.points[zone.getLeftPointIndex()]);
@@ -132,7 +88,9 @@ public class Ghost {
                     }
 
                     for (int j = 0; j < zone.quad.points.length; j++) {
-                        FloatPoint intersection = intersection(currentMoveLine, new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) % zone.quad.points.length]));
+                        LineEquation zoneLine = new LineEquation(zone.quad.points[j], zone.quad.points[(j + 1) %  zone.quad.points.length]);
+
+                        FloatPoint intersection = intersection(currentMoveLine, zoneLine);
 
                         float min = Math.min(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX());
                         float max = Math.max(zone.quad.points[j].getX(), zone.quad.points[(j + 1) % zone.quad.points.length].getX());
@@ -142,55 +100,42 @@ public class Ghost {
                         }
                     }
 
-                    for (FloatPoint intersection : intersections) {
-                        if (entryLine.isPointOnLine(intersection)) {
-                            if (distance(intersection, center) / distance(intersections.get(0), intersections.get(1)) >= directionChangeScalar) {
-                                ChangeDirection();
-                                zone.ghosted();
-                            }
-                            break;
-                        }
+                    float distanceFromEntry = distance(center, intersection(currentMoveLine, entryLine));
+                    float potDistance = distance(intersections.get(0), intersections.get(1));
+
+                    float scalar = distanceFromEntry / potDistance;
+
+                    if (scalar >= directionChangeScalar) {
+                        ChangeDirection();
+                        zone.ghosted();
                     }
                     break;
+                } else {
+                    inGhostedCorner = true;
                 }
             }
         }
         if (!inCorner) {
             for (Zone zone : level.zones) {
-                if (zone.getType() != Zone.Type.CHANGEDIRE && zone.isPointInZone(center.getX(), center.getY())) {
-                    if (zone.getType() == Zone.Type.RIGHT) {
-                        ArrayList<LineSegment> shapeLines = new ArrayList<>();
+                if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
+                    Zone nextDirectionZone = new Zone();
 
-                        TransformShapeInLine(center.getX());
+                    if (level.zones.indexOf(zone) + 2 > level.zones.size() - 1) {
+                        nextDirectionZone = level.zones.get(level.zones.indexOf(zone) + 2);
+                    }
 
-                        for (Polygon shape : barrierLines) {
-                            for (int j = 0; j < shape.getVertices().length; j += 2) {
-                                shapeLines.add(new LineSegment(shape.getVertices()[j], shape.getVertices()[j+1], shape.getVertices()[(j+2) % shape.getVertices().length], shape.getVertices()[(j+3) % shape.getVertices().length]));
-                            }
-                        }
+                    if (nextDirectionZone.getType() == Zone.Type.UPDIAG && direction == Player.Direction.UP && inGhostedCorner) break;
+                    if (nextDirectionZone.getType() == Zone.Type.DOWNDIAG && direction == Player.Direction.DOWN && inGhostedCorner) break;
 
-                        ArrayList<FloatPoint> intersections = new ArrayList<>();
+                    ReturnPackage rp = FindEdges();
 
-                        for (LineSegment line : shapeLines) {
-                            if (line.getDirection() == LineSegment.Direction.VERTICAL && line.startPoint.getX() != level.player.midPoint.getX()) continue;
+                    float topEdgeY = rp.getFloat(0);
+                    float bottomEdgeY = rp.getFloat(1);
 
-                            if (Clamp(line.startPoint.getX(), line.endPoint.getX(), level.player.midPoint.getX()) == level.player.midPoint.getX()) {
-                                intersections.add(new FloatPoint(level.player.midPoint.getX(), line.FindY(level.player.midPoint.getX())));
-                            }
-                        }
+                    float currentLevelHeight = topEdgeY - bottomEdgeY;
 
-                        float bottomEdgeY = 0, topEdgeY = Float.MAX_VALUE;
-                        for (FloatPoint point : intersections) {
-                            if (point.getY() > bottomEdgeY && point.getY() < level.player.midPoint.getY()) {
-                                bottomEdgeY = point.getY();
-                            } else if (point.getY() < topEdgeY && point.getY() > level.player.midPoint.getY()) {
-                                topEdgeY = point.getY();
-                            }
-                        }
-
-                        if ((center.getY() > bottomEdgeY + (0.8f * level.getLevelHeight()) && direction == Player.Direction.UP) || (center.getY() < topEdgeY - (0.8f * level.getLevelHeight()) && direction == Player.Direction.DOWN)) {
-                            ChangeDirection();
-                        }
+                    if ((center.getY() >= bottomEdgeY + (0.8f * currentLevelHeight) && direction == Player.Direction.UP) || (center.getY() <= topEdgeY - (0.8f * currentLevelHeight) && direction == Player.Direction.DOWN)) {
+                        ChangeDirection();
                     }
                     break;
                 }
@@ -215,6 +160,33 @@ public class Ghost {
             GameData.getInstance().timers.runAfter(0.1f, () -> Step());
         }
     }
+    public void FinishSim() {
+        ReturnPackage rp = FindEdges();
+
+        float topEdgeY = rp.floats.get(0);
+        float bottomEdgeY = rp.floats.get(1);
+
+        float currentLevelHeight = topEdgeY - bottomEdgeY;
+
+        System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
+        System.out.println("Player MidPoint X: " + level.player.midPoint.getX() + " | Player MidPoint Y: " + level.player.midPoint.getY());
+
+        FloatPoint finalPoint = new FloatPoint(0,0);
+
+        for (Zone zone : level.zones) {
+            if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * currentLevelHeight));
+                break;
+            } else if ((zone.getType() == Zone.Type.UPDIAG || zone.getType() == Zone.Type.DOWNDIAG) && zone.isPointInZone(center.getX(), center.getY())) {
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * currentLevelHeight));
+                break;
+            }
+        }
+
+        level.setAllZoneNGhosted();
+
+        System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
+    }
 
     public boolean DoTimesMatch() {
         System.out.println("Checking times...");
@@ -222,12 +194,29 @@ public class Ghost {
         float MonsterToGhostDistance = 0, PlayerToGhostDistance;
         ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.GHOSTTRACKER, level.monster.midPoint, center, level, false);
 
+        if (stepper.isCancelled()) {
+            FinishSim();
+            System.out.println("Did not finish");
+        }
+
         stepper.FindPath();
 
         PlayerToGhostDistance = center.getX() - level.player.midPoint.getX();
+
+        if (stepper.path.isEmpty()) {
+            System.out.println("StartPoint: " + stepper.start.getX());
+            System.out.println("Monster MidPoint: " + level.monster.midPoint.getX() + ", " + level.monster.midPoint.getY());
+            System.out.println("EndPoint: " + stepper.end.getX());
+            System.out.println("End State: " + stepper.end.getState());
+        }
+
         for (LineSegment line : stepper.path) {
             System.out.println("Distance: " + line.Distance());
-           MonsterToGhostDistance += line.Distance();
+            MonsterToGhostDistance += line.Distance();
+
+            sr.begin(ShapeRenderer.ShapeType.Line);
+            sr.line(line.startPoint.getX(), line.startPoint.getY(), line.endPoint.getX(), line.endPoint.getY());
+            sr.end();
         }
 
         System.out.println("Monster to ghost distance: " + MonsterToGhostDistance + " | " + "Player to ghost distance: " + PlayerToGhostDistance);
@@ -238,6 +227,8 @@ public class Ghost {
         System.out.println("Monster to ghost time: " + MonsterToGhostTime + " | Player to ghost time: " + PlayerToGhostTime);
 
         System.out.println("Time Difference: " + (MonsterToGhostTime - PlayerToGhostTime));
+
+        level.ResetGridNodes();
 
         if (MonsterToGhostTime > PlayerToGhostTime + delta) return false;
         return MonsterToGhostTime <= PlayerToGhostTime + delta;
@@ -281,11 +272,50 @@ public class Ghost {
     }
     private FloatPoint intersection (LineEquation line1, LineEquation line2) {
         FloatPoint intersection = new FloatPoint(0, 0);
-        intersection.setX(line2.getYIntercept() - line1.getYIntercept() / line1.getGradient() - line2.getGradient());
+        intersection.setX((line2.getYIntercept() - line1.getYIntercept()) / (line1.getGradient() - line2.getGradient()));
         intersection.setY(line1.FindY(intersection.getX()));
         return intersection;
     }
     private float distance (FloatPoint point1, FloatPoint point2) {
         return (float) Math.sqrt(Math.pow(point1.getX() - point2.getX(), 2) + Math.pow(point1.getY() - point2.getY(), 2));
+    }
+    private ReturnPackage FindEdges() {
+        ArrayList<LineSegment> shapeLines = new ArrayList<>();
+        ReturnPackage rp = new ReturnPackage();
+
+        TransformShapeInLine(center.getX());
+
+        for (Polygon shape : barrierLines) {
+            for (int j = 0; j < shape.getVertices().length; j += 2) {
+                shapeLines.add(new LineSegment(shape.getVertices()[j], shape.getVertices()[j+1], shape.getVertices()[(j+2) % shape.getVertices().length], shape.getVertices()[(j+3) % shape.getVertices().length]));
+            }
+        }
+
+        ArrayList<FloatPoint> intersections = new ArrayList<>();
+
+        for (LineSegment line : shapeLines) {
+            if (line.getDirection() == LineSegment.Direction.VERTICAL && line.startPoint.getX() != center.getX()) continue;
+
+            float min = Math.min(line.startPoint.getX(), line.endPoint.getX());
+            float max = Math.max(line.startPoint.getX(), line.endPoint.getX());
+
+            if (Clamp(min, max, center.getX()) == center.getX()) {
+                intersections.add(new FloatPoint(center.getX(), line.FindY(center.getX())));
+            }
+        }
+
+        float topEdgeY = Float.MAX_VALUE, bottomEdgeY = 0;
+        for (FloatPoint point : intersections) {
+            if (point.getY() < topEdgeY && point.getY() > center.getY()) {
+                topEdgeY = point.getY();
+            } else if (point.getY() > bottomEdgeY && point.getY() < center.getY()) {
+                bottomEdgeY = point.getY();
+            }
+        }
+
+        rp.floats.add(topEdgeY);
+        rp.floats.add(bottomEdgeY);
+
+        return rp;
     }
 }
