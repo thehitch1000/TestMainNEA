@@ -74,10 +74,12 @@ public class Ghost {
 
                     if (newZone.getType() == Zone.Type.UPDIAG && direction == Player.Direction.UP) {
                         zone.ghosted();
+                        inCorner = false;
                         break;
                     }
                     if (newZone.getType() == Zone.Type.DOWNDIAG && direction == Player.Direction.DOWN) {
                         zone.ghosted();
+                        inCorner = false;
                         break;
                     }
 
@@ -107,6 +109,7 @@ public class Ghost {
 
                     if (scalar >= directionChangeScalar) {
                         ChangeDirection();
+                        inCorner = false;
                         zone.ghosted();
                     }
                     break;
@@ -120,7 +123,7 @@ public class Ghost {
                 if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
                     Zone nextDirectionZone = new Zone();
 
-                    if (level.zones.indexOf(zone) + 2 > level.zones.size() - 1) {
+                    if (level.zones.indexOf(zone) + 2 < level.zones.size() - 1) {
                         nextDirectionZone = level.zones.get(level.zones.indexOf(zone) + 2);
                     }
 
@@ -143,12 +146,12 @@ public class Ghost {
         }
 
         if (direction == Player.Direction.DOWN) {
-            MoveY(-level.worldSpeed * Gdx.app.getGraphics().getDeltaTime());
+            MoveY(-5);
         } else {
-            MoveY(level.worldSpeed * Gdx.app.getGraphics().getDeltaTime());
+            MoveY(5);
         }
 
-        MoveX(level.worldSpeed * Gdx.app.getGraphics().getDeltaTime());
+        MoveX(5);
 
         level.setFinalPoint(center);
 

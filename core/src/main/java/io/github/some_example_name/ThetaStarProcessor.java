@@ -184,13 +184,13 @@ public class ThetaStarProcessor {
         int speed = 5;
         if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
             shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
-        } if (type == Level.TypeOfPath.GHOSTTRACKER) {
+        } else if (type == Level.TypeOfPath.GHOSTTRACKER) {
             ghostPoint = new FloatPoint(startPoint.getX(), startPoint.getY());
-        } else  {
+        } else if (type == Level.TypeOfPath.MONSTER) {
             shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
         }
         while (true) {
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE ) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
             if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
             if (type == Level.TypeOfPath.GHOSTTRACKER && !segment.isPointInSegment(ghostPoint.getX(), ghostPoint.getY())) break;
 

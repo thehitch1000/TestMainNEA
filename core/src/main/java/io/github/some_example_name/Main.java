@@ -167,6 +167,8 @@ public class Main extends ApplicationAdapter {
 
         GameData.getInstance().Maintenance();
 
+        level.MoveMissiles();
+
         switch (stage) {
             case PLAYING:
                 if (input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -196,6 +198,14 @@ public class Main extends ApplicationAdapter {
                     level.CreateMonsterMissile();
                 }
 
+                if (input.isKeyJustPressed(Input.Keys.R)) {
+                    ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.MONSTERMISSILE, level.monster.midPoint, level.finalPoint, level, false);
+
+                    stepper.FindPath();
+
+                    level.ResetGridNodes();
+                }
+
                 if (!GameData.getInstance().isStop()) {
                     while (level.ReadFile());
 
@@ -203,8 +213,6 @@ public class Main extends ApplicationAdapter {
 
                     level.MovePlayerY(0);
                     level.MoveWorldX();
-
-                    level.MoveMissiles();
 
                     if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));
@@ -228,6 +236,10 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
+                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
+                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
+                level.player.missiles.forEach(missile -> missile.Draw(sr));
+                level.monster.missiles.forEach(missile -> missile.Draw(sr));
 
                 if (input.isKeyPressed(Input.Keys.N)) {
                     for (Node[] node : level.grid) {
@@ -240,6 +252,15 @@ public class Main extends ApplicationAdapter {
                 sr.end();
 
                 sr.begin(ShapeRenderer.ShapeType.Line);
+
+                level.monster.currentPath.forEach(line -> line.Draw(sr));
+
+                if (!level.monster.missiles.isEmpty()) {
+                    for(LineSegment line : level.monster.missiles.get(0).path) {
+                        line.Draw(sr);
+                    }
+                }
+
 
                 sr.setColor(Color.PURPLE);
 

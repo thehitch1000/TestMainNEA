@@ -120,9 +120,6 @@ public class Level {
     public float getTotalLevelTime() {
         return totalLevelTime;
     }
-    public float getLevelHeight() {
-        return levelHeight;
-    }
 
     public void setCurrentFileName(String fileName) {
         currentFileName = fileName;
@@ -427,7 +424,7 @@ public class Level {
 
                 switch (parts[0]) {
                     case "RectPath":
-                        if (x1 - xTravelled <= 1700) {
+                        if (x1 - xTravelled <= 2100) {
                             Barrier rectPath = new RectPath(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight, Float.parseFloat(parts[3]), Float.parseFloat(parts[4]), Boolean.parseBoolean(parts[5]));
                             barriers.add(rectPath);
                             shapeNumber++;
@@ -438,7 +435,7 @@ public class Level {
 
                     case "TriPath":
                         float X3 = Float.parseFloat(parts[3]);
-                        if (x1 - xTravelled <= 1700 || X3 - xTravelled <= 1700) {
+                        if (x1 - xTravelled <= 2100 || X3 - xTravelled <= 2100) {
                             Barrier TriPath = new TriPath(new FloatPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight),
                                 new FloatPoint(X3 - xTravelled, Float.parseFloat(parts[4]) - currentHeight),
                                 new FloatPoint(Float.parseFloat(parts[5]) - xTravelled, Float.parseFloat(parts[6]) - currentHeight), Boolean.parseBoolean(parts[7]));
@@ -453,7 +450,7 @@ public class Level {
                         float x2 = Float.parseFloat(parts[3]);
                         float x3 = Float.parseFloat(parts[5]);
                         float x4 = Float.parseFloat(parts[7]);
-                        if (x1 - xTravelled <= 1700 || x2 - xTravelled <= 1700 || x3 - xTravelled <= 1700 || x4 - xTravelled <= 1700) {
+                        if (x1 - xTravelled <= 2100 || x2 - xTravelled <= 2100 || x3 - xTravelled <= 2100 || x4 - xTravelled <= 2100) {
                             Zone zone = new Zone(Zone.Type.valueOf(parts[9]));
                             zone.quad.points[0].setPoint(x1 - xTravelled, Float.parseFloat(parts[2]) - currentHeight);
                             zone.quad.points[1].setPoint(x2 - xTravelled, Float.parseFloat(parts[4]) - currentHeight);
@@ -924,15 +921,6 @@ public class Level {
 
         scoutGhost.StartSim(AverageChangeDirection.FindMean());
 
-//        Gdx.app.postRunnable(() -> {
-//            try {
-//                stepper.FindPath();
-//            } finally {
-//                synchronized (this) {
-//                    monsterMissilePathPending = false;
-//                }
-//            }
-//        });
     }
 
     public void TransformShapes(int leftBound, int rightBound) {

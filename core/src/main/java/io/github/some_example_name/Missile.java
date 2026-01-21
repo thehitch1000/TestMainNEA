@@ -96,7 +96,7 @@ public class Missile {
         float distanceToEnd = (float) Math.sqrt(Math.pow(xDifference, 2) + Math.pow(yDifference, 2));
 
 
-        if (distanceToEnd <= speed) {
+        if (distanceToEnd <= speed * Gdx.app.getGraphics().getDeltaTime()) {
             shape.MoveX(path.get(0).endPoint.getX() - shape.getX());
             shape.MoveY(path.get(0).endPoint.getY() - shape.getY());
             path.remove(0);
