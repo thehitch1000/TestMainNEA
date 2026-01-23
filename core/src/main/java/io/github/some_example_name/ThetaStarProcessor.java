@@ -182,29 +182,20 @@ public class ThetaStarProcessor {
         Shape shape = null;
         FloatPoint ghostPoint = null;
         int speed = 5;
-        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) {
+        if (type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) {
             shape = new Circle(startPoint.getX(), startPoint.getY(), 10);
-        } else if (type == Level.TypeOfPath.GHOSTTRACKER) {
-            ghostPoint = new FloatPoint(startPoint.getX(), startPoint.getY());
         } else if (type == Level.TypeOfPath.MONSTER) {
             shape = new Rect(startPoint.getX() - level.monster.shape.getWidth()/2f - 5, startPoint.getY() - level.monster.shape.getHeight()/2f - 5, level.monster.shape.getWidth() + 10, level.monster.shape.getHeight() + 10);
         }
         while (true) {
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !segment.isPointInSegment(shape.getX(), shape.getY())) break;
             if (type == Level.TypeOfPath.MONSTER && !segment.isPointInSegment(shape.getX() + level.monster.shape.getWidth()/2f + 5, shape.getY() + level.monster.shape.getHeight()/2f + 5)) break;
-            if (type == Level.TypeOfPath.GHOSTTRACKER && !segment.isPointInSegment(ghostPoint.getX(), ghostPoint.getY())) break;
 
-            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE) && !isMissileSafeAt((Circle) shape)) return false;
+            if ((type == Level.TypeOfPath.PLAYERMISSILE || type == Level.TypeOfPath.MONSTERMISSILE || type == Level.TypeOfPath.GHOSTTRACKER) && !isMissileSafeAt((Circle) shape)) return false;
             if (type == Level.TypeOfPath.MONSTER && !isMonsterSafeAt((Rect) shape)) return false;
-            if (type == Level.TypeOfPath.GHOSTTRACKER && !isPointSafeAt(ghostPoint)) return false;
 
-            if (type != Level.TypeOfPath.GHOSTTRACKER) {
-                shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
-                shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
-            } else {
-                ghostPoint.MoveX(speed * (float) Math.cos(segment.getAngle()));
-                ghostPoint.MoveY(speed * (float) Math.sin(segment.getAngle()));
-            }
+            shape.MoveX(speed * (float) Math.cos(segment.getAngle()));
+            shape.MoveY(speed * (float) Math.sin(segment.getAngle()));
         }
         return true;
     }

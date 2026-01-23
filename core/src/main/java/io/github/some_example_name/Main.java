@@ -236,10 +236,11 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
-                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
-                level.player.missiles.forEach(missile -> missile.Draw(sr));
-                level.monster.missiles.forEach(missile -> missile.Draw(sr));
+//                level.background.Draw(sr);
+//
+//                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
+//                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
+//                level.player.missiles.forEach(missile -> missile.Draw(sr));
 
                 if (input.isKeyPressed(Input.Keys.N)) {
                     for (Node[] node : level.grid) {

@@ -174,21 +174,19 @@ public class Ghost {
         System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
         System.out.println("Player MidPoint X: " + level.player.midPoint.getX() + " | Player MidPoint Y: " + level.player.midPoint.getY());
 
-        FloatPoint finalPoint = new FloatPoint(0,0);
-
         for (Zone zone : level.zones) {
             if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * currentLevelHeight));
+                level.finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * currentLevelHeight));
                 break;
             } else if ((zone.getType() == Zone.Type.UPDIAG || zone.getType() == Zone.Type.DOWNDIAG) && zone.isPointInZone(center.getX(), center.getY())) {
-                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * currentLevelHeight));
+                level.finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * currentLevelHeight));
                 break;
             }
         }
 
         level.setAllZoneNGhosted();
 
-        System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
+        System.out.println("Final Point: " + level.finalPoint.getX() + " | " + level.finalPoint.getY());
     }
 
     public boolean DoTimesMatch() {
