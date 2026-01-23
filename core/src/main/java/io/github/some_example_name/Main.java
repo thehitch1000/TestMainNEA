@@ -206,6 +206,8 @@ public class Main extends ApplicationAdapter {
                     level.ResetGridNodes();
                 }
 
+                level.MoveMissiles();
+
                 if (!GameData.getInstance().isStop()) {
                     while (level.ReadFile());
 
@@ -213,6 +215,7 @@ public class Main extends ApplicationAdapter {
 
                     level.MovePlayerY(0);
                     level.MoveWorldX();
+
 
                     if (input.isButtonJustPressed(Input.Buttons.LEFT)) {
                         level.CreatePlayerMissile(level.player.midPoint, new FloatPoint(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY()));

@@ -109,7 +109,6 @@ public class Ghost {
 
                     if (scalar >= directionChangeScalar) {
                         ChangeDirection();
-                        inCorner = false;
                         zone.ghosted();
                     }
                     break;
