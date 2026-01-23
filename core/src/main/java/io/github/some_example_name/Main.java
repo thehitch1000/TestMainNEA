@@ -199,7 +199,7 @@ public class Main extends ApplicationAdapter {
                 }
 
                 if (input.isKeyJustPressed(Input.Keys.R)) {
-                    ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.MONSTERMISSILE, level.monster.midPoint, level.finalPoint, level, false);
+                    ThetaStarProcessor stepper = new ThetaStarProcessor(Level.TypeOfPath.MONSTERMISSILE, level.monster.midPoint, level.scoutGhost.finalPoint, level, false);
 
                     stepper.FindPath();
 
@@ -239,11 +239,11 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-//                level.background.Draw(sr);
-//
-//                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
-//                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
-//                level.player.missiles.forEach(missile -> missile.Draw(sr));
+                level.background.Draw(sr);
+
+                level.barriers.forEach(obstacle -> obstacle.Draw(sr));
+                level.player.zigTrail.forEach(trail -> trail.Draw(sr));
+                level.player.missiles.forEach(missile -> missile.Draw(sr));
 
                 if (input.isKeyPressed(Input.Keys.N)) {
                     for (Node[] node : level.grid) {
@@ -301,12 +301,12 @@ public class Main extends ApplicationAdapter {
 
                 sr.begin(ShapeRenderer.ShapeType.Filled);
 
-                if (level.finalPoint.getX() != 0) {
+                if (level.scoutGhost.finalPoint.getX() == 0) {
                     sr.setColor(Color.RED);
-                    sr.circle(level.finalPoint.getX(), level.finalPoint.getY(), 5);
+                    sr.circle(level.scoutGhost.center.getX(), level.scoutGhost.center.getY(), 5);
                 } else {
                     sr.setColor(Color.GREEN);
-                    sr.circle(level.scoutGhost.center.getX(), level.scoutGhost.center.getY(), 5);
+                    sr.circle(level.scoutGhost.finalPoint.getX(), level.scoutGhost.finalPoint.getY(), 5);
                 }
 
                 sr.end();

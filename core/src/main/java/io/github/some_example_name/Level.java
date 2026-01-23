@@ -22,6 +22,9 @@ public class Level {
     public enum TypeOfPath {
         MONSTER, PLAYERMISSILE, MONSTERMISSILE, GHOSTTRACKER
     }
+    public enum ProcessingStatus {
+        COMPLETED, PROCESSING, NOTSTARTED
+    }
 
     String currentFileName;
     List<Barrier> barriers;
@@ -34,7 +37,6 @@ public class Level {
     Background background;
     Drill drill;
     Node[][] grid;
-    FloatPoint finalPoint = new FloatPoint(0, 0);
     Ghost scoutGhost = new Ghost(new FloatPoint(0,0), Player.Direction.UP, this);
 
     final int levelDistance = 3000, cellSize = 16, margin = 4 * cellSize, missileSpeed = 540, worldSpeed = 240;
@@ -42,6 +44,8 @@ public class Level {
 
     private float xTravelled, currentHeight, StartTime, currentTopOfLevel, currentBottomOfLevel, levelHeight, totalLevelTime;
     private int shapeNumber;
+
+    ProcessingStatus monsterMissileEndPointStatus = ProcessingStatus.NOTSTARTED, monsterMissilePathStatus = ProcessingStatus.NOTSTARTED;
 
     public Level() {
         player = new Player(100);
@@ -123,9 +127,6 @@ public class Level {
 
     public void setCurrentFileName(String fileName) {
         currentFileName = fileName;
-    }
-    public void setFinalPoint(FloatPoint point) {
-        finalPoint = point;
     }
 
     public void getTrends() {
@@ -852,7 +853,6 @@ public class Level {
             }
         });
     }
-
     public void FindNewMonsterPath() {
         synchronized (this) {
             if (monsterPathPending) return;
@@ -905,22 +905,38 @@ public class Level {
 
         return new FloatPoint(node.getX(), node.getY());
     }
-
     public void CreateMonsterMissile() {
-        synchronized (this) {
-            if (monsterMissilePathPending) return;
-            monsterMissilePathPending = true;
+        if (monsterMissileEndPointStatus == ProcessingStatus.NOTSTARTED) {
+            monster.CalcMidPoint();
+            player.CalcMidPoints();
+
+            CheckGhostWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
+
+            scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
+
+            scoutGhost.StartSim(AverageChangeDirection.FindMean());
+
+            monsterMissileEndPointStatus = ProcessingStatus.PROCESSING;
         }
+        if (monsterMissileEndPointStatus == ProcessingStatus.COMPLETED) {
+            synchronized (this) {
+                if (monsterMissilePathStatus == ProcessingStatus.PROCESSING) return;
+                monsterMissilePathStatus = ProcessingStatus.PROCESSING;
+            }
 
-        monster.CalcMidPoint();
-        player.CalcMidPoints();
+            ThetaStarProcessor stepper = new ThetaStarProcessor(TypeOfPath.MONSTERMISSILE, monster.midPoint, scoutGhost.finalPoint, this, false);
 
-        CheckGhostWalkabilityRegion((int) monster.midPoint.getX() - margin, GameData.getInstance().getScreenWidth());
-
-        scoutGhost = new Ghost(player.midPoint, player.getDirection(), this);
-
-        scoutGhost.StartSim(AverageChangeDirection.FindMean());
-
+            Gdx.app.postRunnable(() -> {
+                try {
+                    stepper.FindPath();
+                } finally {
+                    synchronized (this) {
+                        monsterMissilePathStatus = ProcessingStatus.NOTSTARTED;
+                        monsterMissileEndPointStatus = ProcessingStatus.NOTSTARTED;
+                    }
+                }
+            });
+        }
     }
 
     public void TransformShapes(int leftBound, int rightBound) {

@@ -16,6 +16,7 @@ public class Ghost {
     public Player.Direction[] directions = Player.Direction.values();
     private float directionChangeScalar;
     ShapeRenderer sr;
+    FloatPoint finalPoint = new FloatPoint(0, 0);
 
     public Ghost(FloatPoint startingPoint, Player.Direction direction, Level level) {
         this.center = new FloatPoint(startingPoint.getX(), startingPoint.getY());
@@ -152,8 +153,6 @@ public class Ghost {
 
         MoveX(5);
 
-        level.setFinalPoint(center);
-
         System.out.println("Center X: " + center.getX() + " | Center Y: " + center.getY());
 
         if (DoTimesMatch()) FinishSim();
@@ -175,17 +174,17 @@ public class Ghost {
 
         for (Zone zone : level.zones) {
             if (zone.getType() == Zone.Type.RIGHT && zone.isPointInZone(center.getX(), center.getY())) {
-                level.finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * currentLevelHeight));
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageHorPositionScalar.FindMean() * currentLevelHeight));
                 break;
             } else if ((zone.getType() == Zone.Type.UPDIAG || zone.getType() == Zone.Type.DOWNDIAG) && zone.isPointInZone(center.getX(), center.getY())) {
-                level.finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * currentLevelHeight));
+                finalPoint = new FloatPoint(center.getX(), bottomEdgeY + (level.AverageDiagPositionScalar.FindMean() * currentLevelHeight));
                 break;
             }
         }
 
         level.setAllZoneNGhosted();
 
-        System.out.println("Final Point: " + level.finalPoint.getX() + " | " + level.finalPoint.getY());
+        System.out.println("Final Point: " + finalPoint.getX() + " | " + finalPoint.getY());
     }
 
     public boolean DoTimesMatch() {
